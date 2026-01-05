@@ -26,7 +26,8 @@
       "Bash(powershell:*)",
       "Bash(node:*)",
       "Bash(timeout 5 node:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
