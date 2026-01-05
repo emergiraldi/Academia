@@ -1,0 +1,76 @@
+================================================================================
+CORREÇÃO APLICADA NO RELATÓRIO DE PEDIDOS DE VENDA
+================================================================================
+
+DATA: 23/12/2025
+
+PROBLEMA IDENTIFICADO:
+----------------------
+O Relatório de Pedidos de Venda estava exibindo valores 100x maiores que o correto.
+
+Exemplo:
+  • Pedido 54216: Exibia R$ 1.131.201,00 ao invés de R$ 11.312,01
+  • Pedido 54257: Exibia R$ 4.208.202,00 ao invés de R$ 42.082,02
+
+CAUSA:
+------
+- Os valores na tabela PEDIDOS estão armazenados em CENTAVOS (correto)
+- A VIEW VW_RPT_PEDIDOSVENDAS retornava os valores brutos em centavos
+- O relatório FastReport exibia esses valores sem dividir por 100
+
+SOLUÇÃO APLICADA:
+-----------------
+✓ Modificada a VIEW VW_RPT_PEDIDOSVENDAS para retornar valores em REAIS
+
+Alterações feitas na view:
+  • VLR_TOTAL: agora retorna COALESCE(ped.vlr_total, 0) / 100.0
+  • VLR_PRODUTO: agora retorna COALESCE(ped.vlr_produtos, 0) / 100.0
+  • VLR_DESCONTO: agora retorna COALESCE(ped.vlr_desconto, 0) / 100.0
+  • VLR_FRETE: agora retorna COALESCE(ped.vlrfrete, 0) / 100.0
+
+VERIFICAÇÃO DOS DADOS:
+----------------------
+Os valores no banco de dados estão CORRETOS (em centavos):
+  • Pedido 54216: 1.131.201 centavos = R$ 11.312,01 ✓
+  • Pedido 54257: 4.208.202 centavos = R$ 42.082,02 ✓
+  • Pedido 54261: 2.776.763 centavos = R$ 27.767,63 ✓
+  • Pedido 54272: 2.475.365 centavos = R$ 24.753,65 ✓
+  • Pedido 54276: 2.146.430 centavos = R$ 21.464,30 ✓
+
+PRÓXIMOS PASSOS:
+----------------
+1. Abra o sistema QRSistema.exe
+2. Acesse o menu de Relatórios
+3. Gere o "Relatório de Pedidos de Venda"
+4. Verifique se os valores agora estão corretos
+
+VALORES ESPERADOS:
+------------------
+Pedido 54216 deve mostrar: R$ 11.312,01 (não R$ 1.131.201,00)
+Pedido 54257 deve mostrar: R$ 42.082,02 (não R$ 4.208.202,00)
+Pedido 54261 deve mostrar: R$ 27.767,63 (não R$ 2.776.763,00)
+
+ARQUIVOS CRIADOS:
+-----------------
+- corrigir-view-pedidos.sql: Script SQL da correção aplicada
+- aplicar-correcao-view-v2.py: Script Python que aplicou a correção
+- verificar-view-pedidos.py: Script de diagnóstico da view
+- verificar-view-pedidos-especificos.py: Script de verificação dos pedidos
+- CORRECAO-RELATORIO-PEDIDOS.txt: Este arquivo com o resumo
+
+OBSERVAÇÕES TÉCNICAS:
+---------------------
+- A correção foi aplicada diretamente no banco de dados Firebird
+- Não foi necessário modificar os arquivos .fr3 (FastReport)
+- Os dados originais na tabela PEDIDOS permanecem em centavos (correto)
+- A divisão por 100 agora é feita pela VIEW, tornando os valores prontos
+  para exibição no relatório
+
+BACKUP:
+-------
+IMPORTANTE: Sempre mantenha backups regulares do banco de dados!
+Caminho do banco: C:\QRSistema\db\QRSISTEMA.FDB
+
+================================================================================
+CORREÇÃO CONCLUÍDA COM SUCESSO!
+================================================================================

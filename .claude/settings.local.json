@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pip install:*)",
+      "Bash(python:*)",
+      "Bash(dir:*)",
+      "Bash(timeout /t 10 /nobreak)",
+      "Bash(\"c:\\Projeto\\Academia\\pg-tools\\pgsql\\bin\\pg_restore.exe\" --data-only --table=produtos --table=conta_pagar --table=documentos --table=creditos \"C:\\Mac\\Home\\Documents\\bkp brabancia\\bmcmdb.bkp\")",
+      "Bash(\"c:\\Projeto\\Academia\\dados-extraidos.sql\")",
+      "Bash(\"c:\\Projeto\\Academia\\pg-tools\\pgsql\\bin\\pg_restore.exe\" --data-only --table=produtos --table=conta_pagar --table=documentos --table=creditos -f \"c:\\Projeto\\Academia\\dados-extraidos.sql\" \"C:\\Mac\\Home\\Documents\\bkp brabancia\\bmcmdb.bkp\")",
+      "Bash(timeout /t 60 /nobreak)",
+      "Bash(\"c:\\Projeto\\Academia\\pg-tools\\pgsql\\bin\\pg_restore.exe\" --list \"C:\\Mac\\Home\\Documents\\bkp brabancia\\bmcmdb.bkp\")",
+      "Bash(\"c:\\Projeto\\Academia\\pg-tools\\pgsql\\bin\\pg_restore.exe\" --data-only --table=fornecedores --table=clientes -f \"c:\\Projeto\\Academia\\fornecedores-clientes.sql\" \"C:\\Mac\\Home\\Documents\\bkp brabancia\\bmcmdb.bkp\")",
+      "Bash(\"c:\\Projeto\\Academia\\pg-tools\\pgsql\\bin\\pg_restore.exe\":*)",
+      "Bash(\"c:\\Projeto\\Academia\\pg-tools\\pgsql\\bin\\pg_restore.exe\" --data-only --table=funcionarios --table=usuarios --table=user --table=cargos -f \"c:\\Projeto\\Academia\\funcionarios-usuarios.sql\" \"C:\\Mac\\Home\\Documents\\bkp brabancia\\bmcmdb.bkp\")",
+      "Bash(\"c:\\Projeto\\Academia\\pg-tools\\pgsql\\bin\\pg_restore.exe\" --data-only --table=pedidos --table=pedidos_itens --table=orcamentos --table=orcamentos_itens --table=orcamentos_pagto --table=comandos --table=comandos_itens -f \"c:\\Projeto\\Academia\\vendas-extraidas.sql\" \"C:\\Mac\\Home\\Documents\\bkp brabancia\\bmcmdb.bkp\")",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(tasklist:*)",
+      "Bash(powershell -Command \"Get-Process -Id 312 | Select-Object ProcessName, Id, Path\")",
+      "Bash(taskkill:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 312 -Force\")",
+      "Bash(powershell -Command \"Stop-Process -Id 14092 -Force\")",
+      "Bash(curl:*)",
+      "Bash(timeout /t 3 /nobreak)",
+      "Bash(powershell:*)",
+      "Bash(node:*)",
+      "Bash(timeout 5 node:*)",
+      "Bash(git init:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

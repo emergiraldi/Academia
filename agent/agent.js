@@ -1,0 +1,585 @@
+#!/usr/bin/env node
+/**
+ * Control ID Agent - Cliente Local
+ *
+ * Este agent roda no cliente e faz a ponte entre a VPS e a leitora Control ID local.
+ *
+ * Funções:
+ * - Conecta na VPS via WebSocket seguro (WSS)
+ * - Executa comandos HTTP na leitora Control ID (rede local)
+ * - Reconexão automática em caso de falha
+ * - Logs detalhados para troubleshooting
+ */
+
+const WebSocket = require('ws');
+const axios = require('axios');
+require('dotenv').config();
+
+// ============================================
+// CONFIGURAÇÕES
+// ============================================
+
+const config = {
+  leitora: {
+    ip: process.env.LEITORA_IP || '192.168.2.142',
+    port: parseInt(process.env.LEITORA_PORT) || 80,
+    username: process.env.LEITORA_USERNAME || 'admin',
+    password: process.env.LEITORA_PASSWORD || 'admin'
+  },
+  vps: {
+    url: process.env.VPS_URL || 'ws://localhost:8080',
+    reconnectInterval: 5000, // 5 segundos
+    maxReconnectAttempts: 10,
+    pingInterval: 30000 // 30 segundos
+  },
+  agent: {
+    id: process.env.AGENT_ID || 'academia-1',
+    token: process.env.AUTH_TOKEN || 'development-token'
+  }
+};
+
+// ============================================
+// ESTADO GLOBAL
+// ============================================
+
+let ws = null;
+let session = null; // Sessão da leitora Control ID
+let reconnectAttempts = 0;
+let pingInterval = null;
+let isConnected = false;
+
+// ============================================
+// LOGGING
+// ============================================
+
+function log(level, message, ...args) {
+  const timestamp = new Date().toISOString();
+  const prefix = {
+    info: '📘',
+    success: '✅',
+    warn: '⚠️',
+    error: '❌',
+    debug: '🔍'
+  }[level] || '📘';
+
+  console.log(`[${timestamp}] ${prefix} ${message}`, ...args);
+}
+
+// ============================================
+// COMUNICAÇÃO COM LEITORA CONTROL ID
+// ============================================
+
+function getLeitoraUrl(endpoint) {
+  return `http://${config.leitora.ip}:${config.leitora.port}${endpoint}`;
+}
+
+async function loginLeitora() {
+  try {
+    log('info', 'Fazendo login na leitora Control ID...');
+
+    const response = await axios.post(
+      getLeitoraUrl('/login.fcgi'),
+      {
+        login: config.leitora.username,
+        password: config.leitora.password
+      },
+      { timeout: 10000 }
+    );
+
+    session = response.data.session;
+    log('success', `Login na leitora OK. Session: ${session.substring(0, 10)}...`);
+    return session;
+  } catch (error) {
+    log('error', 'Erro ao fazer login na leitora:', error.message);
+    throw new Error('Falha no login da leitora: ' + error.message);
+  }
+}
+
+async function garantirSessao() {
+  if (!session) {
+    await loginLeitora();
+  }
+  return session;
+}
+
+async function verificarLeitora() {
+  try {
+    const response = await axios.get(
+      getLeitoraUrl('/'),
+      { timeout: 5000 }
+    );
+    return response.status === 200;
+  } catch (error) {
+    return false;
+  }
+}
+
+// ============================================
+// AÇÕES NA LEITORA
+// ============================================
+
+async function executarAcao(action, data) {
+  log('debug', `Executando ação: ${action}`, data);
+
+  switch (action) {
+    case 'login':
+      return await loginLeitora();
+
+    case 'checkStatus':
+      return await verificarLeitora();
+
+    case 'createUser':
+      return await criarUsuario(data);
+
+    case 'enrollFace':
+      return await cadastrarFace(data);
+
+    case 'uploadFaceImage':
+      return await uploadFaceImage(data);
+
+    case 'blockUserAccess':
+      return await bloquearUsuario(data);
+
+    case 'unblockUserAccess':
+      return await desbloquearUsuario(data);
+
+    case 'deleteUser':
+      return await deletarUsuario(data);
+
+    case 'loadAccessLogs':
+      return await carregarLogs();
+
+    case 'getUserImage':
+      return await obterImagemUsuario(data);
+
+    case 'listUsersWithFaces':
+      return await listarUsuariosComFaces();
+
+    case 'removeUserFace':
+      return await removerFaceUsuario(data);
+
+    default:
+      throw new Error(`Ação desconhecida: ${action}`);
+  }
+}
+
+async function criarUsuario(data) {
+  await garantirSessao();
+
+  log('info', `Criando usuário: ${data.name} (${data.registration})`);
+
+  const response = await axios.post(
+    getLeitoraUrl(`/create_objects.fcgi?session=${session}`),
+    {
+      object: 'users',
+      values: [{
+        name: data.name,
+        registration: data.registration,
+        begin_time: 0,
+        end_time: 2147483647
+      }]
+    },
+    { timeout: 10000 }
+  );
+
+  if (!response.data.ids || response.data.ids.length === 0) {
+    throw new Error('Falha ao criar usuário - nenhum ID retornado');
+  }
+
+  const userId = response.data.ids[0];
+  log('success', `Usuário criado com ID: ${userId}`);
+
+  // Adicionar ao grupo padrão
+  const groupId = data.groupId || 1;
+  try {
+    await axios.post(
+      getLeitoraUrl(`/create_objects.fcgi?session=${session}`),
+      {
+        object: 'user_groups',
+        values: [{
+          user_id: userId,
+          group_id: groupId
+        }]
+      },
+      { timeout: 10000 }
+    );
+    log('success', `Usuário ${userId} adicionado ao grupo ${groupId}`);
+  } catch (err) {
+    if (!err.response?.data?.error?.includes('already exists')) {
+      log('warn', 'Erro ao adicionar usuário ao grupo:', err.message);
+    }
+  }
+
+  return userId;
+}
+
+async function cadastrarFace(data) {
+  await garantirSessao();
+
+  log('info', `Cadastrando face para usuário ${data.userId}`);
+
+  const response = await axios.post(
+    getLeitoraUrl(`/remote_enroll.fcgi?session=${session}`),
+    {
+      type: 'face',
+      user_id: data.userId,
+      save: data.save !== undefined ? data.save : true,
+      sync: data.sync !== undefined ? data.sync : true,
+      auto: data.auto !== undefined ? data.auto : true,
+      countdown: data.countdown || 3
+    },
+    { timeout: 30000 }
+  );
+
+  log('success', `Face cadastrada para usuário ${data.userId}`);
+  return response.data;
+}
+
+async function uploadFaceImage(data) {
+  await garantirSessao();
+
+  log('info', `Fazendo upload de imagem para usuário ${data.userId}`);
+
+  const imageBuffer = Buffer.from(data.imageBase64, 'base64');
+  const timestamp = data.timestamp || Math.floor(Date.now() / 1000);
+
+  const response = await axios.post(
+    getLeitoraUrl(`/user_set_image.fcgi?user_id=${data.userId}&timestamp=${timestamp}&match=1&session=${session}`),
+    imageBuffer,
+    {
+      headers: {
+        'Content-Type': 'application/octet-stream'
+      },
+      timeout: 30000
+    }
+  );
+
+  log('success', `Imagem enviada para usuário ${data.userId}`);
+  return response.data;
+}
+
+async function bloquearUsuario(data) {
+  await garantirSessao();
+
+  log('info', `Bloqueando acesso do usuário ${data.userId}`);
+
+  // Buscar grupos do usuário
+  const userGroupsResp = await axios.post(
+    getLeitoraUrl(`/load_objects.fcgi?session=${session}`),
+    { object: 'user_groups' },
+    { timeout: 10000 }
+  );
+
+  const userGroups = (userGroupsResp.data.user_groups || []).filter(
+    ug => ug.user_id === data.userId
+  );
+
+  if (userGroups.length === 0) {
+    log('info', `Usuário ${data.userId} já não está em nenhum grupo`);
+    return true;
+  }
+
+  // Remover de cada grupo
+  for (const ug of userGroups) {
+    await axios.post(
+      getLeitoraUrl(`/destroy_objects.fcgi?session=${session}`),
+      {
+        object: 'user_groups',
+        where: {
+          user_groups: {
+            user_id: ug.user_id,
+            group_id: ug.group_id
+          }
+        }
+      },
+      { timeout: 10000 }
+    );
+  }
+
+  log('success', `Acesso bloqueado para usuário ${data.userId}`);
+  return true;
+}
+
+async function desbloquearUsuario(data) {
+  await garantirSessao();
+
+  const groupId = data.groupId || 1;
+  log('info', `Desbloqueando usuário ${data.userId} (grupo ${groupId})`);
+
+  const response = await axios.post(
+    getLeitoraUrl(`/create_objects.fcgi?session=${session}`),
+    {
+      object: 'user_groups',
+      values: [{
+        user_id: data.userId,
+        group_id: groupId
+      }]
+    },
+    { timeout: 10000 }
+  );
+
+  log('success', `Acesso desbloqueado para usuário ${data.userId}`);
+  return true;
+}
+
+async function deletarUsuario(data) {
+  await garantirSessao();
+
+  log('info', `Deletando usuário ${data.userId}`);
+
+  const response = await axios.post(
+    getLeitoraUrl(`/destroy_objects.fcgi?session=${session}`),
+    {
+      object: 'users',
+      where: {
+        users: {
+          id: data.userId
+        }
+      }
+    },
+    { timeout: 10000 }
+  );
+
+  log('success', `Usuário ${data.userId} deletado`);
+  return true;
+}
+
+async function carregarLogs() {
+  await garantirSessao();
+
+  log('debug', 'Carregando logs de acesso...');
+
+  const response = await axios.post(
+    getLeitoraUrl(`/load_objects.fcgi?session=${session}`),
+    { object: 'access_logs' },
+    { timeout: 10000 }
+  );
+
+  const logs = response.data.access_logs || [];
+  log('debug', `${logs.length} logs carregados`);
+  return logs;
+}
+
+async function obterImagemUsuario(data) {
+  await garantirSessao();
+
+  const response = await axios.get(
+    getLeitoraUrl(`/user_get_image.fcgi?user_id=${data.userId}&get_timestamp=1&session=${session}`),
+    { timeout: 10000 }
+  );
+
+  return response.data;
+}
+
+async function listarUsuariosComFaces() {
+  await garantirSessao();
+
+  const response = await axios.get(
+    getLeitoraUrl(`/user_list_images.fcgi?get_timestamp=1&session=${session}`),
+    { timeout: 10000 }
+  );
+
+  return response.data.image_info || [];
+}
+
+async function removerFaceUsuario(data) {
+  await garantirSessao();
+
+  log('info', `Removendo face do usuário ${data.userId}`);
+
+  const response = await axios.post(
+    getLeitoraUrl(`/user_remove_image.fcgi?session=${session}`),
+    { user_id: data.userId },
+    { timeout: 10000 }
+  );
+
+  log('success', `Face removida do usuário ${data.userId}`);
+  return true;
+}
+
+// ============================================
+// COMUNICAÇÃO COM VPS (WebSocket)
+// ============================================
+
+function conectarVPS() {
+  log('info', `Conectando na VPS: ${config.vps.url}`);
+
+  try {
+    ws = new WebSocket(config.vps.url, {
+      headers: {
+        'x-client-id': config.agent.id,
+        'authorization': `Bearer ${config.agent.token}`
+      }
+    });
+
+    ws.on('open', onVPSOpen);
+    ws.on('message', onVPSMessage);
+    ws.on('close', onVPSClose);
+    ws.on('error', onVPSError);
+    ws.on('pong', () => {
+      log('debug', 'Pong recebido da VPS');
+    });
+
+  } catch (error) {
+    log('error', 'Erro ao criar WebSocket:', error.message);
+    tentarReconectar();
+  }
+}
+
+function onVPSOpen() {
+  log('success', 'Conectado na VPS!');
+  isConnected = true;
+  reconnectAttempts = 0;
+
+  // Iniciar ping para manter conexão viva
+  if (pingInterval) clearInterval(pingInterval);
+  pingInterval = setInterval(() => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.ping();
+      log('debug', 'Ping enviado para VPS');
+    }
+  }, config.vps.pingInterval);
+
+  // Verificar leitora
+  verificarLeitora().then(ok => {
+    if (ok) {
+      log('success', `Leitora Control ID OK (${config.leitora.ip})`);
+    } else {
+      log('warn', `Leitora Control ID não responde (${config.leitora.ip})`);
+    }
+  });
+}
+
+async function onVPSMessage(data) {
+  let comando;
+
+  try {
+    comando = JSON.parse(data.toString());
+    log('debug', `Comando recebido: ${comando.action} (ID: ${comando.requestId})`);
+
+    // Executar ação na leitora
+    const resultado = await executarAcao(comando.action, comando.data);
+
+    // Enviar resposta de sucesso
+    enviarResposta({
+      requestId: comando.requestId,
+      success: true,
+      data: resultado
+    });
+
+  } catch (error) {
+    log('error', `Erro ao executar ${comando?.action}:`, error.message);
+
+    // Enviar resposta de erro
+    enviarResposta({
+      requestId: comando?.requestId,
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+}
+
+function enviarResposta(resposta) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(resposta));
+    log('debug', `Resposta enviada (ID: ${resposta.requestId})`);
+  } else {
+    log('error', 'WebSocket não está aberto. Não foi possível enviar resposta.');
+  }
+}
+
+function onVPSClose() {
+  log('warn', 'Conexão com VPS fechada');
+  isConnected = false;
+
+  if (pingInterval) {
+    clearInterval(pingInterval);
+    pingInterval = null;
+  }
+
+  tentarReconectar();
+}
+
+function onVPSError(error) {
+  log('error', 'Erro no WebSocket:', error.message);
+}
+
+function tentarReconectar() {
+  if (reconnectAttempts >= config.vps.maxReconnectAttempts) {
+    log('error', `Máximo de tentativas de reconexão atingido (${config.vps.maxReconnectAttempts}). Aguardando 1 minuto...`);
+    reconnectAttempts = 0;
+    setTimeout(tentarReconectar, 60000);
+    return;
+  }
+
+  reconnectAttempts++;
+  log('info', `Tentativa de reconexão ${reconnectAttempts}/${config.vps.maxReconnectAttempts} em 5 segundos...`);
+
+  setTimeout(() => {
+    conectarVPS();
+  }, config.vps.reconnectInterval);
+}
+
+// ============================================
+// INICIALIZAÇÃO
+// ============================================
+
+async function iniciar() {
+  log('info', '='.repeat(60));
+  log('info', 'Control ID Agent - Iniciando...');
+  log('info', '='.repeat(60));
+  log('info', `Agent ID: ${config.agent.id}`);
+  log('info', `Leitora: ${config.leitora.ip}:${config.leitora.port}`);
+  log('info', `VPS: ${config.vps.url}`);
+  log('info', '='.repeat(60));
+
+  // Verificar leitora antes de conectar
+  log('info', 'Verificando leitora Control ID...');
+  const leitoraOk = await verificarLeitora();
+
+  if (!leitoraOk) {
+    log('warn', 'Leitora não está respondendo. Continuando mesmo assim...');
+  } else {
+    log('success', 'Leitora Control ID está respondendo!');
+
+    // Fazer login
+    try {
+      await loginLeitora();
+    } catch (error) {
+      log('warn', 'Não foi possível fazer login na leitora. Tentando mais tarde...');
+    }
+  }
+
+  // Conectar na VPS
+  conectarVPS();
+}
+
+// Tratamento de sinais para shutdown gracioso
+process.on('SIGINT', () => {
+  log('info', 'Recebido SIGINT. Encerrando...');
+  if (ws) {
+    ws.close();
+  }
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  log('info', 'Recebido SIGTERM. Encerrando...');
+  if (ws) {
+    ws.close();
+  }
+  process.exit(0);
+});
+
+// Tratamento de erros não capturados
+process.on('uncaughtException', (error) => {
+  log('error', 'Erro não capturado:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  log('error', 'Promise rejeitada não tratada:', reason);
+});
+
+// Iniciar agent
+iniciar();

@@ -1,0 +1,633 @@
+import { SuperAdminLayout } from "@/components/SuperAdminLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Settings,
+  Palette,
+  DollarSign,
+  Image,
+  Save,
+  Upload,
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+
+interface SiteSettings {
+  // Branding
+  siteName: string;
+  logoUrl: string;
+  primaryColor: string;
+  secondaryColor: string;
+
+  // Hero Section
+  heroTitle: string;
+  heroSubtitle: string;
+  heroDescription: string;
+
+  // Banners
+  banner1Title: string;
+  banner1Description: string;
+  banner1Image: string;
+  banner2Title: string;
+  banner2Description: string;
+  banner2Image: string;
+
+  // Pricing Plans
+  basicPrice: number;
+  professionalPrice: number;
+  enterprisePrice: number;
+
+  // Contact
+  contactEmail: string;
+  contactPhone: string;
+  whatsappNumber: string;
+
+  // Social Media
+  facebookUrl: string;
+  instagramUrl: string;
+  linkedinUrl: string;
+}
+
+const tabs = [
+  { id: "branding", label: "Branding", icon: Palette },
+  { id: "content", label: "Conteúdo", icon: Settings },
+  { id: "pricing", label: "Preços", icon: DollarSign },
+  { id: "media", label: "Mídias", icon: Image },
+];
+
+export default function SuperAdminSettings() {
+  const [activeTab, setActiveTab] = useState("branding");
+  const [settings, setSettings] = useState<SiteSettings>({
+    // Branding
+    siteName: "SysFit Pro",
+    logoUrl: "",
+    primaryColor: "#6366f1",
+    secondaryColor: "#8b5cf6",
+
+    // Hero
+    heroTitle: "Sistema Completo para Academias Modernas",
+    heroSubtitle: "Gerencie sua academia com eficiência total",
+    heroDescription: "Controle biométrico Control ID, integração Wellhub, PIX automático e app mobile para alunos.",
+
+    // Banners
+    banner1Title: "Control ID - Reconhecimento Facial",
+    banner1Description: "Integração com Control ID para controle de acesso biométrico",
+    banner1Image: "",
+    banner2Title: "Integração Wellhub (Gympass)",
+    banner2Description: "Sincronização automática com Wellhub",
+    banner2Image: "",
+
+    // Pricing
+    basicPrice: 149,
+    professionalPrice: 299,
+    enterprisePrice: 599,
+
+    // Contact
+    contactEmail: "contato@sysfit.com.br",
+    contactPhone: "(11) 99999-9999",
+    whatsappNumber: "5511999999999",
+
+    // Social
+    facebookUrl: "",
+    instagramUrl: "",
+    linkedinUrl: "",
+  });
+
+  const { data: settingsData, isLoading } = trpc.settings.get.useQuery();
+  const updateMutation = trpc.settings.update.useMutation({
+    onSuccess: () => {
+      toast.success("Configurações salvas com sucesso!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao salvar configurações: " + error.message);
+    },
+  });
+
+  // Load settings from backend
+  useEffect(() => {
+    if (settingsData) {
+      setSettings({
+        siteName: settingsData.siteName,
+        logoUrl: settingsData.logoUrl || "",
+        primaryColor: settingsData.primaryColor,
+        secondaryColor: settingsData.secondaryColor,
+        heroTitle: settingsData.heroTitle,
+        heroSubtitle: settingsData.heroSubtitle,
+        heroDescription: settingsData.heroDescription || "",
+        banner1Title: settingsData.banner1Title || "",
+        banner1Description: settingsData.banner1Description || "",
+        banner1Image: settingsData.banner1Image || "",
+        banner2Title: settingsData.banner2Title || "",
+        banner2Description: settingsData.banner2Description || "",
+        banner2Image: settingsData.banner2Image || "",
+        basicPrice: settingsData.basicPrice,
+        professionalPrice: settingsData.professionalPrice,
+        enterprisePrice: settingsData.enterprisePrice,
+        contactEmail: settingsData.contactEmail || "",
+        contactPhone: settingsData.contactPhone || "",
+        whatsappNumber: settingsData.whatsappNumber || "",
+        facebookUrl: settingsData.facebookUrl || "",
+        instagramUrl: settingsData.instagramUrl || "",
+        linkedinUrl: settingsData.linkedinUrl || "",
+      });
+    }
+  }, [settingsData]);
+
+  const handleSave = async () => {
+    updateMutation.mutate({
+      siteName: settings.siteName,
+      logoUrl: settings.logoUrl || null,
+      primaryColor: settings.primaryColor,
+      secondaryColor: settings.secondaryColor,
+      heroTitle: settings.heroTitle,
+      heroSubtitle: settings.heroSubtitle,
+      heroDescription: settings.heroDescription || null,
+      banner1Title: settings.banner1Title || null,
+      banner1Description: settings.banner1Description || null,
+      banner1Image: settings.banner1Image || null,
+      banner2Title: settings.banner2Title || null,
+      banner2Description: settings.banner2Description || null,
+      banner2Image: settings.banner2Image || null,
+      basicPrice: settings.basicPrice,
+      professionalPrice: settings.professionalPrice,
+      enterprisePrice: settings.enterprisePrice,
+      contactEmail: settings.contactEmail || null,
+      contactPhone: settings.contactPhone || null,
+      whatsappNumber: settings.whatsappNumber || null,
+      facebookUrl: settings.facebookUrl || null,
+      instagramUrl: settings.instagramUrl || null,
+      linkedinUrl: settings.linkedinUrl || null,
+    });
+  };
+
+  const handleFileUpload = (field: "banner1Image" | "banner2Image") => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de arquivo
+    if (!file.type.startsWith('image/')) {
+      toast.error("Por favor, selecione um arquivo de imagem");
+      return;
+    }
+
+    // Validar tamanho (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Imagem muito grande. Tamanho máximo: 5MB");
+      return;
+    }
+
+    // Converter para base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setSettings({ ...settings, [field]: base64String });
+      toast.success("Imagem carregada! Clique em 'Salvar Alterações' para confirmar.");
+    };
+    reader.onerror = () => {
+      toast.error("Erro ao carregar imagem");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = (field: "banner1Image" | "banner2Image") => {
+    setSettings({ ...settings, [field]: null });
+    toast.success("Imagem removida! Clique em 'Salvar Alterações' para confirmar.");
+  };
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case "branding":
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Identidade Visual</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="siteName">Nome do Site</Label>
+                  <Input
+                    id="siteName"
+                    value={settings.siteName}
+                    onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="logoUrl">URL do Logo</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="logoUrl"
+                      placeholder="https://..."
+                      value={settings.logoUrl}
+                      onChange={(e) => setSettings({ ...settings, logoUrl: e.target.value })}
+                    />
+                    <Button variant="outline">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Logo aparecerá no header do site e na landing page
+                  </p>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="primaryColor">Cor Primária</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="primaryColor"
+                        type="color"
+                        value={settings.primaryColor}
+                        onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
+                        className="w-20"
+                      />
+                      <Input
+                        value={settings.primaryColor}
+                        onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
+                        placeholder="#6366f1"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="secondaryColor">Cor Secundária</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="secondaryColor"
+                        type="color"
+                        value={settings.secondaryColor}
+                        onChange={(e) => setSettings({ ...settings, secondaryColor: e.target.value })}
+                        className="w-20"
+                      />
+                      <Input
+                        value={settings.secondaryColor}
+                        onChange={(e) => setSettings({ ...settings, secondaryColor: e.target.value })}
+                        placeholder="#8b5cf6"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Contato e Redes Sociais</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="contactEmail">Email de Contato</Label>
+                    <Input
+                      id="contactEmail"
+                      type="email"
+                      value={settings.contactEmail}
+                      onChange={(e) => setSettings({ ...settings, contactEmail: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="contactPhone">Telefone</Label>
+                    <Input
+                      id="contactPhone"
+                      value={settings.contactPhone}
+                      onChange={(e) => setSettings({ ...settings, contactPhone: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="whatsappNumber">WhatsApp (com DDI)</Label>
+                  <Input
+                    id="whatsappNumber"
+                    placeholder="5511999999999"
+                    value={settings.whatsappNumber}
+                    onChange={(e) => setSettings({ ...settings, whatsappNumber: e.target.value })}
+                  />
+                </div>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="facebookUrl">Facebook</Label>
+                    <Input
+                      id="facebookUrl"
+                      placeholder="https://facebook.com/..."
+                      value={settings.facebookUrl}
+                      onChange={(e) => setSettings({ ...settings, facebookUrl: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="instagramUrl">Instagram</Label>
+                    <Input
+                      id="instagramUrl"
+                      placeholder="https://instagram.com/..."
+                      value={settings.instagramUrl}
+                      onChange={(e) => setSettings({ ...settings, instagramUrl: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="linkedinUrl">LinkedIn</Label>
+                    <Input
+                      id="linkedinUrl"
+                      placeholder="https://linkedin.com/..."
+                      value={settings.linkedinUrl}
+                      onChange={(e) => setSettings({ ...settings, linkedinUrl: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case "content":
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Hero Section (Topo da Página)</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="heroTitle">Título Principal</Label>
+                  <Input
+                    id="heroTitle"
+                    value={settings.heroTitle}
+                    onChange={(e) => setSettings({ ...settings, heroTitle: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="heroSubtitle">Subtítulo</Label>
+                  <Input
+                    id="heroSubtitle"
+                    value={settings.heroSubtitle}
+                    onChange={(e) => setSettings({ ...settings, heroSubtitle: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="heroDescription">Descrição</Label>
+                  <Textarea
+                    id="heroDescription"
+                    rows={3}
+                    value={settings.heroDescription}
+                    onChange={(e) => setSettings({ ...settings, heroDescription: e.target.value })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Banner 1 - Control ID</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="banner1Title">Título</Label>
+                  <Input
+                    id="banner1Title"
+                    value={settings.banner1Title}
+                    onChange={(e) => setSettings({ ...settings, banner1Title: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="banner1Description">Descrição</Label>
+                  <Textarea
+                    id="banner1Description"
+                    rows={2}
+                    value={settings.banner1Description}
+                    onChange={(e) => setSettings({ ...settings, banner1Description: e.target.value })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Banner 2 - Wellhub</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="banner2Title">Título</Label>
+                  <Input
+                    id="banner2Title"
+                    value={settings.banner2Title}
+                    onChange={(e) => setSettings({ ...settings, banner2Title: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="banner2Description">Descrição</Label>
+                  <Textarea
+                    id="banner2Description"
+                    rows={2}
+                    value={settings.banner2Description}
+                    onChange={(e) => setSettings({ ...settings, banner2Description: e.target.value })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case "pricing":
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Preços dos Planos SaaS</CardTitle>
+                <p className="text-sm text-gray-600">
+                  Estes são os preços exibidos na landing page. Para gerenciar planos completos, vá em "Planos SaaS"
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="basicPrice">Plano Básico (R$/mês)</Label>
+                    <Input
+                      id="basicPrice"
+                      type="number"
+                      value={settings.basicPrice}
+                      onChange={(e) => setSettings({ ...settings, basicPrice: parseFloat(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="professionalPrice">Plano Professional (R$/mês)</Label>
+                    <Input
+                      id="professionalPrice"
+                      type="number"
+                      value={settings.professionalPrice}
+                      onChange={(e) => setSettings({ ...settings, professionalPrice: parseFloat(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="enterprisePrice">Plano Enterprise (R$/mês)</Label>
+                    <Input
+                      id="enterprisePrice"
+                      type="number"
+                      value={settings.enterprisePrice}
+                      onChange={(e) => setSettings({ ...settings, enterprisePrice: parseFloat(e.target.value) })}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-6">
+                <p className="text-sm text-blue-900">
+                  💡 <strong>Dica:</strong> Os preços aqui são apenas para exibição no site. Para configurar
+                  os planos completos com funcionalidades e limites, acesse a página "Planos SaaS" no menu.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case "media":
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Imagens e Banners</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Banner 1 - Control ID</Label>
+                  <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-sm text-gray-600 mb-2">
+                      Arraste uma imagem ou clique para fazer upload
+                    </p>
+                    <input
+                      type="file"
+                      id="banner1Input"
+                      accept="image/*"
+                      onChange={handleFileUpload("banner1Image")}
+                      className="hidden"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById("banner1Input")?.click()}
+                    >
+                      Selecionar Arquivo
+                    </Button>
+                  </div>
+                  {settings.banner1Image && (
+                    <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+                      <img
+                        src={settings.banner1Image}
+                        alt="Banner 1"
+                        className="max-w-xs rounded border mb-3"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleRemoveImage("banner1Image")}
+                      >
+                        Excluir Banner 1
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Label>Banner 2 - Wellhub</Label>
+                  <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-sm text-gray-600 mb-2">
+                      Arraste uma imagem ou clique para fazer upload
+                    </p>
+                    <input
+                      type="file"
+                      id="banner2Input"
+                      accept="image/*"
+                      onChange={handleFileUpload("banner2Image")}
+                      className="hidden"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById("banner2Input")?.click()}
+                    >
+                      Selecionar Arquivo
+                    </Button>
+                  </div>
+                  {settings.banner2Image && (
+                    <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+                      <img
+                        src={settings.banner2Image}
+                        alt="Banner 2"
+                        className="max-w-xs rounded border mb-3"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleRemoveImage("banner2Image")}
+                      >
+                        Excluir Banner 2
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <SuperAdminLayout>
+      <div className="max-w-7xl mx-auto px-8 py-8 space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900">Configurações do Site</h2>
+            <p className="text-gray-600 mt-1">Gerencie logo, banners, preços e conteúdo da landing page</p>
+          </div>
+          <Button
+            onClick={handleSave}
+            disabled={updateMutation.isPending}
+            className="bg-blue-600 hover:bg-blue-700"
+            size="lg"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+          </Button>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`
+                    flex items-center py-4 px-1 border-b-2 font-medium text-sm transition
+                    ${
+                      activeTab === tab.id
+                        ? "border-blue-500 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }
+                  `}
+                >
+                  <Icon className="w-5 h-5 mr-2" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Content */}
+        {renderContent()}
+      </div>
+    </SuperAdminLayout>
+  );
+}

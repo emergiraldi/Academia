@@ -1,0 +1,29 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cache/
+coverage/
+
+# Database dumps and backups
+*.sql
+*.bkp
+*.dump
+
+# PostgreSQL tools (large binaries)
+pg-tools/
+*.exe
+*.zip
+
+# Windows special files
+nul
+CON
+PRN
+AUX
+NUL

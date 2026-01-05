@@ -1,0 +1,89 @@
+================================================================================
+COMPARAÇÃO DO PEDIDO 54329 - POSTGRESQL vs FIREBIRD
+================================================================================
+
+Data: 23/12/2025
+Pedido: 54329
+Cliente: 12203 - BRASILIT
+Data do Pedido: 2025-12-15
+
+================================================================================
+VALORES NO POSTGRESQL:
+================================================================================
+
+VLNOTA (Total):      R$   59,840.00
+VLPROD (Produtos):   R$   53,934.15
+VLFRETE (Frete):     R$    6,472.09  ⚠️
+VLDESC (Desconto):   R$    1,752.86
+VLSUBTRIB:           R$    4,152.99
+
+================================================================================
+VALORES NO FIREBIRD:
+================================================================================
+
+VLR_TOTAL:           R$   59,840.00  ✓ OK
+VLR_PRODUTOS:        R$   53,934.15  ✓ OK
+VLRFRETE:            R$        0.00  ✗ PROBLEMA!
+VLR_DESCONTO:        R$        0.00  ✗ PROBLEMA!
+
+Soma dos Itens:      R$   53,934.15  ✓ OK (confere com VLR_PRODUTOS)
+
+Itens do pedido:
+  • Produto 66723:  45 un  x R$ 29.63 = R$  1,333.35
+  • Produto 151009: 360 un x R$ 64.01 = R$ 23,043.60
+  • Produto 191555: 630 un x R$ 35.60 = R$ 22,428.00
+  • Produto 191562: 120 un x R$ 59.41 = R$  7,129.20
+
+================================================================================
+PROBLEMAS IDENTIFICADOS:
+================================================================================
+
+1. ✗ VLRFRETE está ZERADO no Firebird
+   - PostgreSQL: R$ 6,472.09
+   - Firebird: R$ 0.00
+   - DIFERENÇA: R$ 6,472.09
+
+2. ✗ VLR_DESCONTO está ZERADO no Firebird
+   - PostgreSQL: R$ 1,752.86
+   - Firebird: R$ 0.00
+   - DIFERENÇA: R$ 1,752.86
+
+3. ✓ VLR_TOTAL está CORRETO
+   - Ambos: R$ 59,840.00
+
+4. ✓ VLR_PRODUTOS está CORRETO
+   - Ambos: R$ 53,934.15
+
+================================================================================
+ANÁLISE:
+================================================================================
+
+O VLR_TOTAL está correto (R$ 59,840.00), mas:
+
+- O FRETE não foi migrado (R$ 6,472.09 perdidos)
+- O DESCONTO não foi migrado (R$ 1,752.86 perdidos)
+
+Isso indica que o script de migração pode não ter mapeado corretamente os
+campos VLFRETE e VLDESC do PostgreSQL para o Firebird.
+
+CÁLCULO CORRETO:
+  Produtos:     R$ 53,934.15
+  + Frete:      R$  6,472.09
+  - Desconto:   R$  1,752.86
+  + SubTrib:    R$  4,152.99
+  ──────────────────────────
+  = Total:      R$ 62,806.37  ⚠️
+
+Mas no banco está R$ 59,840.00...
+
+Precisa verificar a fórmula exata que o PostgreSQL usa para calcular VLNOTA.
+
+================================================================================
+PRÓXIMA AÇÃO:
+================================================================================
+
+1. Verificar se outros pedidos também têm VLRFRETE e VLR_DESCONTO zerados
+2. Corrigir o script de migração (se necessário)
+3. Re-migrar os campos VLRFRETE e VLR_DESCONTO de todos os pedidos
+
+================================================================================

@@ -1,0 +1,59 @@
+const axios = require('axios');
+
+const baseUrl = 'http://192.168.2.142:80';
+
+async function verLogsControlId() {
+  try {
+    console.log('🔐 Conectando à Control ID...\n');
+
+    const loginResponse = await axios.post(
+      `${baseUrl}/login.fcgi`,
+      { login: 'admin', password: 'admin' },
+      { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
+    );
+
+    const session = loginResponse.data.session;
+    console.log('✅ Conectado!\n');
+
+    console.log('📋 Buscando access_logs...\n');
+
+    const response = await axios.post(
+      `${baseUrl}/load_objects.fcgi?session=${session}`,
+      {
+        object: 'access_logs'
+      },
+      { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
+    );
+
+    const logs = response.data.access_logs || [];
+
+    console.log(`✅ Encontrados ${logs.length} logs\n`);
+
+    if (logs.length > 0) {
+      console.log('📊 Estrutura do primeiro log:\n');
+      console.log(JSON.stringify(logs[0], null, 2));
+
+      console.log('\n📊 Estrutura do último log:\n');
+      console.log(JSON.stringify(logs[logs.length - 1], null, 2));
+
+      console.log('\n📊 Todos os campos disponíveis:\n');
+      const allKeys = new Set();
+      logs.forEach(log => {
+        Object.keys(log).forEach(key => allKeys.add(key));
+      });
+      console.log('   Campos:', Array.from(allKeys).join(', '));
+    } else {
+      console.log('❌ Nenhum log encontrado');
+    }
+
+  } catch (error) {
+    if (error.response) {
+      console.error('❌ Erro:', error.response.status);
+      console.error('   Dados:', JSON.stringify(error.response.data, null, 2));
+    } else {
+      console.error('❌ Erro:', error.message);
+    }
+  }
+}
+
+verLogsControlId();
