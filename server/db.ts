@@ -2341,6 +2341,20 @@ export async function updateGymSettings(gymId: number, settings: any) {
   return result;
 }
 
+export async function createGymSettings(gymId: number) {
+  const conn = await getConnection();
+  const [result] = await conn.execute(
+    `INSERT INTO gym_settings (
+      gymId, daysToBlockAfterDue, blockOnExpiredExam, examValidityDays, minimumAge,
+      daysToStartInterest, interestRatePerMonth, lateFeePercentage,
+      allowInstallments, maxInstallments, minimumInstallmentValue
+    ) VALUES (?, 7, 1, 90, 16, 1, 2.00, 2.00, 1, 6, 5000)`,
+    [gymId]
+  );
+  await conn.end();
+  return result;
+}
+
 // ============ INSTALLMENTS ============
 
 export async function createInstallmentPayments(

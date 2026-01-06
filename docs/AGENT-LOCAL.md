@@ -649,5 +649,62 @@ cat debug.txt
 
 ---
 
-**Última atualização:** Dezembro 2024
-**Versão:** 1.0.0
+## 🔧 Configuração Dinâmica do Agent ID
+
+### Como Obter o Agent ID Correto
+
+O `AGENT_ID` deve corresponder ao gymId da sua academia no banco de dados. Ele segue o padrão:
+
+```
+AGENT_ID=academia-{gymId}
+```
+
+### Ao Cadastrar Nova Academia
+
+Quando você cadastra uma academia através da página de registro (`/gym/signup`), o sistema exibe automaticamente o Agent ID correto na tela de sucesso:
+
+```
+Seu Agent ID: academia-5
+```
+
+Copie este ID e configure no arquivo `agent/.env`:
+
+```env
+AGENT_ID=academia-5
+```
+
+### Se Você Já Tem uma Academia Cadastrada
+
+Consulte o banco de dados para descobrir o gymId:
+
+```sql
+SELECT id, name, slug FROM gyms;
+```
+
+Exemplo de resultado:
+```
++----+-------------------+-----------+
+| id | name              | slug      |
++----+-------------------+-----------+
+|  1 | SysFit Pro        | sysfitpro |
+|  4 | Academia Fit Life | fitlife   |
+|  5 | Academia Vida     | vida      |
++----+-------------------+-----------+
+```
+
+Se sua academia tem `id = 5`, configure:
+
+```env
+AGENT_ID=academia-5
+```
+
+### Importante
+
+- Cada agent deve ter um ID único
+- Múltiplas academias precisam de múltiplos agents
+- Se mudar o gymId no banco, atualize o AGENT_ID no agent
+
+---
+
+**Última atualização:** Janeiro 2026
+**Versão:** 2.0.0

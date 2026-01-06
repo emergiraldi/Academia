@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
+import { getDb, createGymSettings } from "../db";
 import { gyms, students, users } from "../../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { TRPCError } from "@trpc/server";
 
 export const gymsRouter = router({
   // Listar todas as academias (super admin)
@@ -115,6 +116,88 @@ export const gymsRouter = router({
           password: tempPassword,
           loginUrl: `/admin/login?gym=${input.slug}`,
         },
+      };
+    }),
+
+  // Auto-cadastro de academia (público)
+  signUp: publicProcedure
+    .input(
+      z.object({
+        // Dados da Academia
+        gymName: z.string().min(1, "Nome da academia é obrigatório"),
+        gymSlug: z.string().min(1, "Identificador é obrigatório"),
+        cnpj: z.string().optional(),
+        email: z.string().email("Email inválido"),
+        phone: z.string().optional(),
+        address: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().max(2).optional(),
+        zipCode: z.string().optional(),
+
+        // Dados do Administrador
+        adminName: z.string().min(1, "Nome do administrador é obrigatório"),
+        adminEmail: z.string().email("Email do administrador é inválido"),
+        adminPassword: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Verificar se slug já existe
+      const [existingGym] = await db.select().from(gyms).where(eq(gyms.slug, input.gymSlug));
+      if (existingGym) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Este identificador já está em uso. Por favor, escolha outro." });
+      }
+
+      // Verificar se email admin já existe
+      const [existingAdmin] = await db.select().from(users).where(eq(users.email, input.adminEmail));
+      if (existingAdmin) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Este email já está cadastrado." });
+      }
+
+      // Criar a academia
+      const [result] = await db.insert(gyms).values({
+        name: input.gymName,
+        slug: input.gymSlug,
+        cnpj: input.cnpj || null,
+        email: input.email,
+        phone: input.phone || null,
+        address: input.address || null,
+        city: input.city || null,
+        state: input.state || null,
+        zipCode: input.zipCode || null,
+        plan: "basic",
+        planStatus: "trial",
+        status: "active",
+      });
+
+      const gymId = Number(result.insertId);
+
+      // Criar configurações padrão para a academia
+      await createGymSettings(gymId);
+
+      // Criar usuário administrador
+      const hashedPassword = await bcrypt.hash(input.adminPassword, 10);
+      const openId = `gym-admin-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+      await db.insert(users).values({
+        gymId,
+        openId,
+        email: input.adminEmail,
+        password: hashedPassword,
+        name: input.adminName,
+        role: "gym_admin",
+        phone: input.phone || null,
+      });
+
+      // Retornar informações importantes
+      return {
+        success: true,
+        gymId,
+        gymSlug: input.gymSlug,
+        agentId: `academia-${gymId}`, // ID para configurar no agent local
+        message: "Academia cadastrada com sucesso!",
       };
     }),
 
