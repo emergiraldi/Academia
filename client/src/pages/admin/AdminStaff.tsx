@@ -30,8 +30,7 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/PageHeader";
-
-const GYM_SLUG = "fitlife";
+import { useGym } from "@/_core/hooks/useGym";
 
 interface Permissions {
   viewStudents: boolean;
@@ -54,6 +53,7 @@ const PERMISSION_LABELS: Record<keyof Permissions, string> = {
 };
 
 export default function AdminStaff() {
+  const { gymSlug } = useGym();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
@@ -95,7 +95,7 @@ export default function AdminStaff() {
 
   const utils = trpc.useUtils();
   const { data: staff, isLoading } = trpc.staff.list.useQuery({
-    gymSlug: GYM_SLUG,
+    gymSlug,
   });
 
   const createMutation = trpc.staff.create.useMutation({
@@ -156,7 +156,7 @@ export default function AdminStaff() {
     }
 
     createMutation.mutate({
-      gymSlug: GYM_SLUG,
+      gymSlug,
       name: formData.name,
       email: formData.email,
       password: formData.password,
@@ -206,7 +206,7 @@ export default function AdminStaff() {
     if (!selectedStaff) return;
 
     const updates: any = {
-      gymSlug: GYM_SLUG,
+      gymSlug,
       staffId: selectedStaff.id,
       permissions: editPermissions,
     };
@@ -221,7 +221,7 @@ export default function AdminStaff() {
   const handleDelete = (staffId: number) => {
     if (confirm("Tem certeza que deseja excluir este funcionário?")) {
       deleteMutation.mutate({
-        gymSlug: GYM_SLUG,
+        gymSlug,
         staffId,
       });
     }
