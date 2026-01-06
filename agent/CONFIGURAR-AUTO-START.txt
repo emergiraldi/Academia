@@ -1,0 +1,275 @@
+===============================================
+  CONFIGURAR AUTO-START DO AGENT NO WINDOWS
+===============================================
+
+
+📦 INSTALAÇÃO COMPLETA NAS ACADEMIAS (CLIENTES)
+===============================================
+
+PASSO 1: PREPARAR PASTA
+-----------------------
+1. Criar pasta no computador da academia:
+   C:\SysFit\agent
+
+2. Copiar TODOS os arquivos desta pasta para lá:
+   - agent.js
+   - package.json
+   - .env.example
+   - start-agent.bat
+   - COMANDOS-AGENT.txt
+   - CONFIGURAR-AUTO-START.txt
+
+
+PASSO 2: INSTALAR NODE.JS
+--------------------------
+1. Baixar Node.js 20 LTS: https://nodejs.org
+2. Executar instalador
+3. Verificar: abrir CMD e digitar "node -v"
+
+
+PASSO 3: INSTALAR DEPENDÊNCIAS
+-------------------------------
+1. Abrir Prompt de Comando (CMD)
+2. Navegar até a pasta:
+   cd C:\SysFit\agent
+
+3. Instalar dependências:
+   npm install
+
+4. Instalar PM2 globalmente:
+   npm install -g pm2
+
+
+PASSO 4: CONFIGURAR .ENV
+------------------------
+1. Copiar .env.example para .env:
+   copy .env.example .env
+
+2. Editar arquivo .env com os dados da academia:
+   notepad .env
+
+   Configurar:
+   - AGENT_ID=academia-X  (fornecido no cadastro)
+   - LEITORA_IP=192.168.X.X  (IP do Control ID)
+   - VPS_URL=wss://www.sysfitpro.com.br/agent
+   - AUTH_TOKEN=xxxxx  (fornecido pelo suporte)
+
+3. Salvar e fechar
+
+
+PASSO 5: USAR O ARQUIVO CORRETO
+--------------------------------
+⭐ OPÇÃO A - Mais fácil (Recomendado):
+   1. Renomear: start-agent-PARA-CLIENTES.bat
+      Para: start-agent.bat
+
+   (Este arquivo já tem o caminho correto C:\SysFit\agent)
+
+OPÇÃO B - Manual:
+   1. Editar o arquivo start-agent.bat:
+      notepad start-agent.bat
+
+   2. Mudar a linha 6 de:
+      cd /d "C:\Projeto\Academia\agent"
+
+      Para:
+      cd /d "C:\SysFit\agent"
+
+   3. Salvar e fechar
+
+
+PASSO 6: TESTAR AGENT
+----------------------
+1. Executar manualmente o script:
+   C:\SysFit\agent\start-agent.bat
+
+2. Verificar se iniciou:
+   pm2 status
+
+3. Ver logs:
+   pm2 logs agent-sysfitpro
+
+4. Deve aparecer:
+   ✅ "Conectado ao servidor VPS!"
+   ✅ "Autenticado como academia-X"
+
+
+PASSO 7: CONFIGURAR AUTO-START
+-------------------------------
+Agora siga as instruções abaixo para configurar auto-start...
+
+
+===============================================
+  AUTO-START - AGENDADOR DE TAREFAS
+===============================================
+
+O arquivo start-agent.bat já foi criado!
+Agora siga estes passos para configurar o auto-start:
+
+
+📋 OPÇÃO 1: AGENDADOR DE TAREFAS (RECOMENDADO)
+===============================================
+
+1. Pressione Win + R e digite: taskschd.msc
+   (Isso abre o Agendador de Tarefas)
+
+2. No painel direito, clique em "Criar Tarefa Básica"
+
+3. Preencha os campos:
+
+   Nome: SysFit Agent Auto-Start
+   Descrição: Inicia o Agent do SysFit Pro automaticamente
+
+4. Gatilho:
+   ☑️ Quando o computador iniciar
+
+5. Ação:
+   ☑️ Iniciar um programa
+
+6. Programa/script:
+
+   ⚠️ NA SUA MÁQUINA (desenvolvimento):
+   C:\Projeto\Academia\agent\start-agent.bat
+
+   ⚠️ NAS ACADEMIAS (produção):
+   C:\SysFit\agent\start-agent.bat
+
+7. IMPORTANTE - Configurações avançadas:
+   - Marque: ✅ "Executar com privilégios mais altos"
+   - Marque: ✅ "Executar estando o usuário conectado ou não"
+   - Configure para: "Windows 10"
+
+8. Clique em "Concluir"
+
+
+📋 OPÇÃO 2: PM2 SAVE (MAIS SIMPLES)
+===============================================
+
+Se PM2 já está rodando o agent, basta salvar:
+
+1. Verificar se agent está rodando:
+   pm2 status
+
+2. Se estiver rodando, salvar configuração:
+   pm2 save
+
+3. Configurar PM2 para restaurar na inicialização:
+   pm2 startup
+
+   (Execute o comando que aparecer na tela)
+
+
+📋 OPÇÃO 3: PASTA DE INICIALIZAÇÃO (MENOS RECOMENDADO)
+===============================================
+
+1. Pressione Win + R e digite: shell:startup
+
+2. Isso abre a pasta de inicialização do Windows
+
+3. Clique com botão direito dentro da pasta
+
+4. Novo > Atalho
+
+5. Localização:
+
+   ⚠️ NA SUA MÁQUINA (desenvolvimento):
+   C:\Projeto\Academia\agent\start-agent.bat
+
+   ⚠️ NAS ACADEMIAS (produção):
+   C:\SysFit\agent\start-agent.bat
+
+6. Nome do atalho:
+   SysFit Agent
+
+
+===============================================
+  TESTAR SE FUNCIONOU
+===============================================
+
+1. Reinicie o computador
+
+2. Aguarde 1-2 minutos após o login
+
+3. Abra o terminal e digite:
+   pm2 status
+
+4. O agent "agent-sysfitpro" deve aparecer como "online"
+
+
+===============================================
+  DESATIVAR AUTO-START
+===============================================
+
+OPÇÃO 1 (Agendador de Tarefas):
+   1. Abrir taskschd.msc
+   2. Encontrar "SysFit Agent Auto-Start"
+   3. Clicar com botão direito > Desabilitar (ou Excluir)
+
+OPÇÃO 2 (PM2):
+   pm2 unstartup
+   pm2 delete agent-sysfitpro
+
+OPÇÃO 3 (Pasta de Inicialização):
+   1. Win + R > shell:startup
+   2. Deletar o atalho "SysFit Agent"
+
+
+===============================================
+  PROBLEMAS?
+===============================================
+
+❌ Agent não inicia após reiniciar?
+   - Verifique se PM2 está instalado globalmente
+   - Execute manualmente o start-agent.bat:
+     * Sua máquina: C:\Projeto\Academia\agent\start-agent.bat
+     * Academias: C:\SysFit\agent\start-agent.bat
+   - Veja os erros que aparecem
+
+❌ Script não executa?
+   - Clique com botão direito no start-agent.bat
+   - Propriedades > Desbloquear (se aparecer)
+   - Tente executar como Administrador
+
+❌ PM2 não encontrado?
+   npm install -g pm2
+
+
+===============================================
+  CHECKLIST RÁPIDO - INSTALAÇÃO NA ACADEMIA
+===============================================
+
+□ 1. Criar pasta C:\SysFit\agent
+□ 2. Copiar todos os arquivos do agent
+□ 3. Instalar Node.js 20 LTS
+□ 4. Instalar PM2: npm install -g pm2
+□ 5. Instalar dependências: npm install
+□ 6. Configurar .env com dados da academia
+□ 7. Editar start-agent.bat (trocar caminho)
+□ 8. Testar: executar start-agent.bat
+□ 9. Verificar: pm2 status
+□ 10. Configurar Auto-Start no Agendador de Tarefas
+□ 11. Reiniciar computador e testar
+
+
+===============================================
+  ARQUIVOS NECESSÁRIOS PARA COPIAR
+===============================================
+
+✅ agent.js
+✅ package.json
+✅ package-lock.json (se existir)
+✅ .env.example
+✅ start-agent.bat (para desenvolvimento)
+✅ start-agent-PARA-CLIENTES.bat (renomear para start-agent.bat)
+✅ COMANDOS-AGENT.txt
+✅ CONFIGURAR-AUTO-START.txt
+✅ README.md (opcional)
+
+IMPORTANTE: Nas academias, use start-agent-PARA-CLIENTES.bat
+(já tem o caminho C:\SysFit\agent configurado)
+
+
+===============================================
+Última atualização: Janeiro 2025
+Versão: 3.0.0
+===============================================

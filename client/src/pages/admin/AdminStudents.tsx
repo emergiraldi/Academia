@@ -14,6 +14,7 @@ import { Users, Plus, Edit, Trash2, Search, Mail, Phone, Calendar, CreditCard, C
 import { Badge } from "@/components/ui/badge";
 import DashboardLayout from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/PageHeader";
+import { validateCPF, formatCPF, formatCEP, formatPhone, fetchAddressByCEP } from "@/lib/validators";
 
 export default function AdminStudents() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -230,9 +231,61 @@ export default function AdminStudents() {
     });
   };
 
+  // Buscar endereço pelo CEP
+  const handleCEPBlur = async (cep: string) => {
+    const cleanCEP = cep.replace(/\D/g, '');
+
+    if (cleanCEP.length !== 8) return;
+
+    try {
+      const address = await fetchAddressByCEP(cleanCEP);
+
+      if (address) {
+        setFormData(prev => ({
+          ...prev,
+          address: address.logradouro || prev.address,
+          city: address.localidade || prev.city,
+          state: address.uf || prev.state,
+          zipCode: formatCEP(cleanCEP),
+        }));
+        toast.success("Endereço encontrado!");
+      } else {
+        toast.error("CEP não encontrado");
+      }
+    } catch (error) {
+      toast.error("Erro ao buscar CEP");
+    }
+  };
+
+  // Validar e formatar CPF
+  const handleCPFBlur = (cpf: string) => {
+    const cleanCPF = cpf.replace(/\D/g, '');
+
+    if (cleanCPF.length === 0) return;
+
+    if (!validateCPF(cleanCPF)) {
+      toast.error("CPF inválido");
+      return;
+    }
+
+    setFormData(prev => ({ ...prev, cpf: formatCPF(cleanCPF) }));
+  };
+
+  // Formatar telefone automaticamente
+  const handlePhoneChange = (phone: string) => {
+    setFormData(prev => ({ ...prev, phone: formatPhone(phone) }));
+  };
+
   const handleCreate = () => {
     if (!formData.name || !formData.email || !formData.password || !formData.cpf || !formData.planId) {
       toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    // Validar CPF antes de criar
+    const cleanCPF = formData.cpf.replace(/\D/g, '');
+    if (!validateCPF(cleanCPF)) {
+      toast.error("CPF inválido");
       return;
     }
 
@@ -245,6 +298,15 @@ export default function AdminStudents() {
 
   const handleUpdate = () => {
     if (!editingStudent) return;
+
+    // Validar CPF se foi alterado
+    if (formData.cpf) {
+      const cleanCPF = formData.cpf.replace(/\D/g, '');
+      if (!validateCPF(cleanCPF)) {
+        toast.error("CPF inválido");
+        return;
+      }
+    }
 
     updateStudent.mutate({
       gymSlug,
@@ -355,7 +417,9 @@ export default function AdminStudents() {
                       id="cpf"
                       value={formData.cpf}
                       onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                      onBlur={(e) => handleCPFBlur(e.target.value)}
                       placeholder="000.000.000-00"
+                      maxLength={14}
                     />
                   </div>
                 </div>
@@ -389,8 +453,9 @@ export default function AdminStudents() {
                     <Input
                       id="phone"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
                       placeholder="(00) 00000-0000"
+                      maxLength={15}
                     />
                   </div>
                   <div className="space-y-2">
@@ -440,7 +505,9 @@ export default function AdminStudents() {
                       id="zipCode"
                       value={formData.zipCode}
                       onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                      onBlur={(e) => handleCEPBlur(e.target.value)}
                       placeholder="00000-000"
+                      maxLength={9}
                     />
                   </div>
                 </div>
@@ -649,13 +716,13 @@ export default function AdminStudents() {
                               <span>{student.cpf}</span>
                             </div>
                           )}
-                          {student.birthDate && (
+                          {student.dateOfBirth && (
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <Calendar className="h-4 w-4" />
                               <span>
                                 {(() => {
                                   try {
-                                    const date = new Date(student.birthDate);
+                                    const date = new Date(student.dateOfBirth);
                                     return isNaN(date.getTime()) ? 'Data inválida' : date.toLocaleDateString('pt-BR');
                                   } catch {
                                     return 'Data inválida';
@@ -973,6 +1040,8 @@ export default function AdminStudents() {
                     id="edit-cpf"
                     value={formData.cpf}
                     onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                    onBlur={(e) => handleCPFBlur(e.target.value)}
+                    maxLength={14}
                   />
                 </div>
               </div>
@@ -1005,7 +1074,8 @@ export default function AdminStudents() {
                   <Input
                     id="edit-phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    maxLength={15}
                   />
                 </div>
                 <div className="space-y-2">
@@ -1055,7 +1125,9 @@ export default function AdminStudents() {
                     id="edit-zipCode"
                     value={formData.zipCode}
                     onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                    onBlur={(e) => handleCEPBlur(e.target.value)}
                     placeholder="00000-000"
+                    maxLength={9}
                   />
                 </div>
               </div>
