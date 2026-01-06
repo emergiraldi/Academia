@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { useGym } from "@/_core/hooks/useGym";
 
 const DAYS_MAP: Record<string, string> = {
   monday: "Segunda",
@@ -84,6 +85,8 @@ export default function AdminSchedule() {
     phone: "",
   });
 
+  const { gymSlug } = useGym();
+
   // Queries
   const { data: schedules, refetch: refetchSchedules } = trpc.schedules.list.useQuery(undefined, {
     retry: false,
@@ -92,14 +95,14 @@ export default function AdminSchedule() {
     },
   });
 
-  const { data: professors } = trpc.professors.list.useQuery({ gymSlug: "fitlife" }, {
+  const { data: professors } = trpc.professors.list.useQuery({ gymSlug }, {
     retry: false,
     onError: (error) => {
       console.error("Erro ao carregar professores:", error.message);
     },
   });
 
-  const { data: students } = trpc.students.listAll.useQuery({ gymSlug: "fitlife" }, {
+  const { data: students } = trpc.students.listAll.useQuery({ gymSlug }, {
     retry: false,
     onError: (error) => {
       console.error("Erro ao carregar alunos:", error.message);

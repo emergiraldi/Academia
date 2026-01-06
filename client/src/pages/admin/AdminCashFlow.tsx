@@ -41,12 +41,14 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { trpc } from "@/lib/trpc";
+import { useGym } from "@/_core/hooks/useGym";
 
 export default function AdminCashFlow() {
   const [period, setPeriod] = useState("12");
+  const { gymSlug } = useGym();
 
   const { data: payments = [] } = trpc.payments.listAll.useQuery({
-    gymSlug: "fitlife",
+    gymSlug,
   });
 
   // Mock expenses data - substituir por tRPC query quando disponível

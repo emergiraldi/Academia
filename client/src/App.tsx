@@ -45,6 +45,7 @@ import LandingPage from "./pages/LandingPage";
 import Pricing from "./pages/Pricing";
 import Signup from "./pages/Signup";
 import Features from "./pages/Features";
+import GymSignUp from "./pages/GymSignUp";
 
 function Router() {
   return (
@@ -55,6 +56,7 @@ function Router() {
       <Route path={"/features"} component={Features} />
       <Route path={"/pricing"} component={Pricing} />
       <Route path={"/signup"} component={Signup} />
+      <Route path={"/gym/signup"} component={GymSignUp} />
       
       {/* Student Routes */}
       <Route path={"/student/login"} component={StudentLogin} />

@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useGym } from "@/_core/hooks/useGym";
 
 export default function AdminDefaulters() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,12 +56,14 @@ export default function AdminDefaulters() {
   const [numInstallments, setNumInstallments] = useState(1);
   const [forgiveInterest, setForgiveInterest] = useState(false);
 
+  const { gymSlug } = useGym();
+
   // Queries
   const { data: payments = [], refetch: refetchPayments } = trpc.payments.listAll.useQuery({
-    gymSlug: "fitlife",
+    gymSlug,
   });
   const { data: students = [], refetch: refetchStudents } = trpc.students.list.useQuery();
-  const { data: settings } = trpc.settings.get.useQuery({ gymSlug: "fitlife" });
+  const { data: settings } = trpc.settings.get.useQuery({ gymSlug });
 
   // Mutations
   const updateMembershipStatus = trpc.students.updateMembershipStatus.useMutation({
@@ -200,7 +203,7 @@ export default function AdminDefaulters() {
     try {
       for (const studentId of selectedStudents) {
         await updateMembershipStatus.mutateAsync({
-          gymSlug: "fitlife",
+          gymSlug,
           studentId,
           membershipStatus: "blocked",
         });
@@ -217,7 +220,7 @@ export default function AdminDefaulters() {
     const action = newStatus === "blocked" ? "bloqueado" : "desbloqueado";
 
     await updateMembershipStatus.mutateAsync({
-      gymSlug: "fitlife",
+      gymSlug,
       studentId,
       membershipStatus: newStatus as "active" | "inactive" | "suspended" | "blocked",
     });
@@ -296,7 +299,7 @@ export default function AdminDefaulters() {
 
     // Call the mutation
     await createInstallment.mutateAsync({
-      gymSlug: "fitlife",
+      gymSlug,
       studentId: selectedDefaulter.student.id,
       paymentIds,
       numInstallments,

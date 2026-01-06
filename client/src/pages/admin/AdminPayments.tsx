@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useGym } from "@/_core/hooks/useGym";
 
 export default function AdminPayments() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -76,12 +77,14 @@ export default function AdminPayments() {
   const [startDate, setStartDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState<string>("");
 
+  const { gymSlug } = useGym();
+
   // Queries
   const { data: payments = [], refetch: refetchPayments } = trpc.payments.listAll.useQuery({
-    gymSlug: "fitlife",
+    gymSlug,
   });
   const { data: students = [] } = trpc.students.list.useQuery();
-  const { data: plans = [] } = trpc.plans.list.useQuery({ gymSlug: "fitlife" });
+  const { data: plans = [] } = trpc.plans.list.useQuery({ gymSlug });
   const { data: paymentMethods = [] } = trpc.paymentMethods.list.useQuery();
 
   // Mutations

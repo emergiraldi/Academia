@@ -12,9 +12,10 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/PageHeader";
+import { useGym } from "@/_core/hooks/useGym";
 
 export default function AdminPlans() {
-  const [gymSlug] = useState("fitlife");
+  const { gymSlug } = useGym();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);

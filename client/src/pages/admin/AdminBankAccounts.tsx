@@ -31,6 +31,7 @@ import {
 import { Building2, Plus, Pencil, Trash2, Building } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useGym } from "@/_core/hooks/useGym";
 
 const BANCOS = [
   { codigo: 1, nome: "Banco do Brasil" },
@@ -78,8 +79,10 @@ export default function AdminBankAccounts() {
   const [pixUrlBase, setPixUrlBase] = useState("");
   const [pixUrlToken, setPixUrlToken] = useState("");
 
+  const { gymSlug } = useGym();
+
   const { data: accounts = [], refetch } = trpc.bankAccounts.list.useQuery({
-    gymSlug: "fitlife",
+    gymSlug,
   });
 
   const createMutation = trpc.bankAccounts.create.useMutation({
@@ -175,7 +178,7 @@ export default function AdminBankAccounts() {
     }
 
     const data = {
-      gymSlug: "fitlife",
+      gymSlug,
       titularNome: titular,
       banco: parseInt(banco),
       agenciaNumero: agencia,
@@ -204,7 +207,7 @@ export default function AdminBankAccounts() {
 
   const handleDelete = (id: number) => {
     if (confirm("Tem certeza que deseja excluir esta conta?")) {
-      deleteMutation.mutate({ id, gymSlug: "fitlife" });
+      deleteMutation.mutate({ id, gymSlug });
     }
   };
 

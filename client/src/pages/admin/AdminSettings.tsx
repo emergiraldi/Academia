@@ -19,9 +19,10 @@ import {
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
+import { useGym } from "@/_core/hooks/useGym";
 
 export default function AdminSettings() {
-  const gymSlug = "fitlife";
+  const { gymSlug } = useGym();
 
   // Query settings
   const { data: settings, refetch } = trpc.gymSettings.get.useQuery({ gymSlug });

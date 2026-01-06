@@ -47,6 +47,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/PageHeader";
+import { useGym } from "@/_core/hooks/useGym";
 
 type ExpenseCategory =
   | "rent"
@@ -73,7 +74,7 @@ export default function AdminAccountsPayable() {
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [receiptHtml, setReceiptHtml] = useState<string>("");
 
-  const gymSlug = "fitlife";
+  const { gymSlug } = useGym();
 
   // tRPC queries
   const { data: expenses = [], refetch } = trpc.expenses.list.useQuery({

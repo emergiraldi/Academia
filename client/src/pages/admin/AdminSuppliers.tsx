@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Building2, Search } from "lucide-react";
+import { useGym } from "@/_core/hooks/useGym";
 
 export default function AdminSuppliers() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -43,7 +44,7 @@ export default function AdminSuppliers() {
     notes: "",
   });
 
-  const gymSlug = "fitlife";
+  const { gymSlug } = useGym();
 
   const { data: suppliers = [], refetch } = trpc.suppliers.list.useQuery({ gymSlug });
 

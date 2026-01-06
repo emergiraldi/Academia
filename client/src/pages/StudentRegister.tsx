@@ -7,9 +7,11 @@ import { Dumbbell, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useGym } from "@/_core/hooks/useGym";
 
 export default function StudentRegister() {
   const [, setLocation] = useLocation();
+  const { gymSlug } = useGym();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -47,7 +49,7 @@ export default function StudentRegister() {
     setIsLoading(true);
     try {
       await registerMutation.mutateAsync({
-        gymSlug: "fitlife",
+        gymSlug,
         name: formData.name,
         email: formData.email,
         password: formData.password,

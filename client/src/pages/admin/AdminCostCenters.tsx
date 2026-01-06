@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Target, Search } from "lucide-react";
+import { useGym } from "@/_core/hooks/useGym";
 
 export default function AdminCostCenters() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -37,7 +38,7 @@ export default function AdminCostCenters() {
     description: "",
   });
 
-  const gymSlug = "fitlife";
+  const { gymSlug } = useGym();
 
   const { data: costCenters = [], refetch } = trpc.costCenters.list.useQuery({ gymSlug });
 

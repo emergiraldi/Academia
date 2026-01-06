@@ -10,15 +10,17 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { useGym } from "@/_core/hooks/useGym";
 
 export default function AdminReports() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [generating, setGenerating] = useState<string | null>(null);
 
+  const { gymSlug } = useGym();
   const { data: students = [] } = trpc.students.list.useQuery();
-  const { data: payments = [] } = trpc.payments.listAll.useQuery({ gymSlug: "fitlife" });
-  const { data: plans = [] } = trpc.plans.list.useQuery({ gymSlug: "fitlife" });
+  const { data: payments = [] } = trpc.payments.listAll.useQuery({ gymSlug });
+  const { data: plans = [] } = trpc.plans.list.useQuery({ gymSlug });
 
   // Filter defaulters (students with pending payments)
   const defaulters = students.filter((student: any) => student.membershipStatus === "inactive");

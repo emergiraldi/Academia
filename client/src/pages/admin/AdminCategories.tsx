@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Tag, TrendingUp, TrendingDown } from "lucide-react";
+import { useGym } from "@/_core/hooks/useGym";
 
 export default function AdminCategories() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -44,7 +45,7 @@ export default function AdminCategories() {
     color: "#3b82f6",
   });
 
-  const gymSlug = "fitlife";
+  const { gymSlug } = useGym();
 
   const { data: categories = [], refetch } = trpc.categories.list.useQuery({ gymSlug });
 

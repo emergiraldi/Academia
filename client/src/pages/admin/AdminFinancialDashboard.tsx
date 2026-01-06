@@ -22,6 +22,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useGym } from "@/_core/hooks/useGym";
 import {
   BarChart,
   Bar,
@@ -41,9 +42,10 @@ import { useState } from "react";
 
 export default function AdminFinancialDashboard() {
   const [period, setPeriod] = useState("12");
+  const { gymSlug } = useGym();
 
   const { data: payments = [] } = trpc.payments.listAll.useQuery({
-    gymSlug: "fitlife",
+    gymSlug,
   });
 
   // Buscar próximas aulas (próximos 7 dias)

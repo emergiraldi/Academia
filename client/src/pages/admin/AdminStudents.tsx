@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import Webcam from "react-webcam";
 import { trpc } from "@/lib/trpc";
+import { useGym } from "@/_core/hooks/useGym";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
@@ -44,7 +45,7 @@ export default function AdminStudents() {
     planId: "",
   });
 
-  const gymSlug = "fitlife"; // TODO: Get from context
+  const { gymSlug } = useGym();
 
   const { data: students, refetch: refetchStudents } = trpc.students.listAll.useQuery({ gymSlug });
   const { data: plans } = trpc.plans.list.useQuery({ gymSlug });
