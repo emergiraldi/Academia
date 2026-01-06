@@ -651,7 +651,16 @@ export default function AdminStudents() {
                           {student.birthDate && (
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <Calendar className="h-4 w-4" />
-                              <span>{new Date(student.birthDate).toLocaleDateString('pt-BR')}</span>
+                              <span>
+                                {(() => {
+                                  try {
+                                    const date = new Date(student.birthDate);
+                                    return isNaN(date.getTime()) ? 'Data inválida' : date.toLocaleDateString('pt-BR');
+                                  } catch {
+                                    return 'Data inválida';
+                                  }
+                                })()}
+                              </span>
                             </div>
                           )}
                         </div>
