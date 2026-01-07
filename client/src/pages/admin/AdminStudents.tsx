@@ -289,6 +289,11 @@ export default function AdminStudents() {
       return;
     }
 
+    if (!gymSlug) {
+      toast.error("Academia não identificada");
+      return;
+    }
+
     // Validar CPF antes de criar
     const cleanCPF = formData.cpf.replace(/\D/g, '');
     if (!validateCPF(cleanCPF)) {
@@ -305,6 +310,11 @@ export default function AdminStudents() {
 
   const handleUpdate = () => {
     if (!editingStudent) return;
+
+    if (!gymSlug) {
+      toast.error("Academia não identificada");
+      return;
+    }
 
     // Validar CPF se foi alterado
     if (formData.cpf) {
@@ -346,6 +356,10 @@ export default function AdminStudents() {
 
   const handleDelete = (studentId: number) => {
     if (confirm("Tem certeza que deseja excluir este aluno?")) {
+      if (!gymSlug) {
+        toast.error("Academia não identificada");
+        return;
+      }
       deleteStudent.mutate({ gymSlug, studentId });
     }
   };

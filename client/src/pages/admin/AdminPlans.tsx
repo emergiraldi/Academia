@@ -39,6 +39,10 @@ export default function AdminPlans() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!gymSlug) {
+      toast.error("Academia não identificada");
+      return;
+    }
     try {
       await createMutation.mutateAsync({
         gymSlug,
@@ -68,6 +72,10 @@ export default function AdminPlans() {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPlan) return;
+    if (!gymSlug) {
+      toast.error("Academia não identificada");
+      return;
+    }
 
     try {
       await updateMutation.mutateAsync({
@@ -89,6 +97,10 @@ export default function AdminPlans() {
 
   const handleDelete = async (planId: number) => {
     if (!confirm("Tem certeza que deseja excluir este plano? Alunos vinculados não serão afetados.")) return;
+    if (!gymSlug) {
+      toast.error("Academia não identificada");
+      return;
+    }
 
     try {
       await deleteMutation.mutateAsync({ gymSlug, planId });

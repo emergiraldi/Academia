@@ -155,6 +155,11 @@ export default function AdminStaff() {
       return;
     }
 
+    if (!gymSlug) {
+      toast.error("Academia não identificada");
+      return;
+    }
+
     createMutation.mutate({
       gymSlug,
       name: formData.name,
@@ -205,6 +210,11 @@ export default function AdminStaff() {
   const handleUpdate = () => {
     if (!selectedStaff) return;
 
+    if (!gymSlug) {
+      toast.error("Academia não identificada");
+      return;
+    }
+
     const updates: any = {
       gymSlug,
       staffId: selectedStaff.id,
@@ -220,6 +230,10 @@ export default function AdminStaff() {
 
   const handleDelete = (staffId: number) => {
     if (confirm("Tem certeza que deseja excluir este funcionário?")) {
+      if (!gymSlug) {
+        toast.error("Academia não identificada");
+        return;
+      }
       deleteMutation.mutate({
         gymSlug,
         staffId,
