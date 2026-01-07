@@ -72,7 +72,7 @@ export default function AdminAssessments() {
   });
 
   // Queries
-  const { data: assessments = [], refetch: refetchAssessments } = trpc.assessments.list.useQuery({});
+  const { data: assessments = [], refetch: refetchAssessments } = trpc.assessments.list.useQuery({ studentId: undefined });
   const { data: students = [] } = trpc.students.list.useQuery();
 
   // Mutations

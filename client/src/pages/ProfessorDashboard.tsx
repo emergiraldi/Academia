@@ -119,7 +119,7 @@ export default function ProfessorDashboard() {
   const { data: exercises = [], refetch: refetchExercises } = trpc.exercises.list.useQuery();
   const { data: students = [] } = trpc.students.list.useQuery();
   const { data: workouts = [], refetch: refetchWorkouts } = trpc.workouts.list.useQuery();
-  const { data: assessments = [], refetch: refetchAssessments } = trpc.assessments.list.useQuery({});
+  const { data: assessments = [], refetch: refetchAssessments } = trpc.assessments.list.useQuery({ studentId: undefined });
 
   // Dashboard queries
   const { data: dashboardMetrics } = trpc.professorDashboard.getMetrics.useQuery();
