@@ -1554,11 +1554,16 @@ export async function markTokenAsUsed(id: number) {
 import mysql from 'mysql2/promise';
 
 async function getConnection() {
+  // Parse DATABASE_URL to get credentials
+  const dbUrl = process.env.DATABASE_URL || 'mysql://root@localhost:3306/academia_db';
+  const url = new URL(dbUrl);
+
   return await mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'academia_db'
+    host: url.hostname,
+    port: parseInt(url.port) || 3306,
+    user: url.username || 'root',
+    password: url.password || '',
+    database: url.pathname.substring(1)
   });
 }
 
