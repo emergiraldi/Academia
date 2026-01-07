@@ -3559,9 +3559,26 @@ export const appRouter = router({
         }
 
         return await db.createPhysicalAssessment({
-          ...input,
-          assessedBy: ctx.user.id,
+          studentId: input.studentId,
+          professorId: ctx.user.id,
           gymId: ctx.user.gymId,
+          assessmentDate: new Date(input.assessmentDate),
+          weight: input.weightKg.toString(),
+          height: input.heightCm.toString(),
+          bodyFat: input.bodyFatPercentage?.toString(),
+          muscleMass: input.muscleMassKg?.toString(),
+          chest: input.chestCm?.toString(),
+          waist: input.waistCm?.toString(),
+          hips: input.hipCm?.toString(),
+          rightArm: input.rightArmCm?.toString(),
+          leftArm: input.leftArmCm?.toString(),
+          rightThigh: input.rightThighCm?.toString(),
+          leftThigh: input.leftThighCm?.toString(),
+          rightCalf: input.rightCalfCm?.toString(),
+          leftCalf: input.leftCalfCm?.toString(),
+          notes: input.notes,
+          goals: input.goals,
+          photos: input.photos,
         });
       }),
 
