@@ -9,11 +9,21 @@ async function createAdmin() {
   try {
     console.log('🔐 Criando usuário admin...\n');
 
+    // Extrair credenciais do DATABASE_URL
+    const dbUrl = process.env.DATABASE_URL || 'mysql://root@localhost:3306/academia_db';
+    const match = dbUrl.match(/mysql:\/\/([^:]+)(?::([^@]+))?@([^:]+):(\d+)\/(.+)/);
+
+    if (!match) {
+      throw new Error('DATABASE_URL inválida');
+    }
+
+    const [, user, password, host, port, database] = match;
+
     const connection = await mysql.createConnection({
-      host: 'localhost',
-      user: 'root',
-      password: '',
-      database: 'academia_db',
+      host,
+      user,
+      password: password || '',
+      database,
     });
 
     console.log('✅ Conectado ao banco de dados\n');
