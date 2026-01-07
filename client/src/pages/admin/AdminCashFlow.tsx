@@ -42,6 +42,9 @@ import {
 } from "recharts";
 import { trpc } from "@/lib/trpc";
 import { useGym } from "@/_core/hooks/useGym";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { toast } from "sonner";
 
 export default function AdminCashFlow() {
   const [period, setPeriod] = useState("12");
@@ -179,6 +182,104 @@ export default function AdminCashFlow() {
   const growthRate =
     lastMonthBalance !== 0 ? ((currentMonthBalance - lastMonthBalance) / Math.abs(lastMonthBalance)) * 100 : 0;
 
+  const handleExportPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Título
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("Relatório de Fluxo de Caixa", pageWidth / 2, 15, { align: "center" });
+
+      // Data de geração
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const today = new Date().toLocaleDateString("pt-BR");
+      doc.text(`Data: ${today}`, pageWidth / 2, 22, { align: "center" });
+      doc.text(`Período: Últimos ${period} meses`, pageWidth / 2, 28, { align: "center" });
+
+      // Resumo de Métricas
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Resumo Financeiro", 14, 38);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Saldo Atual: R$ ${(currentBalance / 100).toFixed(2)}`, 14, 45);
+      doc.text(`Total de Entradas: R$ ${(totalIncome / 100).toFixed(2)}`, 14, 51);
+      doc.text(`Total de Saídas: R$ ${(totalExpenses / 100).toFixed(2)}`, 14, 57);
+      doc.text(`Projeção 30 dias: R$ ${(projectedBalance / 100).toFixed(2)}`, 14, 63);
+      doc.text(`Crescimento vs mês anterior: ${growthRate.toFixed(1)}%`, 14, 69);
+
+      // Tabela de Fluxo Mensal
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Fluxo Mensal", 14, 79);
+
+      const monthlyTableData = monthlyData.map((m) => [
+        m.month,
+        `R$ ${m.entradas.toFixed(2)}`,
+        `R$ ${m.saidas.toFixed(2)}`,
+        `R$ ${m.saldo.toFixed(2)}`,
+      ]);
+
+      autoTable(doc, {
+        startY: 84,
+        head: [["Mês", "Entradas", "Saídas", "Saldo"]],
+        body: monthlyTableData,
+        theme: "striped",
+        headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
+        styles: { fontSize: 9 },
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 45, halign: "right" },
+          2: { cellWidth: 45, halign: "right" },
+          3: { cellWidth: 45, halign: "right" },
+        },
+      });
+
+      // Tabela de Transações Recentes
+      const finalY = (doc as any).lastAutoTable.finalY || 84;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Transações Recentes", 14, finalY + 10);
+
+      const transactionsTableData = allTransactions.map((t) => [
+        t.type === "income" ? "Entrada" : "Saída",
+        t.description,
+        t.category,
+        new Date(t.date).toLocaleDateString("pt-BR"),
+        `${t.type === "income" ? "+" : "-"}R$ ${(t.amount / 100).toFixed(2)}`,
+      ]);
+
+      autoTable(doc, {
+        startY: finalY + 15,
+        head: [["Tipo", "Descrição", "Categoria", "Data", "Valor"]],
+        body: transactionsTableData,
+        theme: "striped",
+        headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
+        styles: { fontSize: 8 },
+        columnStyles: {
+          0: { cellWidth: 25 },
+          1: { cellWidth: 60 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 35, halign: "right" },
+        },
+      });
+
+      // Salvar PDF
+      const filename = `fluxo_caixa_${new Date().toISOString().split("T")[0]}.pdf`;
+      doc.save(filename);
+
+      toast.success("Relatório exportado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      toast.error("Erro ao exportar relatório");
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
@@ -201,7 +302,7 @@ export default function AdminCashFlow() {
                 <SelectItem value="12">Últimos 12 meses</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportPDF}>
               <Download className="w-4 h-4 mr-2" />
               Exportar
             </Button>
