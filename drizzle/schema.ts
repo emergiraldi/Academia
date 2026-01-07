@@ -671,13 +671,14 @@ export type InsertSiteSettings = typeof siteSettings.$inferInsert;
 export const classSchedules = mysqlTable("class_schedules", {
   id: int("id").autoincrement().primaryKey(),
   gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
-  professorId: int("professorId").notNull().references(() => users.id, { onDelete: "restrict" }),
+  professorId: int("professorId").references(() => users.id, { onDelete: "set null" }),
   name: varchar("name", { length: 200 }).notNull(), // Nome da aula (Yoga, Spinning, etc)
+  type: varchar("type", { length: 50 }).notNull(), // Tipo de aula (Yoga, Spinning, Pilates, etc)
   description: text("description"),
   dayOfWeek: int("dayOfWeek").notNull(), // 0-6 (Sunday-Saturday)
   startTime: varchar("startTime", { length: 5 }).notNull(), // "08:00"
-  endTime: varchar("endTime", { length: 5 }).notNull(), // "09:00"
-  maxCapacity: int("maxCapacity").notNull().default(20),
+  durationMinutes: int("durationMinutes").notNull().default(60), // Duração em minutos
+  capacity: int("capacity").notNull().default(20), // Capacidade máxima
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -691,8 +692,7 @@ export type InsertClassSchedule = typeof classSchedules.$inferInsert;
  */
 export const classBookings = mysqlTable("class_bookings", {
   id: int("id").autoincrement().primaryKey(),
-  gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
-  classScheduleId: int("classScheduleId").notNull().references(() => classSchedules.id, { onDelete: "cascade" }),
+  scheduleId: int("scheduleId").notNull().references(() => classSchedules.id, { onDelete: "cascade" }),
   studentId: int("studentId").notNull().references(() => students.id, { onDelete: "cascade" }),
   bookingDate: timestamp("bookingDate").notNull(), // Data específica da aula
   status: mysqlEnum("status", ["confirmed", "cancelled", "attended", "missed"]).default("confirmed").notNull(),
@@ -709,13 +709,14 @@ export type InsertClassBooking = typeof classBookings.$inferInsert;
 export const visitorBookings = mysqlTable("visitor_bookings", {
   id: int("id").autoincrement().primaryKey(),
   gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 200 }).notNull(),
-  email: varchar("email", { length: 320 }).notNull(),
-  phone: varchar("phone", { length: 20 }).notNull(),
-  visitDate: timestamp("visitDate").notNull(),
-  visitTime: varchar("visitTime", { length: 5 }).notNull(), // "14:00"
+  scheduleId: int("scheduleId").references(() => classSchedules.id, { onDelete: "set null" }), // Aula agendada (opcional)
+  visitorName: varchar("visitorName", { length: 200 }).notNull(),
+  visitorEmail: varchar("visitorEmail", { length: 320 }).notNull(),
+  visitorPhone: varchar("visitorPhone", { length: 20 }).notNull(),
+  bookingDate: timestamp("bookingDate").notNull(), // Data/hora da visita
   status: mysqlEnum("status", ["pending", "confirmed", "completed", "cancelled", "no_show"]).default("pending").notNull(),
   notes: text("notes"),
+  leadId: int("leadId"), // ID do lead (se aplicável)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
