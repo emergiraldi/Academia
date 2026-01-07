@@ -46,6 +46,8 @@ import {
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useGym } from "@/_core/hooks/useGym";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function AdminDefaulters() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -310,8 +312,69 @@ export default function AdminDefaulters() {
   };
 
   const handleExportReport = () => {
-    toast.success("Gerando relatório de inadimplência...");
-    // TODO: Implement PDF export
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Título
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("Relatório de Inadimplência", pageWidth / 2, 15, { align: "center" });
+
+      // Data de geração
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const today = new Date().toLocaleDateString("pt-BR");
+      doc.text(`Data: ${today}`, pageWidth / 2, 22, { align: "center" });
+
+      // Resumo
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Resumo", 14, 32);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Total de inadimplentes: ${filteredDefaulters.length}`, 14, 39);
+      doc.text(`Valor total em atraso: R$ ${(totalOverdueAmount / 100).toFixed(2)}`, 14, 45);
+      doc.text(`Valor com vencimento próximo: R$ ${(totalDueSoonAmount / 100).toFixed(2)}`, 14, 51);
+
+      // Tabela de inadimplentes
+      const tableData = filteredDefaulters.map((defaulter: any) => {
+        const { totalWithInterest } = calculateInterestAndFees(defaulter);
+        return [
+          defaulter.student.registrationNumber || "-",
+          defaulter.student.name || "-",
+          `${defaulter.daysOverdue} dias`,
+          `R$ ${(totalWithInterest / 100).toFixed(2)}`,
+          defaulter.student.membershipStatus === "blocked" ? "Bloqueado" : "Ativo"
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 58,
+        head: [["Matrícula", "Nome", "Atraso", "Valor Devido", "Status"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
+        styles: { fontSize: 9 },
+        columnStyles: {
+          0: { cellWidth: 25 },
+          1: { cellWidth: 60 },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 35 },
+          4: { cellWidth: 30 },
+        },
+      });
+
+      // Salvar PDF
+      const filename = `inadimplentes_${new Date().toISOString().split("T")[0]}.pdf`;
+      doc.save(filename);
+
+      toast.success("Relatório gerado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      toast.error("Erro ao gerar relatório PDF");
+    }
   };
 
   const handleSendIndividualReminder = (studentId: number, studentName: string) => {
