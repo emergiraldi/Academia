@@ -552,7 +552,11 @@ export default function AdminAssessments() {
                           <Badge className={imcStatus.color}>{imcStatus.label}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setLocation(`/admin/students/${assessment.studentId}`)}
+                          >
                             Ver Detalhes
                           </Button>
                         </TableCell>
