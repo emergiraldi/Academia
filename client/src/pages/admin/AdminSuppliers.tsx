@@ -26,7 +26,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Building2, Search } from "lucide-react";
 import { useGym } from "@/_core/hooks/useGym";
-import { validateCPF, validateCNPJ, formatCPF, formatCNPJ, formatCEP, formatPhone, fetchAddressByCEP, fetchCompanyByCNPJ } from "@/lib/validators";
+import { validateCPF, validateCNPJ, formatCPF, formatCNPJ, formatCEP, formatPhone, fetchAddressByCEP } from "@/lib/validators";
 
 export default function AdminSuppliers() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -177,9 +177,9 @@ export default function AdminSuppliers() {
       // Formatar CNPJ
       setFormData(prev => ({ ...prev, cnpjCpf: formatCNPJ(clean) }));
 
-      // Buscar dados da empresa
+      // Buscar dados da empresa via backend
       try {
-        const company = await fetchCompanyByCNPJ(clean);
+        const company = await trpc.suppliers.fetchCNPJ.query({ cnpj: clean });
         if (company) {
           setFormData(prev => ({
             ...prev,
@@ -201,6 +201,7 @@ export default function AdminSuppliers() {
         }
       } catch (error) {
         console.error("Erro ao buscar CNPJ:", error);
+        toast.error("Erro ao buscar dados do CNPJ");
       }
       return;
     }

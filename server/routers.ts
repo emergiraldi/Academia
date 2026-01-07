@@ -3427,6 +3427,52 @@ export const appRouter = router({
         return await db.listSuppliers(gym.id);
       }),
 
+    fetchCNPJ: publicProcedure
+      .input(z.object({
+        cnpj: z.string(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          const cleanCNPJ = input.cnpj.replace(/\D/g, '');
+
+          if (cleanCNPJ.length !== 14) {
+            throw new Error('CNPJ deve ter 14 dígitos');
+          }
+
+          const response = await fetch(`https://www.receitaws.com.br/v1/cnpj/${cleanCNPJ}`);
+
+          if (!response.ok) {
+            throw new Error('Erro ao buscar CNPJ');
+          }
+
+          const data = await response.json();
+
+          if (data.erro || data.message) {
+            return null;
+          }
+
+          return {
+            cnpj: data.cnpj,
+            nome: data.nome,
+            fantasia: data.fantasia,
+            abertura: data.abertura,
+            logradouro: data.logradouro,
+            numero: data.numero,
+            complemento: data.complemento,
+            bairro: data.bairro,
+            municipio: data.municipio,
+            uf: data.uf,
+            cep: data.cep,
+            email: data.email,
+            telefone: data.telefone,
+            situacao: data.situacao,
+          };
+        } catch (error) {
+          console.error('Erro ao buscar CNPJ:', error);
+          return null;
+        }
+      }),
+
     create: gymAdminOrStaffProcedure
       .input(z.object({
         gymSlug: z.string(),
