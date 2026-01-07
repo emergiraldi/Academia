@@ -73,11 +73,11 @@ export default function AdminSuppliers() {
   });
 
   const updateSupplier = trpc.suppliers.update.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Fornecedor atualizado com sucesso!");
       setIsEditOpen(false);
       resetForm();
-      refetch();
+      await refetch();
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao atualizar fornecedor");
@@ -287,11 +287,23 @@ export default function AdminSuppliers() {
       }
     }
 
-    updateSupplier.mutate({
+    const updateData: any = {
       gymSlug,
       supplierId: editingSupplier.id,
-      ...formData,
-    });
+      name: formData.name,
+    };
+
+    // Só adicionar campos opcionais se tiverem valor
+    if (formData.cnpjCpf) updateData.cnpjCpf = formData.cnpjCpf;
+    if (formData.email) updateData.email = formData.email;
+    if (formData.phone) updateData.phone = formData.phone;
+    if (formData.address) updateData.address = formData.address;
+    if (formData.city) updateData.city = formData.city;
+    if (formData.state) updateData.state = formData.state;
+    if (formData.zipCode) updateData.zipCode = formData.zipCode;
+    if (formData.notes) updateData.notes = formData.notes;
+
+    updateSupplier.mutate(updateData);
   };
 
   const handleDelete = (supplierId: number) => {
