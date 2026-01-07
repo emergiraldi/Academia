@@ -2214,31 +2214,44 @@ export const appRouter = router({
         phone: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        // Check if email already exists
-        const existing = await db.getUserByEmail(input.email);
-        if (existing) {
-          throw new TRPCError({ code: "CONFLICT", message: "Email já está em uso" });
+        try {
+          if (!ctx.user.gymId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Academia não identificada" });
+          }
+
+          // Check if email already exists
+          const existing = await db.getUserByEmail(input.email);
+          if (existing) {
+            throw new TRPCError({ code: "CONFLICT", message: "Email já está em uso" });
+          }
+
+          // Hash password
+          const hashedPassword = await bcrypt.hash(input.password, 10);
+
+          // Generate unique openId
+          const openId = `professor-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+          // Create user with professor role
+          const result = await db.createUser({
+            gymId: ctx.user.gymId,
+            openId,
+            name: input.name,
+            email: input.email,
+            password: hashedPassword,
+            phone: input.phone || null,
+            role: "professor",
+            loginMethod: "password",
+          });
+
+          return { success: true, userId: result.insertId };
+        } catch (error: any) {
+          console.error("[professors.create] Error:", error);
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error.message || "Erro ao criar professor"
+          });
         }
-
-        // Hash password
-        const hashedPassword = await bcrypt.hash(input.password, 10);
-
-        // Generate unique openId
-        const openId = `professor-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-        // Create user with professor role
-        const result = await db.createUser({
-          gymId: ctx.user.gymId,
-          openId,
-          name: input.name,
-          email: input.email,
-          password: hashedPassword,
-          phone: input.phone,
-          role: "professor",
-          loginMethod: "password",
-        });
-
-        return { success: true, userId: result.insertId };
       }),
 
     update: gymAdminProcedure
@@ -2311,31 +2324,45 @@ export const appRouter = router({
         }),
       }))
       .mutation(async ({ input, ctx }) => {
-        // Check if email already exists
-        const existing = await db.getUserByEmail(input.email);
-        if (existing) {
-          throw new TRPCError({ code: "CONFLICT", message: "Email já está em uso" });
+        try {
+          if (!ctx.user.gymId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Academia não identificada" });
+          }
+
+          // Check if email already exists
+          const existing = await db.getUserByEmail(input.email);
+          if (existing) {
+            throw new TRPCError({ code: "CONFLICT", message: "Email já está em uso" });
+          }
+
+          // Hash password
+          const hashedPassword = await bcrypt.hash(input.password, 10);
+
+          // Generate unique openId
+          const openId = `staff-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+          // Create user with staff role
+          const result = await db.createUser({
+            gymId: ctx.user.gymId,
+            openId,
+            name: input.name,
+            email: input.email,
+            password: hashedPassword,
+            phone: input.phone || null,
+            role: "staff",
+            loginMethod: "password",
+            permissions: JSON.stringify(input.permissions),
+          });
+
+          return { success: true, userId: result.insertId };
+        } catch (error: any) {
+          console.error("[staff.create] Error:", error);
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error.message || "Erro ao criar funcionário"
+          });
         }
-
-        // Hash password
-        const hashedPassword = await bcrypt.hash(input.password, 10);
-
-        // Generate unique openId
-        const openId = `staff-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-        // Create user with staff role
-        const result = await db.createUser({
-          gymId: ctx.user.gymId,
-          openId,
-          name: input.name,
-          email: input.email,
-          password: hashedPassword,
-          role: "staff",
-          loginMethod: "password",
-          permissions: JSON.stringify(input.permissions),
-        });
-
-        return { success: true, userId: result.insertId };
       }),
 
     update: gymAdminProcedure
