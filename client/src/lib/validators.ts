@@ -65,33 +65,30 @@ export function validateCNPJ(cnpj: string): boolean {
   if (/^(\d)\1+$/.test(cleanCNPJ)) return false;
 
   // Validação do primeiro dígito verificador
-  let length = cleanCNPJ.length - 2;
-  let numbers = cleanCNPJ.substring(0, length);
-  const digits = cleanCNPJ.substring(length);
+  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
   let sum = 0;
-  let pos = length - 7;
 
-  for (let i = length; i >= 1; i--) {
-    sum += parseInt(numbers.charAt(length - i)) * pos--;
-    if (pos < 2) pos = 9;
+  for (let i = 0; i < 12; i++) {
+    sum += parseInt(cleanCNPJ.charAt(i)) * weights1[i];
   }
 
-  let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  if (result !== parseInt(digits.charAt(0))) return false;
+  let remainder = sum % 11;
+  const digit1 = remainder < 2 ? 0 : 11 - remainder;
+
+  if (digit1 !== parseInt(cleanCNPJ.charAt(12))) return false;
 
   // Validação do segundo dígito verificador
-  length = length + 1;
-  numbers = cleanCNPJ.substring(0, length);
+  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
   sum = 0;
-  pos = length - 7;
 
-  for (let i = length; i >= 1; i--) {
-    sum += parseInt(numbers.charAt(length - i)) * pos--;
-    if (pos < 2) pos = 9;
+  for (let i = 0; i < 13; i++) {
+    sum += parseInt(cleanCNPJ.charAt(i)) * weights2[i];
   }
 
-  result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  if (result !== parseInt(digits.charAt(1))) return false;
+  remainder = sum % 11;
+  const digit2 = remainder < 2 ? 0 : 11 - remainder;
+
+  if (digit2 !== parseInt(cleanCNPJ.charAt(13))) return false;
 
   return true;
 }
