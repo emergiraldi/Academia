@@ -656,9 +656,11 @@ export default function AdminAssessments() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
+                                console.log("🔵 EDITAR CLICKED - Setting isEditing to TRUE");
                                 setSelectedAssessment(assessment);
                                 populateEditForm(assessment);
                                 setIsEditing(true);
+                                console.log("🔵 isEditing state SHOULD NOW BE TRUE");
                                 setDetailsModalOpen(true);
                               }}
                             >
@@ -689,6 +691,7 @@ export default function AdminAssessments() {
 
             {selectedAssessment && (
               <div className="grid gap-6 py-4">
+                {console.log("🟢 MODAL RENDER - isEditing value:", isEditing)}
                 {/* Dados Básicos */}
                 <div>
                   <h3 className="font-semibold mb-3">Dados Básicos</h3>
