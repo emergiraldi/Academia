@@ -693,37 +693,56 @@ export default function AdminSuppliers() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="edit-name">Nome / Razão Social *</Label>
-                  <Input
-                    id="edit-name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Nome do fornecedor"
-                  />
+                {/* Dados Básicos */}
+                <div className="col-span-2">
+                  <h3 className="font-semibold text-sm text-gray-700 mb-3 border-b pb-2">Dados da Empresa</h3>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-cnpjCpf">CNPJ / CPF</Label>
+                  <Label htmlFor="edit-cnpjCpf">CNPJ / CPF *</Label>
                   <Input
                     id="edit-cnpjCpf"
                     value={formData.cnpjCpf}
                     onChange={(e) => setFormData({ ...formData, cnpjCpf: e.target.value })}
                     onBlur={(e) => handleCNPJCPFBlur(e.target.value)}
-                    placeholder="00.000.000/0000-00 ou 000.000.000-00"
+                    placeholder="00.000.000/0000-00"
                     maxLength={18}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-phone">Telefone</Label>
+                  <Label htmlFor="edit-category">Categoria</Label>
                   <Input
-                    id="edit-phone"
-                    value={formData.phone}
-                    onChange={(e) => handlePhoneChange(e.target.value)}
-                    placeholder="(00) 00000-0000"
-                    maxLength={15}
+                    id="edit-category"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    placeholder="Ex: Equipamentos, Manutenção..."
                   />
+                </div>
+
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="edit-name">Razão Social *</Label>
+                  <Input
+                    id="edit-name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Nome completo da empresa"
+                  />
+                </div>
+
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="edit-tradeName">Nome Fantasia</Label>
+                  <Input
+                    id="edit-tradeName"
+                    value={formData.tradeName}
+                    onChange={(e) => setFormData({ ...formData, tradeName: e.target.value })}
+                    placeholder="Nome comercial"
+                  />
+                </div>
+
+                {/* Contato */}
+                <div className="col-span-2 mt-4">
+                  <h3 className="font-semibold text-sm text-gray-700 mb-3 border-b pb-2">Contato</h3>
                 </div>
 
                 <div className="col-span-2 space-y-2">
@@ -738,6 +757,44 @@ export default function AdminSuppliers() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="edit-phone">Telefone</Label>
+                  <Input
+                    id="edit-phone"
+                    value={formData.phone}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-cellphone">Celular</Label>
+                  <Input
+                    id="edit-cellphone"
+                    value={formData.cellphone}
+                    onChange={(e) => setFormData({ ...formData, cellphone: formatPhone(e.target.value) })}
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                  />
+                </div>
+
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="edit-website">Website</Label>
+                  <Input
+                    id="edit-website"
+                    type="url"
+                    value={formData.website}
+                    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                    placeholder="https://www.empresa.com.br"
+                  />
+                </div>
+
+                {/* Endereço */}
+                <div className="col-span-2 mt-4">
+                  <h3 className="font-semibold text-sm text-gray-700 mb-3 border-b pb-2">Endereço</h3>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="edit-zipCode">CEP</Label>
                   <Input
                     id="edit-zipCode"
@@ -746,6 +803,46 @@ export default function AdminSuppliers() {
                     onBlur={(e) => handleCEPBlur(e.target.value)}
                     placeholder="00000-000"
                     maxLength={9}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-number">Número</Label>
+                  <Input
+                    id="edit-number"
+                    value={formData.number}
+                    onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                    placeholder="123"
+                  />
+                </div>
+
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="edit-address">Logradouro</Label>
+                  <Input
+                    id="edit-address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Rua, Avenida..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-complement">Complemento</Label>
+                  <Input
+                    id="edit-complement"
+                    value={formData.complement}
+                    onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                    placeholder="Sala, Andar..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-neighborhood">Bairro</Label>
+                  <Input
+                    id="edit-neighborhood"
+                    value={formData.neighborhood}
+                    onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                    placeholder="Bairro"
                   />
                 </div>
 
@@ -770,13 +867,38 @@ export default function AdminSuppliers() {
                   />
                 </div>
 
+                {/* Dados Bancários */}
+                <div className="col-span-2 mt-4">
+                  <h3 className="font-semibold text-sm text-gray-700 mb-3 border-b pb-2">Dados Bancários</h3>
+                </div>
+
                 <div className="col-span-2 space-y-2">
-                  <Label htmlFor="edit-address">Endereço</Label>
+                  <Label htmlFor="edit-bank">Banco</Label>
                   <Input
-                    id="edit-address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Rua, número, complemento"
+                    id="edit-bank"
+                    value={formData.bank}
+                    onChange={(e) => setFormData({ ...formData, bank: e.target.value })}
+                    placeholder="Nome do banco"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-bankAgency">Agência</Label>
+                  <Input
+                    id="edit-bankAgency"
+                    value={formData.bankAgency}
+                    onChange={(e) => setFormData({ ...formData, bankAgency: e.target.value })}
+                    placeholder="0000"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-bankAccount">Conta</Label>
+                  <Input
+                    id="edit-bankAccount"
+                    value={formData.bankAccount}
+                    onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
+                    placeholder="00000-0"
                   />
                 </div>
 
