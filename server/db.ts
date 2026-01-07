@@ -1918,7 +1918,10 @@ export async function getClassSchedulesByGym(gymId: number) {
   const conn = await getConnection();
   const [rows] = await conn.execute(
     `SELECT cs.*, u.name as professorName,
-     (SELECT COUNT(*) FROM class_bookings cb WHERE cb.scheduleId = cs.id AND cb.status = 'confirmed') as enrolledCount
+     (
+       (SELECT COUNT(*) FROM class_bookings cb WHERE cb.scheduleId = cs.id AND cb.status IN ('confirmed', 'attended')) +
+       (SELECT COUNT(*) FROM visitor_bookings vb WHERE vb.scheduleId = cs.id AND vb.status IN ('confirmed', 'attended'))
+     ) as enrolledCount
      FROM class_schedules cs
      LEFT JOIN users u ON cs.professorId = u.id
      WHERE cs.gymId = ? AND cs.active = TRUE
@@ -1935,7 +1938,10 @@ export async function getClassScheduleById(id: number, gymId: number) {
   const conn = await getConnection();
   const [rows] = await conn.execute(
     `SELECT cs.*, u.name as professorName,
-     (SELECT COUNT(*) FROM class_bookings cb WHERE cb.scheduleId = cs.id AND cb.status = 'confirmed') as enrolledCount
+     (
+       (SELECT COUNT(*) FROM class_bookings cb WHERE cb.scheduleId = cs.id AND cb.status IN ('confirmed', 'attended')) +
+       (SELECT COUNT(*) FROM visitor_bookings vb WHERE vb.scheduleId = cs.id AND vb.status IN ('confirmed', 'attended'))
+     ) as enrolledCount
      FROM class_schedules cs
      LEFT JOIN users u ON cs.professorId = u.id
      WHERE cs.id = ? AND cs.gymId = ?`,
@@ -2112,8 +2118,11 @@ export async function checkBookingExists(scheduleId: number, studentId: number, 
 export async function getBookingCountForDate(scheduleId: number, bookingDate: string) {
   const conn = await getConnection();
   const [rows] = await conn.execute(
-    'SELECT COUNT(*) as count FROM class_bookings WHERE scheduleId = ? AND bookingDate = ? AND status IN (?, ?)',
-    [scheduleId, bookingDate, 'confirmed', 'attended']
+    `SELECT
+       (SELECT COUNT(*) FROM class_bookings WHERE scheduleId = ? AND bookingDate = ? AND status IN ('confirmed', 'attended')) +
+       (SELECT COUNT(*) FROM visitor_bookings WHERE scheduleId = ? AND bookingDate = ? AND status IN ('confirmed', 'attended'))
+     as count`,
+    [scheduleId, bookingDate, scheduleId, bookingDate]
   );
   await conn.end();
   return ((rows as any[])[0]?.count || 0);
