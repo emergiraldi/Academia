@@ -103,13 +103,16 @@ export default function AdminSchedule() {
     },
   });
 
-  const { data: students } = trpc.students.listAll.useQuery({ gymSlug }, {
-    enabled: !!gymSlug,
-    retry: false,
-    onError: (error) => {
-      console.error("Erro ao carregar alunos:", error.message);
-    },
-  });
+  const { data: students } = trpc.students.listAll.useQuery(
+    { gymSlug: gymSlug || '' },
+    {
+      enabled: !!gymSlug,
+      retry: false,
+      onError: (error) => {
+        console.error("Erro ao carregar alunos:", error.message);
+      },
+    }
+  );
 
   const { data: leads } = trpc.leads.list.useQuery(undefined, {
     retry: false,

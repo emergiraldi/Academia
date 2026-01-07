@@ -63,7 +63,7 @@ export default function AdminDefaulters() {
     gymSlug,
   });
   const { data: students = [], refetch: refetchStudents } = trpc.students.list.useQuery();
-  const { data: settings } = trpc.settings.get.useQuery({ gymSlug }, { enabled: !!gymSlug });
+  const { data: settings } = trpc.settings.get.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
 
   // Mutations
   const updateMembershipStatus = trpc.students.updateMembershipStatus.useMutation({

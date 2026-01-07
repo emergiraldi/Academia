@@ -51,8 +51,8 @@ export default function AdminStudents() {
 
   const { gymSlug } = useGym();
 
-  const { data: students, refetch: refetchStudents } = trpc.students.listAll.useQuery({ gymSlug }, { enabled: !!gymSlug });
-  const { data: plans } = trpc.plans.list.useQuery({ gymSlug }, { enabled: !!gymSlug });
+  const { data: students, refetch: refetchStudents } = trpc.students.listAll.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
+  const { data: plans } = trpc.plans.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
   const { data: studentPayments = [], refetch: refetchPayments } = trpc.payments.getByStudent.useQuery(
     { gymSlug, studentId: viewingStudentPayments?.id || 0 },
     { enabled: !!viewingStudentPayments?.id }

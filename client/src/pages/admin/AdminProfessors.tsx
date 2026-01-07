@@ -33,7 +33,7 @@ export default function AdminProfessors() {
   const [editPassword, setEditPassword] = useState("");
   const [editPhone, setEditPhone] = useState("");
 
-  const { data: professors, refetch } = trpc.professors.list.useQuery({ gymSlug }, { enabled: !!gymSlug });
+  const { data: professors, refetch } = trpc.professors.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
   const createMutation = trpc.professors.create.useMutation();
   const updateMutation = trpc.professors.update.useMutation();
   const deleteMutation = trpc.professors.delete.useMutation();

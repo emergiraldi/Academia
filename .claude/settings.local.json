@@ -22,7 +22,11 @@
       "Bash(ssh -o StrictHostKeyChecking=no root@138.197.8.136 \"cd /var/www/academia && mysql -u root academia_db -e ''DESCRIBE class_bookings;''\")",
       "Bash(sshpass -p \"935559Emerson@\" ssh -o StrictHostKeyChecking=no root@138.197.8.136 \"cd /var/www/academia && mysql -u root academia_db -e ''DESCRIBE class_bookings;''\")",
       "Bash(node check_table_structure.js:*)",
-      "Bash(node recreate_tables.js:*)"
+      "Bash(node recreate_tables.js:*)",
+      "Bash(ssh -o StrictHostKeyChecking=no root@138.197.8.136 \"cd /var/www/academia && bash fix_vps_db.sh\")",
+      "Bash(node fix_gymslug_queries.js:*)",
+      "Bash(for file in client/src/pages/admin/AdminAccountsPayable.tsx client/src/pages/admin/AdminCategories.tsx client/src/pages/admin/AdminCostCenters.tsx client/src/pages/admin/AdminDefaulters.tsx client/src/pages/admin/AdminPayments.tsx client/src/pages/admin/AdminPlans.tsx client/src/pages/admin/AdminProfessors.tsx client/src/pages/admin/AdminReports.tsx client/src/pages/admin/AdminSettings.tsx client/src/pages/admin/AdminSuppliers.tsx)",
+      "Bash(do sed -i 's/.useQuery({ gymSlug }, { enabled: !!gymSlug/.useQuery({ gymSlug: gymSlug || '\"''\"''\"''\"' }, { enabled: !!gymSlug/g' \"$file\")"
     ],
     "deny": [],
     "ask": []
