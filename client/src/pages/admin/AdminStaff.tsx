@@ -96,7 +96,7 @@ export default function AdminStaff() {
   const utils = trpc.useUtils();
   const { data: staff, isLoading } = trpc.staff.list.useQuery({
     gymSlug,
-  });
+  }, { enabled: !!gymSlug });
 
   const createMutation = trpc.staff.create.useMutation({
     onSuccess: () => {
