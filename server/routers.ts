@@ -421,6 +421,9 @@ export const appRouter = router({
         phone: z.string().optional(),
         dateOfBirth: z.string().optional(),
         address: z.string().optional(),
+        number: z.string().optional(),
+        complement: z.string().optional(),
+        neighborhood: z.string().optional(),
         city: z.string().optional(),
         state: z.string().optional(),
         zipCode: z.string().optional(),
@@ -446,7 +449,11 @@ export const appRouter = router({
           userId: userResult.insertId,
           cpf: input.cpf,
           phone: input.phone,
+          birthDate: input.dateOfBirth ? new Date(input.dateOfBirth) : undefined,
           address: input.address,
+          number: input.number,
+          complement: input.complement,
+          neighborhood: input.neighborhood,
           city: input.city,
           state: input.state,
           zipCode: input.zipCode,
@@ -491,6 +498,9 @@ export const appRouter = router({
         phone: z.string().optional(),
         dateOfBirth: z.string().optional(),
         address: z.string().optional(),
+        number: z.string().optional(),
+        complement: z.string().optional(),
+        neighborhood: z.string().optional(),
         city: z.string().optional(),
         state: z.string().optional(),
         zipCode: z.string().optional(),
@@ -511,6 +521,9 @@ export const appRouter = router({
         if (input.phone !== undefined) studentUpdates.phone = input.phone;
         if (input.dateOfBirth !== undefined) studentUpdates.birthDate = new Date(input.dateOfBirth);
         if (input.address !== undefined) studentUpdates.address = input.address;
+        if (input.number !== undefined) studentUpdates.number = input.number;
+        if (input.complement !== undefined) studentUpdates.complement = input.complement;
+        if (input.neighborhood !== undefined) studentUpdates.neighborhood = input.neighborhood;
         if (input.city !== undefined) studentUpdates.city = input.city;
         if (input.state !== undefined) studentUpdates.state = input.state;
         if (input.zipCode !== undefined) studentUpdates.zipCode = input.zipCode;

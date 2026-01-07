@@ -89,6 +89,9 @@ export const students = mysqlTable("students", {
   phone: varchar("phone", { length: 20 }),
   birthDate: timestamp("birthDate"),
   address: text("address"),
+  number: varchar("number", { length: 20 }),
+  complement: varchar("complement", { length: 100 }),
+  neighborhood: varchar("neighborhood", { length: 100 }),
   city: varchar("city", { length: 100 }),
   state: varchar("state", { length: 2 }),
   zipCode: varchar("zipCode", { length: 10 }),
@@ -505,14 +508,24 @@ export type InsertCategory = typeof categories.$inferInsert;
 export const suppliers = mysqlTable("suppliers", {
   id: int("id").autoincrement().primaryKey(),
   gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 200 }).notNull(),
+  name: varchar("name", { length: 200 }).notNull(), // Razão Social
+  tradeName: varchar("tradeName", { length: 200 }), // Nome Fantasia
   cnpjCpf: varchar("cnpjCpf", { length: 18 }),
+  category: varchar("category", { length: 100 }), // Categoria do fornecedor
   email: varchar("email", { length: 320 }),
   phone: varchar("phone", { length: 20 }),
-  address: text("address"),
+  cellphone: varchar("cellphone", { length: 20 }), // Celular
+  website: varchar("website", { length: 255 }), // Website
+  address: text("address"), // Logradouro
+  number: varchar("number", { length: 20 }), // Número
+  complement: varchar("complement", { length: 100 }), // Complemento
+  neighborhood: varchar("neighborhood", { length: 100 }), // Bairro
   city: varchar("city", { length: 100 }),
   state: varchar("state", { length: 2 }),
   zipCode: varchar("zipCode", { length: 10 }),
+  bank: varchar("bank", { length: 100 }), // Banco
+  bankAgency: varchar("bankAgency", { length: 20 }), // Agência
+  bankAccount: varchar("bankAccount", { length: 30 }), // Conta
   notes: text("notes"),
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

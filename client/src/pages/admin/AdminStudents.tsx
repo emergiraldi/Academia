@@ -40,6 +40,9 @@ export default function AdminStudents() {
     phone: "",
     dateOfBirth: "",
     address: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
     city: "",
     state: "",
     zipCode: "",
@@ -224,6 +227,9 @@ export default function AdminStudents() {
       phone: "",
       dateOfBirth: "",
       address: "",
+      number: "",
+      complement: "",
+      neighborhood: "",
       city: "",
       state: "",
       zipCode: "",
@@ -244,6 +250,7 @@ export default function AdminStudents() {
         setFormData(prev => ({
           ...prev,
           address: address.logradouro || prev.address,
+          neighborhood: address.bairro || prev.neighborhood,
           city: address.localidade || prev.city,
           state: address.uf || prev.state,
           zipCode: formatCEP(cleanCEP),
@@ -326,6 +333,9 @@ export default function AdminStudents() {
       phone: student.phone || "",
       dateOfBirth: student.dateOfBirth ? new Date(student.dateOfBirth).toISOString().split('T')[0] : "",
       address: student.address || "",
+      number: student.number || "",
+      complement: student.complement || "",
+      neighborhood: student.neighborhood || "",
       city: student.city || "",
       state: student.state || "",
       zipCode: student.zipCode || "",
@@ -469,17 +479,60 @@ export default function AdminStudents() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="address">Endereço</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Rua, número, complemento"
-                  />
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="zipCode">CEP</Label>
+                    <Input
+                      id="zipCode"
+                      value={formData.zipCode}
+                      onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                      onBlur={(e) => handleCEPBlur(e.target.value)}
+                      placeholder="00000-000"
+                      maxLength={9}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="number">Número</Label>
+                    <Input
+                      id="number"
+                      value={formData.number}
+                      onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                      placeholder="123"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Logradouro</Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="Rua, Avenida, etc"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="complement">Complemento</Label>
+                    <Input
+                      id="complement"
+                      value={formData.complement}
+                      onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                      placeholder="Apto, Bloco, etc"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="neighborhood">Bairro</Label>
+                    <Input
+                      id="neighborhood"
+                      value={formData.neighborhood}
+                      onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                      placeholder="Centro"
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="city">Cidade</Label>
                     <Input
@@ -497,17 +550,6 @@ export default function AdminStudents() {
                       onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                       placeholder="SP"
                       maxLength={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="zipCode">CEP</Label>
-                    <Input
-                      id="zipCode"
-                      value={formData.zipCode}
-                      onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                      onBlur={(e) => handleCEPBlur(e.target.value)}
-                      placeholder="00000-000"
-                      maxLength={9}
                     />
                   </div>
                 </div>
@@ -1089,17 +1131,60 @@ export default function AdminStudents() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-address">Endereço</Label>
-                <Input
-                  id="edit-address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Rua, número, complemento"
-                />
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="edit-zipCode">CEP</Label>
+                  <Input
+                    id="edit-zipCode"
+                    value={formData.zipCode}
+                    onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                    onBlur={(e) => handleCEPBlur(e.target.value)}
+                    placeholder="00000-000"
+                    maxLength={9}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-number">Número</Label>
+                  <Input
+                    id="edit-number"
+                    value={formData.number}
+                    onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                    placeholder="123"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-address">Logradouro</Label>
+                  <Input
+                    id="edit-address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Rua, Avenida, etc"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-complement">Complemento</Label>
+                  <Input
+                    id="edit-complement"
+                    value={formData.complement}
+                    onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                    placeholder="Apto, Bloco, etc"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-neighborhood">Bairro</Label>
+                  <Input
+                    id="edit-neighborhood"
+                    value={formData.neighborhood}
+                    onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                    placeholder="Centro"
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-city">Cidade</Label>
                   <Input
@@ -1117,17 +1202,6 @@ export default function AdminStudents() {
                     onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                     placeholder="SP"
                     maxLength={2}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-zipCode">CEP</Label>
-                  <Input
-                    id="edit-zipCode"
-                    value={formData.zipCode}
-                    onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                    onBlur={(e) => handleCEPBlur(e.target.value)}
-                    placeholder="00000-000"
-                    maxLength={9}
                   />
                 </div>
               </div>

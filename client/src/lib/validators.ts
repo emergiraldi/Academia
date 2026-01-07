@@ -187,3 +187,69 @@ export async function fetchAddressByCEP(cep: string): Promise<ViaCEPResponse | n
     return null;
   }
 }
+
+/**
+ * Interface para o retorno da API ReceitaWS (CNPJ)
+ */
+export interface ReceitaWSResponse {
+  cnpj: string;
+  nome: string; // Razão Social
+  fantasia: string; // Nome Fantasia
+  abertura: string; // Data de abertura
+  atividade_principal: Array<{ code: string; text: string }>;
+  atividades_secundarias: Array<{ code: string; text: string }>;
+  natureza_juridica: string;
+  logradouro: string; // Rua
+  numero: string; // Número
+  complemento: string;
+  bairro: string;
+  municipio: string; // Cidade
+  uf: string; // Estado
+  cep: string;
+  email: string;
+  telefone: string;
+  efr: string;
+  situacao: string;
+  data_situacao: string;
+  motivo_situacao: string;
+  situacao_especial: string;
+  data_situacao_especial: string;
+  capital_social: string;
+  qsa: Array<any>;
+  erro?: boolean;
+  message?: string;
+}
+
+/**
+ * Busca dados de empresa pela API ReceitaWS
+ * @param cnpj - CNPJ com ou sem formatação
+ * @returns Dados da empresa ou null se não encontrado
+ */
+export async function fetchCompanyByCNPJ(cnpj: string): Promise<ReceitaWSResponse | null> {
+  try {
+    const cleanCNPJ = cnpj.replace(/\D/g, '');
+
+    if (cleanCNPJ.length !== 14) {
+      throw new Error('CNPJ deve ter 14 dígitos');
+    }
+
+    // Usando API pública da ReceitaWS
+    const response = await fetch(`https://www.receitaws.com.br/v1/cnpj/${cleanCNPJ}`);
+
+    if (!response.ok) {
+      throw new Error('Erro ao buscar CNPJ');
+    }
+
+    const data: ReceitaWSResponse = await response.json();
+
+    if (data.erro || data.message) {
+      console.error('Erro na resposta da ReceitaWS:', data.message);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Erro ao buscar CNPJ:', error);
+    return null;
+  }
+}

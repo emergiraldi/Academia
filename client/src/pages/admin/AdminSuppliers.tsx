@@ -26,6 +26,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Building2, Search } from "lucide-react";
 import { useGym } from "@/_core/hooks/useGym";
+import { validateCPF, validateCNPJ, formatCPF, formatCNPJ, formatCEP, formatPhone, fetchAddressByCEP, fetchCompanyByCNPJ } from "@/lib/validators";
 
 export default function AdminSuppliers() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -33,14 +34,24 @@ export default function AdminSuppliers() {
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState({
-    name: "",
+    name: "", // Razão Social
+    tradeName: "", // Nome Fantasia
     cnpjCpf: "",
     email: "",
     phone: "",
+    cellphone: "",
+    website: "",
     address: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
     city: "",
     state: "",
     zipCode: "",
+    bank: "",
+    bankAgency: "",
+    bankAccount: "",
+    category: "",
     notes: "",
   });
 
@@ -95,19 +106,132 @@ export default function AdminSuppliers() {
   const resetForm = () => {
     setFormData({
       name: "",
+      tradeName: "",
       cnpjCpf: "",
       email: "",
       phone: "",
+      cellphone: "",
+      website: "",
       address: "",
+      number: "",
+      complement: "",
+      neighborhood: "",
       city: "",
       state: "",
       zipCode: "",
+      bank: "",
+      bankAgency: "",
+      bankAccount: "",
+      category: "",
       notes: "",
     });
     setEditingSupplier(null);
   };
 
+  // Buscar endereço pelo CEP
+  const handleCEPBlur = async (cep: string) => {
+    const cleanCEP = cep.replace(/\D/g, '');
+    if (cleanCEP.length !== 8) return;
+
+    try {
+      const address = await fetchAddressByCEP(cleanCEP);
+      if (address) {
+        setFormData(prev => ({
+          ...prev,
+          address: address.logradouro || prev.address,
+          city: address.localidade || prev.city,
+          state: address.uf || prev.state,
+          zipCode: formatCEP(cleanCEP),
+        }));
+        toast.success("Endereço encontrado!");
+      } else {
+        toast.error("CEP não encontrado");
+      }
+    } catch (error) {
+      toast.error("Erro ao buscar CEP");
+    }
+  };
+
+  // Validar e formatar CNPJ/CPF + Buscar dados da empresa
+  const handleCNPJCPFBlur = async (value: string) => {
+    const clean = value.replace(/\D/g, '');
+    if (clean.length === 0) return;
+
+    // Validar CPF (11 dígitos)
+    if (clean.length === 11) {
+      if (!validateCPF(clean)) {
+        toast.error("CPF inválido");
+        return;
+      }
+      setFormData(prev => ({ ...prev, cnpjCpf: formatCPF(clean) }));
+      return;
+    }
+
+    // Validar e buscar CNPJ (14 dígitos)
+    if (clean.length === 14) {
+      if (!validateCNPJ(clean)) {
+        toast.error("CNPJ inválido");
+        return;
+      }
+
+      // Formatar CNPJ
+      setFormData(prev => ({ ...prev, cnpjCpf: formatCNPJ(clean) }));
+
+      // Buscar dados da empresa
+      try {
+        const company = await fetchCompanyByCNPJ(clean);
+        if (company) {
+          setFormData(prev => ({
+            ...prev,
+            name: company.nome || prev.name,
+            tradeName: company.fantasia || prev.tradeName,
+            email: company.email || prev.email,
+            phone: company.telefone ? formatPhone(company.telefone) : prev.phone,
+            address: company.logradouro || prev.address,
+            number: company.numero || prev.number,
+            complement: company.complemento || prev.complement,
+            neighborhood: company.bairro || prev.neighborhood,
+            city: company.municipio || prev.city,
+            state: company.uf || prev.state,
+            zipCode: company.cep ? formatCEP(company.cep) : prev.zipCode,
+          }));
+          toast.success("Dados da empresa encontrados!");
+        } else {
+          toast.error("Dados da empresa não encontrados");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CNPJ:", error);
+      }
+      return;
+    }
+
+    toast.error("CNPJ/CPF deve ter 11 (CPF) ou 14 (CNPJ) dígitos");
+  };
+
+  // Formatar telefone automaticamente
+  const handlePhoneChange = (phone: string) => {
+    setFormData(prev => ({ ...prev, phone: formatPhone(phone) }));
+  };
+
   const handleCreate = () => {
+    if (!formData.name) {
+      toast.error("Nome é obrigatório");
+      return;
+    }
+
+    // Validar CNPJ/CPF se preenchido
+    if (formData.cnpjCpf) {
+      const clean = formData.cnpjCpf.replace(/\D/g, '');
+      if (clean.length === 11 && !validateCPF(clean)) {
+        toast.error("CPF inválido");
+        return;
+      }
+      if (clean.length === 14 && !validateCNPJ(clean)) {
+        toast.error("CNPJ inválido");
+        return;
+      }
+    }
+
     createSupplier.mutate({
       gymSlug,
       ...formData,
@@ -117,14 +241,24 @@ export default function AdminSuppliers() {
   const handleEdit = (supplier: any) => {
     setEditingSupplier(supplier);
     setFormData({
-      name: supplier.name,
+      name: supplier.name || "",
+      tradeName: supplier.tradeName || "",
       cnpjCpf: supplier.cnpjCpf || "",
       email: supplier.email || "",
       phone: supplier.phone || "",
+      cellphone: supplier.cellphone || "",
+      website: supplier.website || "",
       address: supplier.address || "",
+      number: supplier.number || "",
+      complement: supplier.complement || "",
+      neighborhood: supplier.neighborhood || "",
       city: supplier.city || "",
       state: supplier.state || "",
       zipCode: supplier.zipCode || "",
+      bank: supplier.bank || "",
+      bankAgency: supplier.bankAgency || "",
+      bankAccount: supplier.bankAccount || "",
+      category: supplier.category || "",
       notes: supplier.notes || "",
     });
     setIsEditOpen(true);
@@ -132,6 +266,25 @@ export default function AdminSuppliers() {
 
   const handleUpdate = () => {
     if (!editingSupplier) return;
+
+    if (!formData.name) {
+      toast.error("Nome é obrigatório");
+      return;
+    }
+
+    // Validar CNPJ/CPF se preenchido
+    if (formData.cnpjCpf) {
+      const clean = formData.cnpjCpf.replace(/\D/g, '');
+      if (clean.length === 11 && !validateCPF(clean)) {
+        toast.error("CPF inválido");
+        return;
+      }
+      if (clean.length === 14 && !validateCNPJ(clean)) {
+        toast.error("CNPJ inválido");
+        return;
+      }
+    }
+
     updateSupplier.mutate({
       gymSlug,
       supplierId: editingSupplier.id,
@@ -180,36 +333,58 @@ export default function AdminSuppliers() {
                   Cadastre um novo fornecedor ou prestador de serviço
                 </DialogDescription>
               </DialogHeader>
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-4 py-4">
+              <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2 space-y-2">
-                    <Label htmlFor="name">Nome / Razão Social *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Nome do fornecedor"
-                    />
+                  {/* Dados Básicos */}
+                  <div className="col-span-2">
+                    <h3 className="font-semibold text-sm text-gray-700 mb-3 border-b pb-2">Dados da Empresa</h3>
                   </div>
 
-                  <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                    <Label htmlFor="cnpjCpf">CNPJ / CPF</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="cnpjCpf">CNPJ / CPF *</Label>
                     <Input
                       id="cnpjCpf"
                       value={formData.cnpjCpf}
                       onChange={(e) => setFormData({ ...formData, cnpjCpf: e.target.value })}
+                      onBlur={(e) => handleCNPJCPFBlur(e.target.value)}
                       placeholder="00.000.000/0000-00"
+                      maxLength={18}
                     />
                   </div>
 
-                  <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                    <Label htmlFor="phone">Telefone</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Categoria</Label>
                     <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="(00) 00000-0000"
+                      id="category"
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      placeholder="Ex: Equipamentos, Manutenção..."
                     />
+                  </div>
+
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="name">Razão Social *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Nome completo da empresa"
+                    />
+                  </div>
+
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="tradeName">Nome Fantasia</Label>
+                    <Input
+                      id="tradeName"
+                      value={formData.tradeName}
+                      onChange={(e) => setFormData({ ...formData, tradeName: e.target.value })}
+                      placeholder="Nome comercial"
+                    />
+                  </div>
+
+                  {/* Contato */}
+                  <div className="col-span-2 mt-4">
+                    <h3 className="font-semibold text-sm text-gray-700 mb-3 border-b pb-2">Contato</h3>
                   </div>
 
                   <div className="col-span-2 space-y-2">
@@ -223,17 +398,97 @@ export default function AdminSuppliers() {
                     />
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                      placeholder="(00) 00000-0000"
+                      maxLength={15}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cellphone">Celular</Label>
+                    <Input
+                      id="cellphone"
+                      value={formData.cellphone}
+                      onChange={(e) => setFormData({ ...formData, cellphone: formatPhone(e.target.value) })}
+                      placeholder="(00) 00000-0000"
+                      maxLength={15}
+                    />
+                  </div>
+
                   <div className="col-span-2 space-y-2">
-                    <Label htmlFor="address">Endereço</Label>
+                    <Label htmlFor="website">Website</Label>
+                    <Input
+                      id="website"
+                      type="url"
+                      value={formData.website}
+                      onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                      placeholder="https://www.empresa.com.br"
+                    />
+                  </div>
+
+                  {/* Endereço */}
+                  <div className="col-span-2 mt-4">
+                    <h3 className="font-semibold text-sm text-gray-700 mb-3 border-b pb-2">Endereço</h3>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="zipCode">CEP</Label>
+                    <Input
+                      id="zipCode"
+                      value={formData.zipCode}
+                      onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                      onBlur={(e) => handleCEPBlur(e.target.value)}
+                      placeholder="00000-000"
+                      maxLength={9}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="number">Número</Label>
+                    <Input
+                      id="number"
+                      value={formData.number}
+                      onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                      placeholder="123"
+                    />
+                  </div>
+
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="address">Logradouro</Label>
                     <Input
                       id="address"
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      placeholder="Rua, número, complemento"
+                      placeholder="Rua, Avenida..."
                     />
                   </div>
 
-                  <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="complement">Complemento</Label>
+                    <Input
+                      id="complement"
+                      value={formData.complement}
+                      onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                      placeholder="Sala, Andar..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="neighborhood">Bairro</Label>
+                    <Input
+                      id="neighborhood"
+                      value={formData.neighborhood}
+                      onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                      placeholder="Bairro"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="city">Cidade</Label>
                     <Input
                       id="city"
@@ -243,27 +498,50 @@ export default function AdminSuppliers() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                      <Label htmlFor="state">Estado</Label>
-                      <Input
-                        id="state"
-                        value={formData.state}
-                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                        placeholder="UF"
-                        maxLength={2}
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="state">Estado</Label>
+                    <Input
+                      id="state"
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      placeholder="UF"
+                      maxLength={2}
+                    />
+                  </div>
 
-                    <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                      <Label htmlFor="zipCode">CEP</Label>
-                      <Input
-                        id="zipCode"
-                        value={formData.zipCode}
-                        onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                        placeholder="00000-000"
-                      />
-                    </div>
+                  {/* Dados Bancários */}
+                  <div className="col-span-2 mt-4">
+                    <h3 className="font-semibold text-sm text-gray-700 mb-3 border-b pb-2">Dados Bancários</h3>
+                  </div>
+
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="bank">Banco</Label>
+                    <Input
+                      id="bank"
+                      value={formData.bank}
+                      onChange={(e) => setFormData({ ...formData, bank: e.target.value })}
+                      placeholder="Nome do banco"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bankAgency">Agência</Label>
+                    <Input
+                      id="bankAgency"
+                      value={formData.bankAgency}
+                      onChange={(e) => setFormData({ ...formData, bankAgency: e.target.value })}
+                      placeholder="0000"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bankAccount">Conta</Label>
+                    <Input
+                      id="bankAccount"
+                      value={formData.bankAccount}
+                      onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
+                      placeholder="00000-0"
+                    />
                   </div>
 
                   <div className="col-span-2 space-y-2">
@@ -411,7 +689,7 @@ export default function AdminSuppliers() {
                 Atualize as informações do fornecedor
               </DialogDescription>
             </DialogHeader>
-            <div className="max-w-7xl mx-auto px-8 py-8 space-y-4 py-4">
+            <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-2">
                   <Label htmlFor="edit-name">Nome / Razão Social *</Label>
@@ -423,23 +701,26 @@ export default function AdminSuppliers() {
                   />
                 </div>
 
-                <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="edit-cnpjCpf">CNPJ / CPF</Label>
                   <Input
                     id="edit-cnpjCpf"
                     value={formData.cnpjCpf}
                     onChange={(e) => setFormData({ ...formData, cnpjCpf: e.target.value })}
-                    placeholder="00.000.000/0000-00"
+                    onBlur={(e) => handleCNPJCPFBlur(e.target.value)}
+                    placeholder="00.000.000/0000-00 ou 000.000.000-00"
+                    maxLength={18}
                   />
                 </div>
 
-                <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="edit-phone">Telefone</Label>
                   <Input
                     id="edit-phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
                     placeholder="(00) 00000-0000"
+                    maxLength={15}
                   />
                 </div>
 
@@ -454,17 +735,19 @@ export default function AdminSuppliers() {
                   />
                 </div>
 
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="edit-address">Endereço</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-zipCode">CEP</Label>
                   <Input
-                    id="edit-address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Rua, número, complemento"
+                    id="edit-zipCode"
+                    value={formData.zipCode}
+                    onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                    onBlur={(e) => handleCEPBlur(e.target.value)}
+                    placeholder="00000-000"
+                    maxLength={9}
                   />
                 </div>
 
-                <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="edit-city">Cidade</Label>
                   <Input
                     id="edit-city"
@@ -474,27 +757,25 @@ export default function AdminSuppliers() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                    <Label htmlFor="edit-state">Estado</Label>
-                    <Input
-                      id="edit-state"
-                      value={formData.state}
-                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                      placeholder="UF"
-                      maxLength={2}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-state">Estado</Label>
+                  <Input
+                    id="edit-state"
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    placeholder="UF"
+                    maxLength={2}
+                  />
+                </div>
 
-                  <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                    <Label htmlFor="edit-zipCode">CEP</Label>
-                    <Input
-                      id="edit-zipCode"
-                      value={formData.zipCode}
-                      onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                      placeholder="00000-000"
-                    />
-                  </div>
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="edit-address">Endereço</Label>
+                  <Input
+                    id="edit-address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Rua, número, complemento"
+                  />
                 </div>
 
                 <div className="col-span-2 space-y-2">
