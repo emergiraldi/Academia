@@ -26,9 +26,9 @@ echo "🏗️  Compilando projeto..."
 npm run build
 echo ""
 
-# 5. Aplicar migrações do banco de dados
-echo "🗄️  Aplicando migrações do banco de dados..."
-npm run db:push
+# 5. Criar tabelas faltantes no banco de dados
+echo "🗄️  Criando tabelas no banco de dados..."
+node create_tables.js
 echo ""
 
 # 6. Executar create_admin.js para resetar senha
