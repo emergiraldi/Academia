@@ -21,22 +21,27 @@ echo "🔍 Verificando DATABASE_URL..."
 grep "DATABASE_URL" .env
 echo ""
 
-# 4. Executar create_admin.js para resetar senha
+# 4. Aplicar migrações do banco de dados
+echo "🗄️  Aplicando migrações do banco de dados..."
+npm run db:push
+echo ""
+
+# 5. Executar create_admin.js para resetar senha
 echo "🔐 Resetando senha do admin..."
 node create_admin.js
 echo ""
 
-# 5. Reiniciar PM2
+# 6. Reiniciar PM2
 echo "🔄 Reiniciando PM2..."
 pm2 restart all
 echo ""
 
-# 6. Aguardar 3 segundos
+# 7. Aguardar 3 segundos
 echo "⏳ Aguardando backend iniciar..."
 sleep 3
 echo ""
 
-# 7. Verificar logs
+# 8. Verificar logs
 echo "📋 Últimos logs do PM2:"
 pm2 logs --lines 20 --nostream
 echo ""
