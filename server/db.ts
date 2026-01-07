@@ -1028,9 +1028,12 @@ export async function getAllAssessmentsByGym(gymId: number) {
       nextAssessmentDate: physicalAssessments.nextAssessmentDate,
       createdAt: physicalAssessments.createdAt,
       professorName: users.name,
+      studentName: sql<string>`student_user.name`.as('studentName'),
     })
     .from(physicalAssessments)
     .leftJoin(users, eq(physicalAssessments.professorId, users.id))
+    .leftJoin(students, eq(physicalAssessments.studentId, students.id))
+    .leftJoin(sql`users as student_user`, sql`students.userId = student_user.id`)
     .where(eq(physicalAssessments.gymId, gymId))
     .orderBy(desc(physicalAssessments.assessmentDate));
 
