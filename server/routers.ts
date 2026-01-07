@@ -3709,9 +3709,9 @@ export const appRouter = router({
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
         await db.updateCategory(input.categoryId, {
           name: input.name,
-          description: input.description,
+          description: input.description || null,
           type: input.type,
-          color: input.color,
+          color: input.color || null,
         });
         return { success: true };
       }),
@@ -3923,7 +3923,7 @@ export const appRouter = router({
         await db.updateCostCenter(input.costCenterId, {
           name: input.name,
           code: input.code,
-          description: input.description,
+          description: input.description || null,
         });
         return { success: true };
       }),
