@@ -1,4 +1,4 @@
--- Script para RECRIAR as 4 tabelas com estrutura correta
+-- Script para RECRIAR as 5 tabelas com estrutura correta
 -- Execute: mysql -u root academia_db < recreate_tables.sql
 
 -- ATENÇÃO: Este script remove e recria as tabelas, perdendo todos os dados!
@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS class_bookings;
 DROP TABLE IF EXISTS visitor_bookings;
 DROP TABLE IF EXISTS payment_methods;
 DROP TABLE IF EXISTS class_schedules;
+DROP TABLE IF EXISTS leads;
 
 -- 2. Criar tabela class_schedules
 CREATE TABLE class_schedules (
@@ -70,6 +71,25 @@ CREATE TABLE payment_methods (
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (gymId) REFERENCES gyms(id) ON DELETE CASCADE
+);
+
+-- 6. Criar tabela leads
+CREATE TABLE leads (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  gymId INT NOT NULL,
+  name VARCHAR(200) NOT NULL,
+  email VARCHAR(320),
+  phone VARCHAR(20) NOT NULL,
+  source VARCHAR(100) NOT NULL,
+  status ENUM('new', 'contacted', 'interested', 'negotiating', 'converted', 'lost') NOT NULL DEFAULT 'new',
+  notes TEXT,
+  assignedTo INT,
+  lastContactDate DATE,
+  nextFollowUpDate DATE,
+  createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (gymId) REFERENCES gyms(id) ON DELETE CASCADE,
+  FOREIGN KEY (assignedTo) REFERENCES users(id) ON DELETE SET NULL
 );
 
 SELECT 'Tabelas recriadas com sucesso!' as status;
