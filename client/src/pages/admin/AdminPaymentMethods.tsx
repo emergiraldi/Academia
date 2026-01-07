@@ -31,6 +31,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useGym } from "@/hooks/useGym";
 import {
   Plus,
   Edit,
@@ -59,18 +60,18 @@ const iconComponents: Record<string, any> = {
 };
 
 export default function AdminPaymentMethods() {
+  const { gymSlug } = useGym();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingMethod, setEditingMethod] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState({
     name: "",
-    code: "",
+    type: "cash" as "cash" | "bank_transfer" | "credit_card" | "debit_card" | "pix" | "check" | "other",
     description: "",
-    icon: "Wallet",
   });
 
-  const { data: paymentMethods = [], refetch } = trpc.paymentMethods.list.useQuery();
+  const { data: paymentMethods = [], refetch } = trpc.paymentMethods.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
 
   const createMethod = trpc.paymentMethods.create.useMutation({
     onSuccess: () => {
@@ -119,35 +120,36 @@ export default function AdminPaymentMethods() {
   const resetForm = () => {
     setFormData({
       name: "",
-      code: "",
+      type: "cash" as "cash" | "bank_transfer" | "credit_card" | "debit_card" | "pix" | "check" | "other",
       description: "",
-      icon: "Wallet",
     });
     setEditingMethod(null);
   };
 
   const handleCreate = () => {
-    if (!formData.name || !formData.code) {
+    if (!formData.name || !formData.type) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
-    createMethod.mutate(formData);
+    createMethod.mutate({
+      gymSlug: gymSlug || '',
+      ...formData,
+    });
   };
 
   const handleEdit = (method: any) => {
     setEditingMethod(method);
     setFormData({
       name: method.name,
-      code: method.code,
+      type: method.type || "cash",
       description: method.description || "",
-      icon: method.icon || "Wallet",
     });
     setIsEditOpen(true);
   };
 
   const handleUpdate = () => {
-    if (!editingMethod || !formData.name || !formData.code) {
+    if (!editingMethod || !formData.name || !formData.type) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -170,12 +172,20 @@ export default function AdminPaymentMethods() {
 
   const filteredMethods = paymentMethods.filter((method: any) =>
     method.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    method.code.toLowerCase().includes(searchTerm.toLowerCase())
+    (method.type && method.type.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const getIcon = (iconName: string) => {
-    const IconComponent = iconComponents[iconName] || Wallet;
-    return <IconComponent className="w-5 h-5" />;
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      cash: "Dinheiro",
+      bank_transfer: "Transferência Bancária",
+      credit_card: "Cartão de Crédito",
+      debit_card: "Cartão de Débito",
+      pix: "PIX",
+      check: "Cheque",
+      other: "Outro"
+    };
+    return labels[type] || type;
   };
 
   return (
@@ -215,23 +225,31 @@ export default function AdminPaymentMethods() {
                 </div>
 
                 <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                  <Label htmlFor="code">Código *</Label>
-                  <Input
-                    id="code"
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toLowerCase().replace(/\s/g, '_') })}
-                    placeholder="Ex: pix, cash, credit_card"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Identificador único (sem espaços, use underscore _)
-                  </p>
+                  <Label htmlFor="type">Tipo *</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value: any) => setFormData({ ...formData, type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Dinheiro</SelectItem>
+                      <SelectItem value="pix">PIX</SelectItem>
+                      <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+                      <SelectItem value="debit_card">Cartão de Débito</SelectItem>
+                      <SelectItem value="bank_transfer">Transferência Bancária</SelectItem>
+                      <SelectItem value="check">Cheque</SelectItem>
+                      <SelectItem value="other">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                  <Label htmlFor="icon">Ícone</Label>
+                <div className="max-w-7xl mx-auto px-8 py-8 space-y-2" style={{display: "none"}}>
+                  <Label htmlFor="icon-hidden">Ícone</Label>
                   <Select
-                    value={formData.icon}
-                    onValueChange={(value) => setFormData({ ...formData, icon: value })}
+                    value="Wallet"
+                    onValueChange={() => {}}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -306,7 +324,7 @@ export default function AdminPaymentMethods() {
                   </Button>
                   <Button
                     onClick={handleCreate}
-                    disabled={createMethod.isPending || !formData.name || !formData.code}
+                    disabled={createMethod.isPending || !formData.name || !formData.type}
                   >
                     {createMethod.isPending ? "Cadastrando..." : "Cadastrar"}
                   </Button>
@@ -362,9 +380,8 @@ export default function AdminPaymentMethods() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ícone</TableHead>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Código</TableHead>
+                  <TableHead>Tipo</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -373,7 +390,7 @@ export default function AdminPaymentMethods() {
               <TableBody>
                 {filteredMethods.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={5} className="text-center py-8">
                       <Wallet className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">
                         {searchTerm
@@ -385,15 +402,10 @@ export default function AdminPaymentMethods() {
                 ) : (
                   filteredMethods.map((method: any) => (
                     <TableRow key={method.id}>
-                      <TableCell>
-                        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-                          {getIcon(method.icon)}
-                        </div>
-                      </TableCell>
                       <TableCell className="font-medium">{method.name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="font-mono">
-                          {method.code}
+                        <Badge variant="outline">
+                          {getTypeLabel(method.type)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground max-w-xs truncate">
@@ -455,23 +467,31 @@ export default function AdminPaymentMethods() {
               </div>
 
               <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                <Label htmlFor="edit-code">Código *</Label>
-                <Input
-                  id="edit-code"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toLowerCase().replace(/\s/g, '_') })}
-                  placeholder="Ex: pix, cash, credit_card"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Identificador único (sem espaços, use underscore _)
-                </p>
+                <Label htmlFor="edit-type">Tipo *</Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value: any) => setFormData({ ...formData, type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Dinheiro</SelectItem>
+                    <SelectItem value="pix">PIX</SelectItem>
+                    <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+                    <SelectItem value="debit_card">Cartão de Débito</SelectItem>
+                    <SelectItem value="bank_transfer">Transferência Bancária</SelectItem>
+                    <SelectItem value="check">Cheque</SelectItem>
+                    <SelectItem value="other">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                <Label htmlFor="edit-icon">Ícone</Label>
+              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2" style={{display: "none"}}>
+                <Label htmlFor="edit-icon-hidden">Ícone</Label>
                 <Select
-                  value={formData.icon}
-                  onValueChange={(value) => setFormData({ ...formData, icon: value })}
+                  value="Wallet"
+                  onValueChange={() => {}}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -546,7 +566,7 @@ export default function AdminPaymentMethods() {
                 </Button>
                 <Button
                   onClick={handleUpdate}
-                  disabled={updateMethod.isPending || !formData.name || !formData.code}
+                  disabled={updateMethod.isPending || !formData.name || !formData.type}
                 >
                   {updateMethod.isPending ? "Atualizando..." : "Atualizar"}
                 </Button>

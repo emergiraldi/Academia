@@ -20,7 +20,9 @@
       "Bash(sshpass -p \"935559Emerson@\" ssh -o StrictHostKeyChecking=no root@138.197.8.136 \"cd /var/www/academia && git log --oneline -5\")",
       "Bash(git restore:*)",
       "Bash(node check_suppliers_table.js:*)",
-      "Bash(node migrate_suppliers_table.js:*)"
+      "Bash(node migrate_suppliers_table.js:*)",
+      "Bash(bash deploy_suppliers_migration.sh:*)",
+      "Bash(sshpass -p \"935559Emerson@\" ssh -o StrictHostKeyChecking=no root@138.197.8.136 \"cd /var/www/academia && git pull origin main && node migrate_suppliers_table.js && pm2 restart academia\")"
     ],
     "deny": [],
     "ask": []

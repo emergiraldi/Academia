@@ -1739,22 +1739,23 @@ export async function deleteExpense(id: number, gymId: number) {
 
 // ============ PAYMENT METHODS (FORMAS DE PAGAMENTO) ============
 
-export async function getPaymentMethods() {
+export async function getPaymentMethods(gymId: number) {
   const conn = await getConnection();
-  const [rows] = await conn.query('SELECT * FROM payment_methods WHERE active = TRUE ORDER BY name');
+  const [rows] = await conn.query('SELECT * FROM payment_methods WHERE gymId = ? AND active = TRUE ORDER BY name', [gymId]);
   await conn.end();
   return rows;
 }
 
 export async function createPaymentMethod(method: {
+  gymId: number;
   name: string;
   type: string;
   description?: string;
 }) {
   const conn = await getConnection();
   const [result] = await conn.query(
-    'INSERT INTO payment_methods (name, type, description) VALUES (?, ?, ?)',
-    [method.name, method.type, method.description || null]
+    'INSERT INTO payment_methods (gymId, name, type, description) VALUES (?, ?, ?, ?)',
+    [method.gymId, method.name, method.type, method.description || null]
   );
   await conn.end();
   return { insertId: (result as any).insertId };

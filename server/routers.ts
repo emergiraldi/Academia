@@ -2800,18 +2800,26 @@ export const appRouter = router({
 
   // ============ PAYMENT METHODS ============
   paymentMethods: router({
-    list: gymAdminProcedure.query(async () => {
-      return await db.getPaymentMethods();
-    }),
+    list: gymAdminProcedure
+      .input(z.object({
+        gymSlug: z.string(),
+      }))
+      .query(async ({ input, ctx }) => {
+        const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
+        return await db.getPaymentMethods(gym.id);
+      }),
 
     create: gymAdminProcedure
       .input(z.object({
+        gymSlug: z.string(),
         name: z.string(),
         type: z.enum(['cash', 'bank_transfer', 'credit_card', 'debit_card', 'pix', 'check', 'other']),
         description: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
         return await db.createPaymentMethod({
+          gymId: gym.id,
           name: input.name,
           type: input.type,
           description: input.description || null,
