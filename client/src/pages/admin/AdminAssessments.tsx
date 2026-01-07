@@ -50,6 +50,9 @@ export default function AdminAssessments() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [selectedAssessment, setSelectedAssessment] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const { gymSlug } = useGym();
 
   // Form state
@@ -552,13 +555,30 @@ export default function AdminAssessments() {
                           <Badge className={imcStatus.color}>{imcStatus.label}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setLocation(`/admin/students/${assessment.studentId}`)}
-                          >
-                            Ver Detalhes
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedAssessment(assessment);
+                                setIsEditing(false);
+                                setDetailsModalOpen(true);
+                              }}
+                            >
+                              Ver Detalhes
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedAssessment(assessment);
+                                setIsEditing(true);
+                                setDetailsModalOpen(true);
+                              }}
+                            >
+                              Editar
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -568,6 +588,143 @@ export default function AdminAssessments() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Modal de Detalhes/Edição */}
+        <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {isEditing ? "Editar Avaliação Física" : "Detalhes da Avaliação Física"}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedAssessment?.studentName} - {selectedAssessment?.assessmentDate && new Date(selectedAssessment.assessmentDate).toLocaleDateString("pt-BR")}
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedAssessment && (
+              <div className="grid gap-6 py-4">
+                {/* Dados Básicos */}
+                <div>
+                  <h3 className="font-semibold mb-3">Dados Básicos</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground">Peso</Label>
+                      <div className="text-lg font-semibold">{selectedAssessment.weight || "-"} kg</div>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Altura</Label>
+                      <div className="text-lg font-semibold">{selectedAssessment.height || "-"} cm</div>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">IMC</Label>
+                      <div className="text-lg font-semibold">
+                        {selectedAssessment.weight && selectedAssessment.height
+                          ? (Number(selectedAssessment.weight) / Math.pow(Number(selectedAssessment.height) / 100, 2)).toFixed(1)
+                          : "-"}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">% Gordura</Label>
+                      <div className="text-lg font-semibold">{selectedAssessment.bodyFat ? `${selectedAssessment.bodyFat}%` : "-"}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Perimetria */}
+                {(selectedAssessment.chest || selectedAssessment.waist || selectedAssessment.hips) && (
+                  <div>
+                    <h3 className="font-semibold mb-3">Perimetria (cm)</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {selectedAssessment.chest && (
+                        <div>
+                          <Label className="text-muted-foreground">Peitoral</Label>
+                          <div>{selectedAssessment.chest} cm</div>
+                        </div>
+                      )}
+                      {selectedAssessment.waist && (
+                        <div>
+                          <Label className="text-muted-foreground">Cintura</Label>
+                          <div>{selectedAssessment.waist} cm</div>
+                        </div>
+                      )}
+                      {selectedAssessment.hips && (
+                        <div>
+                          <Label className="text-muted-foreground">Quadril</Label>
+                          <div>{selectedAssessment.hips} cm</div>
+                        </div>
+                      )}
+                      {selectedAssessment.rightArm && (
+                        <div>
+                          <Label className="text-muted-foreground">Braço Direito</Label>
+                          <div>{selectedAssessment.rightArm} cm</div>
+                        </div>
+                      )}
+                      {selectedAssessment.leftArm && (
+                        <div>
+                          <Label className="text-muted-foreground">Braço Esquerdo</Label>
+                          <div>{selectedAssessment.leftArm} cm</div>
+                        </div>
+                      )}
+                      {selectedAssessment.rightThigh && (
+                        <div>
+                          <Label className="text-muted-foreground">Coxa Direita</Label>
+                          <div>{selectedAssessment.rightThigh} cm</div>
+                        </div>
+                      )}
+                      {selectedAssessment.leftThigh && (
+                        <div>
+                          <Label className="text-muted-foreground">Coxa Esquerda</Label>
+                          <div>{selectedAssessment.leftThigh} cm</div>
+                        </div>
+                      )}
+                      {selectedAssessment.rightCalf && (
+                        <div>
+                          <Label className="text-muted-foreground">Panturrilha Direita</Label>
+                          <div>{selectedAssessment.rightCalf} cm</div>
+                        </div>
+                      )}
+                      {selectedAssessment.leftCalf && (
+                        <div>
+                          <Label className="text-muted-foreground">Panturrilha Esquerda</Label>
+                          <div>{selectedAssessment.leftCalf} cm</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Observações e Objetivos */}
+                {(selectedAssessment.notes || selectedAssessment.goals) && (
+                  <div className="space-y-4">
+                    {selectedAssessment.notes && (
+                      <div>
+                        <Label className="text-muted-foreground font-semibold">Observações</Label>
+                        <div className="mt-1 text-sm bg-muted p-3 rounded">{selectedAssessment.notes}</div>
+                      </div>
+                    )}
+                    {selectedAssessment.goals && (
+                      <div>
+                        <Label className="text-muted-foreground font-semibold">Objetivos/Metas</Label>
+                        <div className="mt-1 text-sm bg-muted p-3 rounded">{selectedAssessment.goals}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {isEditing && (
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setDetailsModalOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button>
+                      Salvar Alterações
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
