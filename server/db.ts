@@ -33,12 +33,20 @@ export async function getDb() {
     try {
       // Parse DATABASE_URL
       const dbUrl = process.env.DATABASE_URL || 'mysql://root@localhost:3306/academia_db';
-      console.log("[Database] Connecting to:", dbUrl);
+      console.log("[Database] 🔍 DATABASE_URL from env:", process.env.DATABASE_URL);
+      console.log("[Database] 🔍 Using connection string:", dbUrl);
       const url = new URL(dbUrl);
 
       // Create connection pool
       if (!_pool) {
         console.log("[Database] Creating connection pool...");
+        console.log("[Database] 🔍 Connection details:", {
+          host: url.hostname,
+          port: parseInt(url.port) || 3306,
+          user: url.username || 'root',
+          database: url.pathname.substring(1),
+          hasPassword: !!url.password
+        });
         _pool = mysql.createPool({
           host: url.hostname,
           port: parseInt(url.port) || 3306,
