@@ -40,6 +40,10 @@ export default function AdminProfessors() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!gymSlug) {
+      toast.error("Academia não identificada");
+      return;
+    }
     try {
       await createMutation.mutateAsync({
         gymSlug,
@@ -69,6 +73,10 @@ export default function AdminProfessors() {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProfessor) return;
+    if (!gymSlug) {
+      toast.error("Academia não identificada");
+      return;
+    }
 
     try {
       await updateMutation.mutateAsync({
@@ -90,6 +98,10 @@ export default function AdminProfessors() {
 
   const handleDelete = async (professorId: number) => {
     if (!confirm("Tem certeza que deseja excluir este professor?")) return;
+    if (!gymSlug) {
+      toast.error("Academia não identificada");
+      return;
+    }
 
     try {
       await deleteMutation.mutateAsync({ gymSlug, professorId });

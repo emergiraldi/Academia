@@ -2227,7 +2227,7 @@ export const appRouter = router({
         const openId = `professor-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
         // Create user with professor role
-        const userId = await db.createUser({
+        const result = await db.createUser({
           gymId: ctx.user.gymId,
           openId,
           name: input.name,
@@ -2238,7 +2238,7 @@ export const appRouter = router({
           loginMethod: "password",
         });
 
-        return { success: true, userId };
+        return { success: true, userId: result.insertId };
       }),
 
     update: gymAdminProcedure
@@ -2324,7 +2324,7 @@ export const appRouter = router({
         const openId = `staff-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
         // Create user with staff role
-        const userId = await db.createUser({
+        const result = await db.createUser({
           gymId: ctx.user.gymId,
           openId,
           name: input.name,
@@ -2335,7 +2335,7 @@ export const appRouter = router({
           permissions: JSON.stringify(input.permissions),
         });
 
-        return { success: true, userId };
+        return { success: true, userId: result.insertId };
       }),
 
     update: gymAdminProcedure
