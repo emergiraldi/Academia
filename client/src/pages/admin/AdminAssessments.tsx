@@ -517,7 +517,10 @@ export default function AdminAssessments() {
                   </TableRow>
                 ) : (
                   filteredAssessments.map((assessment: any) => {
-                    const imcStatus = getIMCStatus(assessment.bmi || 0);
+                    const bmi = assessment.weight && assessment.height
+                      ? Number(assessment.weight) / Math.pow(Number(assessment.height) / 100, 2)
+                      : 0;
+                    const imcStatus = getIMCStatus(bmi);
                     return (
                       <TableRow key={assessment.id}>
                         <TableCell className="font-medium">{assessment.studentName}</TableCell>
@@ -530,20 +533,20 @@ export default function AdminAssessments() {
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Weight className="w-3 h-3 text-muted-foreground" />
-                            {assessment.weightKg} kg
+                            {assessment.weight ? `${assessment.weight} kg` : "-"}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Ruler className="w-3 h-3 text-muted-foreground" />
-                            {assessment.heightCm} cm
+                            {assessment.height ? `${assessment.height} cm` : "-"}
                           </div>
                         </TableCell>
                         <TableCell className="font-semibold">
-                          {assessment.bmi ? assessment.bmi.toFixed(1) : "-"}
+                          {bmi ? bmi.toFixed(1) : "-"}
                         </TableCell>
                         <TableCell>
-                          {assessment.bodyFatPercentage ? `${assessment.bodyFatPercentage}%` : "-"}
+                          {assessment.bodyFat ? `${assessment.bodyFat}%` : "-"}
                         </TableCell>
                         <TableCell>
                           <Badge className={imcStatus.color}>{imcStatus.label}</Badge>
