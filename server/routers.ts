@@ -448,15 +448,15 @@ export const appRouter = router({
           gymId: gym.id,
           userId: userResult.insertId,
           cpf: input.cpf,
-          phone: input.phone,
-          birthDate: input.dateOfBirth ? new Date(input.dateOfBirth) : undefined,
-          address: input.address,
-          number: input.number,
-          complement: input.complement,
-          neighborhood: input.neighborhood,
-          city: input.city,
-          state: input.state,
-          zipCode: input.zipCode,
+          phone: input.phone || null,
+          birthDate: input.dateOfBirth ? new Date(input.dateOfBirth) : null,
+          address: input.address || null,
+          number: input.number || null,
+          complement: input.complement || null,
+          neighborhood: input.neighborhood || null,
+          city: input.city || null,
+          state: input.state || null,
+          zipCode: input.zipCode || null,
           registrationNumber: `${gym.id}-${Date.now()}`,
         });
 
@@ -661,7 +661,13 @@ export const appRouter = router({
         if (!student) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Aluno não encontrado" });
         }
-        await db.updateStudent(student.id, ctx.user.gymId, input);
+        await db.updateStudent(student.id, ctx.user.gymId, {
+          phone: input.phone || null,
+          address: input.address || null,
+          city: input.city || null,
+          state: input.state || null,
+          zipCode: input.zipCode || null,
+        });
         return { success: true };
       }),
 
@@ -918,10 +924,10 @@ export const appRouter = router({
         const result = await db.createPlan({
           gymId: gym.id,
           name: input.name,
-          description: input.description,
+          description: input.description || null,
           priceInCents: Math.round(input.price * 100),
           durationDays: input.durationDays,
-          features: input.features,
+          features: input.features || null,
           active: true,
         });
         return { success: true, planId: result.insertId };
@@ -941,10 +947,10 @@ export const appRouter = router({
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
         await db.updatePlan(input.planId, {
           name: input.name,
-          description: input.description,
+          description: input.description || null,
           priceInCents: Math.round(input.price * 100),
           durationDays: input.durationDays,
-          features: input.features,
+          features: input.features || null,
         });
         return { success: true };
       }),
@@ -2805,7 +2811,11 @@ export const appRouter = router({
         description: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        return await db.createPaymentMethod(input);
+        return await db.createPaymentMethod({
+          name: input.name,
+          type: input.type,
+          description: input.description || null,
+        });
       }),
 
     update: gymAdminProcedure
@@ -2817,8 +2827,12 @@ export const appRouter = router({
         active: z.boolean().optional(),
       }))
       .mutation(async ({ input }) => {
-        const { id, ...data } = input;
-        return await db.updatePaymentMethod(id, data);
+        return await db.updatePaymentMethod(input.id, {
+          name: input.name || null,
+          type: input.type || null,
+          description: input.description || null,
+          active: input.active,
+        });
       }),
   }),
 
@@ -2861,8 +2875,31 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
-        const { gymSlug, ...data } = input;
-        await db.createBankAccount({ ...data, gymId: gym.id });
+        await db.createBankAccount({
+          gymId: gym.id,
+          banco: input.banco,
+          titularNome: input.titularNome || null,
+          agenciaNumero: input.agenciaNumero || null,
+          agenciaDv: input.agenciaDv || null,
+          contaNumero: input.contaNumero || null,
+          contaDv: input.contaDv || null,
+          pixAtivo: input.pixAtivo || null,
+          pixScope: input.pixScope || null,
+          pixChave: input.pixChave || null,
+          pixTipoChave: input.pixTipoChave || null,
+          pixTipoAmbiente: input.pixTipoAmbiente || null,
+          pixClientId: input.pixClientId || null,
+          pixClientSecret: input.pixClientSecret || null,
+          pixCertificado: input.pixCertificado || null,
+          pixChavePrivada: input.pixChavePrivada || null,
+          pixSenhaCertificado: input.pixSenhaCertificado || null,
+          pixVersaoApi: input.pixVersaoApi || null,
+          pixTimeoutMs: input.pixTimeoutMs || null,
+          pixTokenExpiracao: input.pixTokenExpiracao || null,
+          pixTipoAutenticacao: input.pixTipoAutenticacao || null,
+          pixUrlBase: input.pixUrlBase || null,
+          pixUrlToken: input.pixUrlToken || null,
+        });
         return { success: true };
       }),
 
@@ -2895,8 +2932,30 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
-        const { id, gymSlug, ...data } = input;
-        await db.updateBankAccount(id, gym.id, data);
+        await db.updateBankAccount(input.id, gym.id, {
+          banco: input.banco || null,
+          titularNome: input.titularNome || null,
+          agenciaNumero: input.agenciaNumero || null,
+          agenciaDv: input.agenciaDv || null,
+          contaNumero: input.contaNumero || null,
+          contaDv: input.contaDv || null,
+          pixAtivo: input.pixAtivo || null,
+          pixScope: input.pixScope || null,
+          pixChave: input.pixChave || null,
+          pixTipoChave: input.pixTipoChave || null,
+          pixTipoAmbiente: input.pixTipoAmbiente || null,
+          pixClientId: input.pixClientId || null,
+          pixClientSecret: input.pixClientSecret || null,
+          pixCertificado: input.pixCertificado || null,
+          pixChavePrivada: input.pixChavePrivada || null,
+          pixSenhaCertificado: input.pixSenhaCertificado || null,
+          pixVersaoApi: input.pixVersaoApi || null,
+          pixTimeoutMs: input.pixTimeoutMs || null,
+          pixTokenExpiracao: input.pixTokenExpiracao || null,
+          pixTipoAutenticacao: input.pixTipoAutenticacao || null,
+          pixUrlBase: input.pixUrlBase || null,
+          pixUrlToken: input.pixUrlToken || null,
+        });
         return { success: true };
       }),
 
