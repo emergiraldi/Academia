@@ -56,6 +56,7 @@ export default function AdminSuppliers() {
   });
 
   const { gymSlug } = useGym();
+  const utils = trpc.useUtils();
 
   const { data: suppliers = [], refetch } = trpc.suppliers.list.useQuery({ gymSlug });
 
@@ -179,7 +180,7 @@ export default function AdminSuppliers() {
 
       // Buscar dados da empresa via backend
       try {
-        const company = await trpc.suppliers.fetchCNPJ.query({ cnpj: clean });
+        const company = await utils.client.suppliers.fetchCNPJ.query({ cnpj: clean });
         if (company) {
           setFormData(prev => ({
             ...prev,

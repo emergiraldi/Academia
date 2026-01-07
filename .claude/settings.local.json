@@ -4,7 +4,14 @@
       "Bash(npm run build:*)",
       "Bash(git add:*)",
       "Bash(git push:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash($null)",
+      "Bash(cat:*)",
+      "Bash(npm run db:push:*)",
+      "Bash(git commit:*)",
+      "Bash(mysql:*)",
+      "Bash(node seed.js:*)",
+      "Bash(node create_admin.js:*)"
     ],
     "deny": [],
     "ask": []
