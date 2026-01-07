@@ -3651,20 +3651,20 @@ export const appRouter = router({
           assessmentDate: new Date(input.assessmentDate),
           weight: input.weightKg.toString(),
           height: input.heightCm.toString(),
-          bodyFat: input.bodyFatPercentage?.toString(),
-          muscleMass: input.muscleMassKg?.toString(),
-          chest: input.chestCm?.toString(),
-          waist: input.waistCm?.toString(),
-          hips: input.hipCm?.toString(),
-          rightArm: input.rightArmCm?.toString(),
-          leftArm: input.leftArmCm?.toString(),
-          rightThigh: input.rightThighCm?.toString(),
-          leftThigh: input.leftThighCm?.toString(),
-          rightCalf: input.rightCalfCm?.toString(),
-          leftCalf: input.leftCalfCm?.toString(),
-          notes: input.notes,
-          goals: input.goals,
-          photos: input.photos,
+          bodyFat: input.bodyFatPercentage?.toString() || null,
+          muscleMass: input.muscleMassKg?.toString() || null,
+          chest: input.chestCm?.toString() || null,
+          waist: input.waistCm?.toString() || null,
+          hips: input.hipCm?.toString() || null,
+          rightArm: input.rightArmCm?.toString() || null,
+          leftArm: input.leftArmCm?.toString() || null,
+          rightThigh: input.rightThighCm?.toString() || null,
+          leftThigh: input.leftThighCm?.toString() || null,
+          rightCalf: input.rightCalfCm?.toString() || null,
+          leftCalf: input.leftCalfCm?.toString() || null,
+          notes: input.notes || null,
+          goals: input.goals || null,
+          photos: input.photos || null,
         });
       }),
 
@@ -3707,8 +3707,25 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN", message: "Você só pode editar suas próprias avaliações" });
         }
 
-        const { id, ...updates } = input;
-        return await db.updatePhysicalAssessment(id, ctx.user.gymId, updates);
+        return await db.updatePhysicalAssessment(input.id, ctx.user.gymId, {
+          assessmentDate: input.assessmentDate ? new Date(input.assessmentDate) : undefined,
+          weight: input.weightKg?.toString() || null,
+          height: input.heightCm?.toString() || null,
+          bodyFat: input.bodyFatPercentage?.toString() || null,
+          muscleMass: input.muscleMassKg?.toString() || null,
+          chest: input.chestCm?.toString() || null,
+          waist: input.waistCm?.toString() || null,
+          hips: input.hipCm?.toString() || null,
+          rightArm: input.rightArmCm?.toString() || null,
+          leftArm: input.leftArmCm?.toString() || null,
+          rightThigh: input.rightThighCm?.toString() || null,
+          leftThigh: input.leftThighCm?.toString() || null,
+          rightCalf: input.rightCalfCm?.toString() || null,
+          leftCalf: input.leftCalfCm?.toString() || null,
+          notes: input.notes || null,
+          goals: input.goals || null,
+          photos: input.photos || null,
+        });
       }),
 
     // Deletar avaliação: Apenas Admin
