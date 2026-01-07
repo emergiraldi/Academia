@@ -55,10 +55,30 @@ export default function AdminAssessments() {
   const [isEditing, setIsEditing] = useState(false);
   const { gymSlug } = useGym();
 
-  // Form state
+  // Form state for creating
   const [formData, setFormData] = useState({
     studentId: "",
     assessmentDate: new Date().toISOString().split('T')[0],
+    weightKg: "",
+    heightCm: "",
+    bodyFatPercentage: "",
+    muscleMassKg: "",
+    chestCm: "",
+    waistCm: "",
+    hipCm: "",
+    rightArmCm: "",
+    leftArmCm: "",
+    rightThighCm: "",
+    leftThighCm: "",
+    rightCalfCm: "",
+    leftCalfCm: "",
+    notes: "",
+    goals: "",
+  });
+
+  // Form state for editing
+  const [editFormData, setEditFormData] = useState({
+    assessmentDate: "",
     weightKg: "",
     heightCm: "",
     bodyFatPercentage: "",
@@ -90,6 +110,18 @@ export default function AdminAssessments() {
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao cadastrar avaliação");
+    },
+  });
+
+  const updateAssessment = trpc.assessments.update.useMutation({
+    onSuccess: () => {
+      toast.success("Avaliação atualizada com sucesso!");
+      setDetailsModalOpen(false);
+      setIsEditing(false);
+      refetchAssessments();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao atualizar avaliação");
     },
   });
 
@@ -150,6 +182,59 @@ export default function AdminAssessments() {
       leftCalfCm: formData.leftCalfCm ? parseFloat(formData.leftCalfCm) : undefined,
       notes: formData.notes || undefined,
       goals: formData.goals || undefined,
+    });
+  };
+
+  const populateEditForm = (assessment: any) => {
+    setEditFormData({
+      assessmentDate: assessment.assessmentDate ? new Date(assessment.assessmentDate).toISOString().split('T')[0] : "",
+      weightKg: assessment.weight || "",
+      heightCm: assessment.height || "",
+      bodyFatPercentage: assessment.bodyFat || "",
+      muscleMassKg: assessment.muscleMass || "",
+      chestCm: assessment.chest || "",
+      waistCm: assessment.waist || "",
+      hipCm: assessment.hips || "",
+      rightArmCm: assessment.rightArm || "",
+      leftArmCm: assessment.leftArm || "",
+      rightThighCm: assessment.rightThigh || "",
+      leftThighCm: assessment.leftThigh || "",
+      rightCalfCm: assessment.rightCalf || "",
+      leftCalfCm: assessment.leftCalf || "",
+      notes: assessment.notes || "",
+      goals: assessment.goals || "",
+    });
+  };
+
+  const handleUpdate = () => {
+    if (!selectedAssessment || !editFormData.weightKg || !editFormData.heightCm) {
+      toast.error("Preencha os campos obrigatórios: Peso e Altura");
+      return;
+    }
+
+    const weight = parseFloat(editFormData.weightKg);
+    const height = parseFloat(editFormData.heightCm);
+    const bmi = calculateBMI(weight, height);
+
+    updateAssessment.mutate({
+      id: selectedAssessment.id,
+      assessmentDate: editFormData.assessmentDate,
+      weightKg: weight,
+      heightCm: height,
+      bmi,
+      bodyFatPercentage: editFormData.bodyFatPercentage ? parseFloat(editFormData.bodyFatPercentage) : undefined,
+      muscleMassKg: editFormData.muscleMassKg ? parseFloat(editFormData.muscleMassKg) : undefined,
+      chestCm: editFormData.chestCm ? parseFloat(editFormData.chestCm) : undefined,
+      waistCm: editFormData.waistCm ? parseFloat(editFormData.waistCm) : undefined,
+      hipCm: editFormData.hipCm ? parseFloat(editFormData.hipCm) : undefined,
+      rightArmCm: editFormData.rightArmCm ? parseFloat(editFormData.rightArmCm) : undefined,
+      leftArmCm: editFormData.leftArmCm ? parseFloat(editFormData.leftArmCm) : undefined,
+      rightThighCm: editFormData.rightThighCm ? parseFloat(editFormData.rightThighCm) : undefined,
+      leftThighCm: editFormData.leftThighCm ? parseFloat(editFormData.leftThighCm) : undefined,
+      rightCalfCm: editFormData.rightCalfCm ? parseFloat(editFormData.rightCalfCm) : undefined,
+      leftCalfCm: editFormData.leftCalfCm ? parseFloat(editFormData.leftCalfCm) : undefined,
+      notes: editFormData.notes || undefined,
+      goals: editFormData.goals || undefined,
     });
   };
 
@@ -572,6 +657,7 @@ export default function AdminAssessments() {
                               size="sm"
                               onClick={() => {
                                 setSelectedAssessment(assessment);
+                                populateEditForm(assessment);
                                 setIsEditing(true);
                                 setDetailsModalOpen(true);
                               }}
@@ -606,107 +692,276 @@ export default function AdminAssessments() {
                 {/* Dados Básicos */}
                 <div>
                   <h3 className="font-semibold mb-3">Dados Básicos</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <Label className="text-muted-foreground">Peso</Label>
-                      <div className="text-lg font-semibold">{selectedAssessment.weight || "-"} kg</div>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Altura</Label>
-                      <div className="text-lg font-semibold">{selectedAssessment.height || "-"} cm</div>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">IMC</Label>
-                      <div className="text-lg font-semibold">
-                        {selectedAssessment.weight && selectedAssessment.height
-                          ? (Number(selectedAssessment.weight) / Math.pow(Number(selectedAssessment.height) / 100, 2)).toFixed(1)
-                          : "-"}
+                  {isEditing ? (
+                    <div className="grid gap-4">
+                      <div>
+                        <Label>Data da Avaliação *</Label>
+                        <Input
+                          type="date"
+                          value={editFormData.assessmentDate}
+                          onChange={(e) => setEditFormData({ ...editFormData, assessmentDate: e.target.value })}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <Label>Peso (kg) *</Label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            value={editFormData.weightKg}
+                            onChange={(e) => setEditFormData({ ...editFormData, weightKg: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <Label>Altura (cm) *</Label>
+                          <Input
+                            type="number"
+                            value={editFormData.heightCm}
+                            onChange={(e) => setEditFormData({ ...editFormData, heightCm: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <Label>% Gordura</Label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            value={editFormData.bodyFatPercentage}
+                            onChange={(e) => setEditFormData({ ...editFormData, bodyFatPercentage: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <Label>Massa Muscular (kg)</Label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            value={editFormData.muscleMassKg}
+                            onChange={(e) => setEditFormData({ ...editFormData, muscleMassKg: e.target.value })}
+                          />
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <Label className="text-muted-foreground">% Gordura</Label>
-                      <div className="text-lg font-semibold">{selectedAssessment.bodyFat ? `${selectedAssessment.bodyFat}%` : "-"}</div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <Label className="text-muted-foreground">Peso</Label>
+                        <div className="text-lg font-semibold">{selectedAssessment.weight || "-"} kg</div>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Altura</Label>
+                        <div className="text-lg font-semibold">{selectedAssessment.height || "-"} cm</div>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">IMC</Label>
+                        <div className="text-lg font-semibold">
+                          {selectedAssessment.weight && selectedAssessment.height
+                            ? (Number(selectedAssessment.weight) / Math.pow(Number(selectedAssessment.height) / 100, 2)).toFixed(1)
+                            : "-"}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">% Gordura</Label>
+                        <div className="text-lg font-semibold">{selectedAssessment.bodyFat ? `${selectedAssessment.bodyFat}%` : "-"}</div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Perimetria */}
-                {(selectedAssessment.chest || selectedAssessment.waist || selectedAssessment.hips) && (
+                {(isEditing || selectedAssessment.chest || selectedAssessment.waist || selectedAssessment.hips) && (
                   <div>
                     <h3 className="font-semibold mb-3">Perimetria (cm)</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {selectedAssessment.chest && (
-                        <div>
-                          <Label className="text-muted-foreground">Peitoral</Label>
-                          <div>{selectedAssessment.chest} cm</div>
+                    {isEditing ? (
+                      <div className="grid gap-4">
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <Label>Peitoral</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={editFormData.chestCm}
+                              onChange={(e) => setEditFormData({ ...editFormData, chestCm: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Cintura</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={editFormData.waistCm}
+                              onChange={(e) => setEditFormData({ ...editFormData, waistCm: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Quadril</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={editFormData.hipCm}
+                              onChange={(e) => setEditFormData({ ...editFormData, hipCm: e.target.value })}
+                            />
+                          </div>
                         </div>
-                      )}
-                      {selectedAssessment.waist && (
-                        <div>
-                          <Label className="text-muted-foreground">Cintura</Label>
-                          <div>{selectedAssessment.waist} cm</div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Braço Direito</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={editFormData.rightArmCm}
+                              onChange={(e) => setEditFormData({ ...editFormData, rightArmCm: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Braço Esquerdo</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={editFormData.leftArmCm}
+                              onChange={(e) => setEditFormData({ ...editFormData, leftArmCm: e.target.value })}
+                            />
+                          </div>
                         </div>
-                      )}
-                      {selectedAssessment.hips && (
-                        <div>
-                          <Label className="text-muted-foreground">Quadril</Label>
-                          <div>{selectedAssessment.hips} cm</div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Coxa Direita</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={editFormData.rightThighCm}
+                              onChange={(e) => setEditFormData({ ...editFormData, rightThighCm: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Coxa Esquerda</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={editFormData.leftThighCm}
+                              onChange={(e) => setEditFormData({ ...editFormData, leftThighCm: e.target.value })}
+                            />
+                          </div>
                         </div>
-                      )}
-                      {selectedAssessment.rightArm && (
-                        <div>
-                          <Label className="text-muted-foreground">Braço Direito</Label>
-                          <div>{selectedAssessment.rightArm} cm</div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Panturrilha Direita</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={editFormData.rightCalfCm}
+                              onChange={(e) => setEditFormData({ ...editFormData, rightCalfCm: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Panturrilha Esquerda</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={editFormData.leftCalfCm}
+                              onChange={(e) => setEditFormData({ ...editFormData, leftCalfCm: e.target.value })}
+                            />
+                          </div>
                         </div>
-                      )}
-                      {selectedAssessment.leftArm && (
-                        <div>
-                          <Label className="text-muted-foreground">Braço Esquerdo</Label>
-                          <div>{selectedAssessment.leftArm} cm</div>
-                        </div>
-                      )}
-                      {selectedAssessment.rightThigh && (
-                        <div>
-                          <Label className="text-muted-foreground">Coxa Direita</Label>
-                          <div>{selectedAssessment.rightThigh} cm</div>
-                        </div>
-                      )}
-                      {selectedAssessment.leftThigh && (
-                        <div>
-                          <Label className="text-muted-foreground">Coxa Esquerda</Label>
-                          <div>{selectedAssessment.leftThigh} cm</div>
-                        </div>
-                      )}
-                      {selectedAssessment.rightCalf && (
-                        <div>
-                          <Label className="text-muted-foreground">Panturrilha Direita</Label>
-                          <div>{selectedAssessment.rightCalf} cm</div>
-                        </div>
-                      )}
-                      {selectedAssessment.leftCalf && (
-                        <div>
-                          <Label className="text-muted-foreground">Panturrilha Esquerda</Label>
-                          <div>{selectedAssessment.leftCalf} cm</div>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {selectedAssessment.chest && (
+                          <div>
+                            <Label className="text-muted-foreground">Peitoral</Label>
+                            <div>{selectedAssessment.chest} cm</div>
+                          </div>
+                        )}
+                        {selectedAssessment.waist && (
+                          <div>
+                            <Label className="text-muted-foreground">Cintura</Label>
+                            <div>{selectedAssessment.waist} cm</div>
+                          </div>
+                        )}
+                        {selectedAssessment.hips && (
+                          <div>
+                            <Label className="text-muted-foreground">Quadril</Label>
+                            <div>{selectedAssessment.hips} cm</div>
+                          </div>
+                        )}
+                        {selectedAssessment.rightArm && (
+                          <div>
+                            <Label className="text-muted-foreground">Braço Direito</Label>
+                            <div>{selectedAssessment.rightArm} cm</div>
+                          </div>
+                        )}
+                        {selectedAssessment.leftArm && (
+                          <div>
+                            <Label className="text-muted-foreground">Braço Esquerdo</Label>
+                            <div>{selectedAssessment.leftArm} cm</div>
+                          </div>
+                        )}
+                        {selectedAssessment.rightThigh && (
+                          <div>
+                            <Label className="text-muted-foreground">Coxa Direita</Label>
+                            <div>{selectedAssessment.rightThigh} cm</div>
+                          </div>
+                        )}
+                        {selectedAssessment.leftThigh && (
+                          <div>
+                            <Label className="text-muted-foreground">Coxa Esquerda</Label>
+                            <div>{selectedAssessment.leftThigh} cm</div>
+                          </div>
+                        )}
+                        {selectedAssessment.rightCalf && (
+                          <div>
+                            <Label className="text-muted-foreground">Panturrilha Direita</Label>
+                            <div>{selectedAssessment.rightCalf} cm</div>
+                          </div>
+                        )}
+                        {selectedAssessment.leftCalf && (
+                          <div>
+                            <Label className="text-muted-foreground">Panturrilha Esquerda</Label>
+                            <div>{selectedAssessment.leftCalf} cm</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Observações e Objetivos */}
-                {(selectedAssessment.notes || selectedAssessment.goals) && (
+                {(isEditing || selectedAssessment.notes || selectedAssessment.goals) && (
                   <div className="space-y-4">
-                    {selectedAssessment.notes && (
-                      <div>
-                        <Label className="text-muted-foreground font-semibold">Observações</Label>
-                        <div className="mt-1 text-sm bg-muted p-3 rounded">{selectedAssessment.notes}</div>
-                      </div>
-                    )}
-                    {selectedAssessment.goals && (
-                      <div>
-                        <Label className="text-muted-foreground font-semibold">Objetivos/Metas</Label>
-                        <div className="mt-1 text-sm bg-muted p-3 rounded">{selectedAssessment.goals}</div>
-                      </div>
+                    {isEditing ? (
+                      <>
+                        <div>
+                          <Label>Objetivos/Metas</Label>
+                          <Textarea
+                            placeholder="Ex: Perder 5kg, ganhar massa muscular..."
+                            value={editFormData.goals}
+                            onChange={(e) => setEditFormData({ ...editFormData, goals: e.target.value })}
+                            rows={2}
+                          />
+                        </div>
+                        <div>
+                          <Label>Observações</Label>
+                          <Textarea
+                            placeholder="Anotações gerais sobre a avaliação..."
+                            value={editFormData.notes}
+                            onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                            rows={3}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {selectedAssessment.notes && (
+                          <div>
+                            <Label className="text-muted-foreground font-semibold">Observações</Label>
+                            <div className="mt-1 text-sm bg-muted p-3 rounded">{selectedAssessment.notes}</div>
+                          </div>
+                        )}
+                        {selectedAssessment.goals && (
+                          <div>
+                            <Label className="text-muted-foreground font-semibold">Objetivos/Metas</Label>
+                            <div className="mt-1 text-sm bg-muted p-3 rounded">{selectedAssessment.goals}</div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
@@ -716,8 +971,8 @@ export default function AdminAssessments() {
                     <Button variant="outline" onClick={() => setDetailsModalOpen(false)}>
                       Cancelar
                     </Button>
-                    <Button>
-                      Salvar Alterações
+                    <Button onClick={handleUpdate} disabled={updateAssessment.isLoading}>
+                      {updateAssessment.isLoading ? "Salvando..." : "Salvar Alterações"}
                     </Button>
                   </div>
                 )}
