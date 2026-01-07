@@ -81,9 +81,9 @@ export default function AdminAccountsPayable() {
     status: statusFilter === "all" ? undefined : statusFilter as any,
   });
 
-  const { data: suppliers = [] } = trpc.suppliers.list.useQuery({ gymSlug });
-  const { data: categories = [] } = trpc.categories.list.useQuery({ gymSlug });
-  const { data: costCenters = [] } = trpc.costCenters.list.useQuery({ gymSlug });
+  const { data: suppliers = [] } = trpc.suppliers.list.useQuery({ gymSlug }, { enabled: !!gymSlug });
+  const { data: categories = [] } = trpc.categories.list.useQuery({ gymSlug }, { enabled: !!gymSlug });
+  const { data: costCenters = [] } = trpc.costCenters.list.useQuery({ gymSlug }, { enabled: !!gymSlug });
   const { data: paymentMethods = [] } = trpc.paymentMethods.list.useQuery();
 
   // tRPC mutations

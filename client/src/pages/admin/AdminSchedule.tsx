@@ -96,6 +96,7 @@ export default function AdminSchedule() {
   });
 
   const { data: professors } = trpc.professors.list.useQuery({ gymSlug }, {
+    enabled: !!gymSlug,
     retry: false,
     onError: (error) => {
       console.error("Erro ao carregar professores:", error.message);
@@ -103,6 +104,7 @@ export default function AdminSchedule() {
   });
 
   const { data: students } = trpc.students.listAll.useQuery({ gymSlug }, {
+    enabled: !!gymSlug,
     retry: false,
     onError: (error) => {
       console.error("Erro ao carregar alunos:", error.message);

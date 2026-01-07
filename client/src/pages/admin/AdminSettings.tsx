@@ -25,7 +25,7 @@ export default function AdminSettings() {
   const { gymSlug } = useGym();
 
   // Query settings
-  const { data: settings, refetch } = trpc.gymSettings.get.useQuery({ gymSlug });
+  const { data: settings, refetch } = trpc.gymSettings.get.useQuery({ gymSlug }, { enabled: !!gymSlug });
 
   // Mutation
   const updateSettings = trpc.gymSettings.update.useMutation({

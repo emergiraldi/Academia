@@ -58,7 +58,7 @@ export default function AdminSuppliers() {
   const { gymSlug } = useGym();
   const utils = trpc.useUtils();
 
-  const { data: suppliers = [], refetch } = trpc.suppliers.list.useQuery({ gymSlug });
+  const { data: suppliers = [], refetch } = trpc.suppliers.list.useQuery({ gymSlug }, { enabled: !!gymSlug });
 
   const createSupplier = trpc.suppliers.create.useMutation({
     onSuccess: () => {

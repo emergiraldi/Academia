@@ -84,7 +84,7 @@ export default function AdminPayments() {
     gymSlug,
   });
   const { data: students = [] } = trpc.students.list.useQuery();
-  const { data: plans = [] } = trpc.plans.list.useQuery({ gymSlug });
+  const { data: plans = [] } = trpc.plans.list.useQuery({ gymSlug }, { enabled: !!gymSlug });
   const { data: paymentMethods = [] } = trpc.paymentMethods.list.useQuery();
 
   // Mutations

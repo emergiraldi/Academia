@@ -40,7 +40,7 @@ export default function AdminCostCenters() {
 
   const { gymSlug } = useGym();
 
-  const { data: costCenters = [], refetch } = trpc.costCenters.list.useQuery({ gymSlug });
+  const { data: costCenters = [], refetch } = trpc.costCenters.list.useQuery({ gymSlug }, { enabled: !!gymSlug });
 
   const createCostCenter = trpc.costCenters.create.useMutation({
     onSuccess: () => {

@@ -19,8 +19,8 @@ export default function AdminReports() {
 
   const { gymSlug } = useGym();
   const { data: students = [] } = trpc.students.list.useQuery();
-  const { data: payments = [] } = trpc.payments.listAll.useQuery({ gymSlug });
-  const { data: plans = [] } = trpc.plans.list.useQuery({ gymSlug });
+  const { data: payments = [] } = trpc.payments.listAll.useQuery({ gymSlug }, { enabled: !!gymSlug });
+  const { data: plans = [] } = trpc.plans.list.useQuery({ gymSlug }, { enabled: !!gymSlug });
 
   // Filter defaulters (students with pending payments)
   const defaulters = students.filter((student: any) => student.membershipStatus === "inactive");

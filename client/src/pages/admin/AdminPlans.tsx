@@ -32,7 +32,7 @@ export default function AdminPlans() {
   const [editDuration, setEditDuration] = useState("30");
   const [editDescription, setEditDescription] = useState("");
 
-  const { data: plans, refetch } = trpc.plans.list.useQuery({ gymSlug });
+  const { data: plans, refetch } = trpc.plans.list.useQuery({ gymSlug }, { enabled: !!gymSlug });
   const createMutation = trpc.plans.create.useMutation();
   const updateMutation = trpc.plans.update.useMutation();
   const deleteMutation = trpc.plans.delete.useMutation();

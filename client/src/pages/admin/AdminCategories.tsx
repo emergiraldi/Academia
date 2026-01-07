@@ -47,7 +47,7 @@ export default function AdminCategories() {
 
   const { gymSlug } = useGym();
 
-  const { data: categories = [], refetch } = trpc.categories.list.useQuery({ gymSlug });
+  const { data: categories = [], refetch } = trpc.categories.list.useQuery({ gymSlug }, { enabled: !!gymSlug });
 
   const createCategory = trpc.categories.create.useMutation({
     onSuccess: () => {
