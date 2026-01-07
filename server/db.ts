@@ -986,6 +986,57 @@ export async function getLatestAssessment(studentId: number, gymId: number) {
   return latest || null;
 }
 
+export async function getAllAssessmentsByGym(gymId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const assessmentsList = await db
+    .select({
+      id: physicalAssessments.id,
+      studentId: physicalAssessments.studentId,
+      professorId: physicalAssessments.professorId,
+      assessmentDate: physicalAssessments.assessmentDate,
+      weight: physicalAssessments.weight,
+      height: physicalAssessments.height,
+      bodyFat: physicalAssessments.bodyFat,
+      muscleMass: physicalAssessments.muscleMass,
+      chest: physicalAssessments.chest,
+      waist: physicalAssessments.waist,
+      hips: physicalAssessments.hips,
+      rightArm: physicalAssessments.rightArm,
+      leftArm: physicalAssessments.leftArm,
+      rightThigh: physicalAssessments.rightThigh,
+      leftThigh: physicalAssessments.leftThigh,
+      rightCalf: physicalAssessments.rightCalf,
+      leftCalf: physicalAssessments.leftCalf,
+      tricepsSkinfold: physicalAssessments.tricepsSkinfold,
+      subscapularSkinfold: physicalAssessments.subscapularSkinfold,
+      pectoralSkinfold: physicalAssessments.pectoralSkinfold,
+      midaxillarySkinfold: physicalAssessments.midaxillarySkinfold,
+      suprailiacSkinfold: physicalAssessments.suprailiacSkinfold,
+      abdominalSkinfold: physicalAssessments.abdominalSkinfold,
+      thighSkinfold: physicalAssessments.thighSkinfold,
+      flexibility: physicalAssessments.flexibility,
+      pushups: physicalAssessments.pushups,
+      plankSeconds: physicalAssessments.plankSeconds,
+      vo2max: physicalAssessments.vo2max,
+      photoFront: physicalAssessments.photoFront,
+      photoSide: physicalAssessments.photoSide,
+      photoBack: physicalAssessments.photoBack,
+      goals: physicalAssessments.goals,
+      notes: physicalAssessments.notes,
+      nextAssessmentDate: physicalAssessments.nextAssessmentDate,
+      createdAt: physicalAssessments.createdAt,
+      professorName: users.name,
+    })
+    .from(physicalAssessments)
+    .leftJoin(users, eq(physicalAssessments.professorId, users.id))
+    .where(eq(physicalAssessments.gymId, gymId))
+    .orderBy(desc(physicalAssessments.assessmentDate));
+
+  return assessmentsList;
+}
+
 export async function getAssessmentById(assessmentId: number, gymId: number) {
   const db = await getDb();
   if (!db) return null;

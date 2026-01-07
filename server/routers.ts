@@ -3201,27 +3201,300 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
         }
 
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
         // Aluno pode ver apenas suas próprias avaliações
         if (ctx.user.role === 'student') {
-          return await db.getPhysicalAssessmentsByStudent(ctx.user.id, ctx.user.gymId);
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
         }
 
-        // Professor vê avaliações que ele fez
-        if (ctx.user.role === 'gym_staff') {
-          if (input.studentId) {
-            // Professor pode ver avaliações de um aluno específico se ele fez a avaliação
-            const assessments = await db.getPhysicalAssessmentsByStudent(input.studentId, ctx.user.gymId);
-            return assessments;
-          }
-          return await db.getPhysicalAssessmentsByProfessor(ctx.user.id, ctx.user.gymId);
-        }
-
-        // Admin vê todas
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
         if (input.studentId) {
-          return await db.getPhysicalAssessmentsByStudent(input.studentId, ctx.user.gymId);
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
         }
 
-        return await db.getPhysicalAssessmentsByGym(ctx.user.gymId);
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
+        // Se studentId for fornecido, retornar avaliações desse aluno
+        if (input.studentId) {
+          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+        }
+
+        // Aluno pode ver apenas suas próprias avaliações
+        if (ctx.user.role === 'student') {
+          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+          if (!student) return [];
+          return await db.getStudentAssessments(student.id, ctx.user.gymId);
+        }
+
+        // Professor e Admin veem todas da academia
+        return await db.getAllAssessmentsByGym(ctx.user.gymId);
       }),
 
     // Buscar avaliação por ID
