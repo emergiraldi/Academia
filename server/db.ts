@@ -2131,6 +2131,7 @@ export async function getBookingCountForDate(scheduleId: number, bookingDate: st
 // ============ VISITOR BOOKINGS (Agendamentos de Visitantes) ============
 
 export async function createVisitorBooking(booking: {
+  gymId: number;
   scheduleId: number;
   visitorName: string;
   visitorPhone: string;
@@ -2142,9 +2143,10 @@ export async function createVisitorBooking(booking: {
   const conn = await getConnection();
   const [result] = await conn.execute(
     `INSERT INTO visitor_bookings
-    (scheduleId, visitorName, visitorPhone, visitorEmail, bookingDate, notes, leadId, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'confirmed')`,
+    (gymId, scheduleId, visitorName, visitorPhone, visitorEmail, bookingDate, notes, leadId, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'confirmed')`,
     [
+      booking.gymId,
       booking.scheduleId,
       booking.visitorName,
       booking.visitorPhone,

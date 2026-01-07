@@ -3172,8 +3172,14 @@ export const appRouter = router({
         notes: z.string().optional(),
         leadId: z.number().optional(),
       }))
-      .mutation(async ({ input }) => {
-        const result = await db.createVisitorBooking(input);
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        }
+        const result = await db.createVisitorBooking({
+          ...input,
+          gymId: ctx.user.gymId,
+        });
         return { success: true, id: result.insertId };
       }),
 
