@@ -3814,14 +3814,14 @@ export const appRouter = router({
         const result = await db.createSupplier({
           gymId: gym.id,
           name: input.name,
-          cnpjCpf: input.cnpjCpf,
-          email: input.email,
-          phone: input.phone,
-          address: input.address,
-          city: input.city,
-          state: input.state,
-          zipCode: input.zipCode,
-          notes: input.notes,
+          cnpjCpf: input.cnpjCpf || null,
+          email: input.email || null,
+          phone: input.phone || null,
+          address: input.address || null,
+          city: input.city || null,
+          state: input.state || null,
+          zipCode: input.zipCode || null,
+          notes: input.notes || null,
           active: true,
         });
         return { success: true, supplierId: result.insertId };
@@ -3845,14 +3845,14 @@ export const appRouter = router({
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
         await db.updateSupplier(input.supplierId, {
           name: input.name,
-          cnpjCpf: input.cnpjCpf,
-          email: input.email,
-          phone: input.phone,
-          address: input.address,
-          city: input.city,
-          state: input.state,
-          zipCode: input.zipCode,
-          notes: input.notes,
+          cnpjCpf: input.cnpjCpf || null,
+          email: input.email || null,
+          phone: input.phone || null,
+          address: input.address || null,
+          city: input.city || null,
+          state: input.state || null,
+          zipCode: input.zipCode || null,
+          notes: input.notes || null,
         });
         return { success: true };
       }),
