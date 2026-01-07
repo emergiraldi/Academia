@@ -44,11 +44,13 @@ import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { useGym } from "@/_core/hooks/useGym";
 
 export default function AdminAssessments() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const { gymSlug } = useGym();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -73,7 +75,7 @@ export default function AdminAssessments() {
 
   // Queries
   const { data: assessments = [], refetch: refetchAssessments } = trpc.assessments.list.useQuery({ studentId: undefined });
-  const { data: students = [] } = trpc.students.list.useQuery();
+  const { data: students = [] } = trpc.students.listAll.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
 
   // Mutations
   const createAssessment = trpc.assessments.create.useMutation({
