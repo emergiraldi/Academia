@@ -16,7 +16,11 @@
       "Bash(git push:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(sshpass -p \"935559Emerson@\" ssh -o StrictHostKeyChecking=no root@138.197.8.136 \"cd /var/www/academia && git log --oneline -5\")",
+      "Bash(git restore:*)",
+      "Bash(node check_suppliers_table.js:*)",
+      "Bash(node migrate_suppliers_table.js:*)"
     ],
     "deny": [],
     "ask": []

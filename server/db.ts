@@ -2312,12 +2312,16 @@ export async function updateSupplier(id: number, data: any) {
   const conn = await getConnection();
   const [result] = await conn.execute(
     `UPDATE suppliers SET
-      name = ?, cnpjCpf = ?, email = ?, phone = ?,
-      address = ?, city = ?, state = ?, zipCode = ?, notes = ?
+      name = ?, tradeName = ?, cnpjCpf = ?, email = ?, phone = ?, cellphone = ?,
+      website = ?, address = ?, number = ?, complement = ?, neighborhood = ?,
+      city = ?, state = ?, zipCode = ?, bank = ?, bankAgency = ?, bankAccount = ?,
+      category = ?, notes = ?
     WHERE id = ?`,
     [
-      data.name, data.cnpjCpf, data.email, data.phone,
-      data.address, data.city, data.state, data.zipCode, data.notes, id
+      data.name, data.tradeName, data.cnpjCpf, data.email, data.phone, data.cellphone,
+      data.website, data.address, data.number, data.complement, data.neighborhood,
+      data.city, data.state, data.zipCode, data.bank, data.bankAgency, data.bankAccount,
+      data.category, data.notes, id
     ]
   );
   await conn.end();

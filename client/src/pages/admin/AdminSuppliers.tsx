@@ -294,13 +294,23 @@ export default function AdminSuppliers() {
     };
 
     // Só adicionar campos opcionais se tiverem valor
+    if (formData.tradeName) updateData.tradeName = formData.tradeName;
     if (formData.cnpjCpf) updateData.cnpjCpf = formData.cnpjCpf;
     if (formData.email) updateData.email = formData.email;
     if (formData.phone) updateData.phone = formData.phone;
+    if (formData.cellphone) updateData.cellphone = formData.cellphone;
+    if (formData.website) updateData.website = formData.website;
     if (formData.address) updateData.address = formData.address;
+    if (formData.number) updateData.number = formData.number;
+    if (formData.complement) updateData.complement = formData.complement;
+    if (formData.neighborhood) updateData.neighborhood = formData.neighborhood;
     if (formData.city) updateData.city = formData.city;
     if (formData.state) updateData.state = formData.state;
     if (formData.zipCode) updateData.zipCode = formData.zipCode;
+    if (formData.bank) updateData.bank = formData.bank;
+    if (formData.bankAgency) updateData.bankAgency = formData.bankAgency;
+    if (formData.bankAccount) updateData.bankAccount = formData.bankAccount;
+    if (formData.category) updateData.category = formData.category;
     if (formData.notes) updateData.notes = formData.notes;
 
     updateSupplier.mutate(updateData);
