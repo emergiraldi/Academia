@@ -88,7 +88,7 @@ export default function AdminSchedule() {
   const { gymSlug } = useGym();
 
   // Queries
-  const { data: schedules, refetch: refetchSchedules } = trpc.schedules.list.useQuery(undefined, {
+  const { data: schedules, refetch: refetchSchedules } = trpc.schedules.list.useQuery({} as any, {
     retry: false,
     onError: (error) => {
       console.error("Erro ao carregar horários:", error.message);
@@ -114,7 +114,7 @@ export default function AdminSchedule() {
     }
   );
 
-  const { data: leads } = trpc.leads.list.useQuery(undefined, {
+  const { data: leads } = trpc.leads.list.useQuery({}, {
     retry: false,
     onError: (error) => {
       console.error("Erro ao carregar leads:", error.message);

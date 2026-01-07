@@ -17,7 +17,7 @@ CREATE TABLE class_schedules (
   name VARCHAR(200) NOT NULL,
   type VARCHAR(50) NOT NULL,
   description TEXT,
-  dayOfWeek INT NOT NULL,
+  dayOfWeek VARCHAR(20) NOT NULL,
   startTime VARCHAR(5) NOT NULL,
   durationMinutes INT NOT NULL DEFAULT 60,
   capacity INT NOT NULL DEFAULT 20,
