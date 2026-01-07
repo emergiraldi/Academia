@@ -26,9 +26,9 @@ echo "🏗️  Compilando projeto..."
 npm run build
 echo ""
 
-# 5. Criar tabelas faltantes no banco de dados
-echo "🗄️  Criando tabelas no banco de dados..."
-node create_tables.js
+# 5. Recriar tabelas no banco de dados (remove e recria para garantir estrutura correta)
+echo "🗄️  Recriando tabelas no banco de dados..."
+node recreate_tables.js
 echo ""
 
 # 6. Executar create_admin.js para resetar senha

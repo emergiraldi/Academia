@@ -11,7 +11,18 @@
       "Bash(git commit:*)",
       "Bash(mysql:*)",
       "Bash(node seed.js:*)",
-      "Bash(node create_admin.js:*)"
+      "Bash(node create_admin.js:*)",
+      "Bash(pm2 logs:*)",
+      "Bash(pm2 show:*)",
+      "Bash(pm2 list:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(ssh root@138.197.8.136:*)",
+      "Bash(node create_tables.js:*)",
+      "Bash(ssh -o StrictHostKeyChecking=no root@138.197.8.136 \"cd /var/www/academia && mysql -u root academia_db -e ''DESCRIBE class_bookings;''\")",
+      "Bash(sshpass -p \"935559Emerson@\" ssh -o StrictHostKeyChecking=no root@138.197.8.136 \"cd /var/www/academia && mysql -u root academia_db -e ''DESCRIBE class_bookings;''\")",
+      "Bash(node check_table_structure.js:*)",
+      "Bash(node recreate_tables.js:*)"
     ],
     "deny": [],
     "ask": []
