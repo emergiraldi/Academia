@@ -4,42 +4,77 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-async function migrateWellhubTables() {
-  // Parse DATABASE_URL from environment
+async function recreateWellhubTables() {
+  // Try to use DATABASE_URL, fallback to localhost
   const databaseUrl = process.env.DATABASE_URL;
 
-  if (!databaseUrl) {
-    console.error('❌ DATABASE_URL not found in environment');
-    process.exit(1);
+  let config;
+
+  if (databaseUrl && databaseUrl.includes('@')) {
+    console.log('📋 Using DATABASE_URL');
+
+    // Try with password: mysql://user:password@host:port/database
+    let match = databaseUrl.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+
+    if (match) {
+      const [, user, password, host, port, database] = match;
+      config = {
+        host,
+        port: parseInt(port),
+        user,
+        password,
+        database
+      };
+    } else {
+      // Try without password: mysql://user@host:port/database
+      match = databaseUrl.match(/mysql:\/\/([^@]+)@([^:]+):(\d+)\/(.+)/);
+
+      if (!match) {
+        console.error('❌ Invalid DATABASE_URL format');
+        process.exit(1);
+      }
+
+      const [, user, host, port, database] = match;
+      config = {
+        host,
+        port: parseInt(port),
+        user,
+        password: '',
+        database
+      };
+    }
+  } else {
+    // Localhost format
+    console.log('📋 Using localhost config');
+    config = {
+      host: 'localhost',
+      user: 'root',
+      password: '',
+      database: 'academia_db'
+    };
   }
 
-  console.log('📋 DATABASE_URL:', databaseUrl.replace(/:[^:@]+@/, ':****@'));
-
-  // Parse connection string: mysql://user:password@host:port/database
-  const match = databaseUrl.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
-
-  if (!match) {
-    console.error('❌ Invalid DATABASE_URL format');
-    process.exit(1);
-  }
-
-  const [, user, password, host, port, database] = match;
-
-  const conn = await mysql.createConnection({
-    host,
-    port: parseInt(port),
-    user,
-    password,
-    database
-  });
+  const conn = await mysql.createConnection(config);
 
   try {
-    console.log('Creating Wellhub tables...\n');
+    console.log('🗑️  Dropando tabelas Wellhub existentes...\n');
+
+    // Drop tables in reverse order due to foreign keys
+    await conn.execute('DROP TABLE IF EXISTS wellhub_checkins');
+    console.log('✓ wellhub_checkins dropped');
+
+    await conn.execute('DROP TABLE IF EXISTS wellhub_members');
+    console.log('✓ wellhub_members dropped');
+
+    await conn.execute('DROP TABLE IF EXISTS wellhub_settings');
+    console.log('✓ wellhub_settings dropped');
+
+    console.log('\n🔨 Recriando tabelas Wellhub...\n');
 
     // 1. Tabela de configurações Wellhub
     console.log('Creating wellhub_settings table...');
     await conn.execute(`
-      CREATE TABLE IF NOT EXISTS wellhub_settings (
+      CREATE TABLE wellhub_settings (
         id INT AUTO_INCREMENT PRIMARY KEY,
         gymId INT NOT NULL,
         apiToken VARCHAR(500) NOT NULL,
@@ -57,7 +92,7 @@ async function migrateWellhubTables() {
     // 2. Tabela de membros Wellhub
     console.log('Creating wellhub_members table...');
     await conn.execute(`
-      CREATE TABLE IF NOT EXISTS wellhub_members (
+      CREATE TABLE wellhub_members (
         id INT AUTO_INCREMENT PRIMARY KEY,
         gymId INT NOT NULL,
         wellhubId VARCHAR(20) NOT NULL,
@@ -85,7 +120,7 @@ async function migrateWellhubTables() {
     // 3. Tabela de check-ins Wellhub
     console.log('Creating wellhub_checkins table...');
     await conn.execute(`
-      CREATE TABLE IF NOT EXISTS wellhub_checkins (
+      CREATE TABLE wellhub_checkins (
         id INT AUTO_INCREMENT PRIMARY KEY,
         wellhubMemberId INT NOT NULL,
         gymId INT NOT NULL,
@@ -128,7 +163,7 @@ async function migrateWellhubTables() {
       console.log(`  ${col.Field} (${col.Type})`);
     });
 
-    console.log('\n✅ All Wellhub tables created successfully!');
+    console.log('\n✅ Tabelas Wellhub recriadas com sucesso!');
 
   } catch (error) {
     console.error('❌ Error:', error.message);
@@ -138,4 +173,4 @@ async function migrateWellhubTables() {
   }
 }
 
-migrateWellhubTables();
+recreateWellhubTables();
