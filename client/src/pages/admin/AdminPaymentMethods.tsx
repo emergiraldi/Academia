@@ -31,7 +31,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { useGym } from "@/hooks/useGym";
+import { useGym } from "@/_core/hooks/useGym";
 import {
   Plus,
   Edit,
