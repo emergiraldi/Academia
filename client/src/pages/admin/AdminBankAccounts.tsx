@@ -81,9 +81,10 @@ export default function AdminBankAccounts() {
 
   const { gymSlug } = useGym();
 
-  const { data: accounts = [], refetch } = trpc.bankAccounts.list.useQuery({
-    gymSlug,
-  });
+  const { data: accounts = [], refetch } = trpc.bankAccounts.list.useQuery(
+    { gymSlug: gymSlug || "" },
+    { enabled: !!gymSlug }
+  );
 
   const createMutation = trpc.bankAccounts.create.useMutation({
     onSuccess: () => {
