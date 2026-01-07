@@ -12,27 +12,31 @@ echo "📥 1. Atualizando código do GitHub..."
 git pull origin main
 echo ""
 
-echo "🗄️  2. Recriando tabelas Wellhub com estrutura correta..."
+echo "🔧 2. Criando tabela gym_settings..."
+node create_gym_settings_table.js
+echo ""
+
+echo "🗄️  3. Recriando tabelas Wellhub com estrutura correta..."
 node recreate_wellhub_tables.js
 echo ""
 
-echo "🏗️  3. Compilando projeto (npm run build)..."
+echo "🏗️  4. Compilando projeto (npm run build)..."
 npm run build
 echo ""
 
-echo "🔄 4. Reiniciando PM2..."
+echo "🔄 5. Reiniciando PM2..."
 pm2 restart academia-api
 echo ""
 
-echo "⏳ 5. Aguardando backend iniciar..."
+echo "⏳ 6. Aguardando backend iniciar..."
 sleep 3
 echo ""
 
-echo "📋 6. Últimos logs do PM2:"
+echo "📋 7. Últimos logs do PM2:"
 pm2 logs academia-api --lines 20 --nostream
 echo ""
 
-echo "📊 7. Status do PM2:"
+echo "📊 8. Status do PM2:"
 pm2 status
 echo ""
 
