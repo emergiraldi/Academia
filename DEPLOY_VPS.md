@@ -1,65 +1,103 @@
-# Deploy para VPS - Academia System
+# 🚀 Deploy para VPS - Academia SysFit Pro
 
-## Passo 1: Copiar arquivos atualizados para VPS
+## Opção 1: Script Automático
 
-Execute estes comandos **no seu computador local** (PowerShell ou CMD):
+Se você tiver **Git Bash** ou **WSL** com `sshpass` instalado:
 
 ```bash
-# Copiar script de recriação de tabelas
-scp recreate_tables.sql root@138.197.8.136:/var/www/academia/
-scp recreate_tables.js root@138.197.8.136:/var/www/academia/
-scp fix_vps_db.sh root@138.197.8.136:/var/www/academia/
+bash deploy_vps_complete.sh
 ```
 
-Senha: `935559Emerson@`
+Este script faz TUDO automaticamente:
+- ✅ Atualiza código do GitHub
+- ✅ Recria tabelas Wellhub com estrutura correta
+- ✅ Compila projeto (npm run build)
+- ✅ Reinicia PM2
+- ✅ Mostra logs e status
 
-## Passo 2: Conectar na VPS e executar deploy
+---
+
+## Opção 2: Manual via SSH
+
+### Passo 1: Conectar na VPS
 
 ```bash
 ssh root@138.197.8.136
 ```
 
-Senha: `935559Emerson@`
+**Senha:** `935559Emerson@`
 
-## Passo 3: Executar o script de correção
+### Passo 2: Executar comandos
 
 ```bash
 cd /var/www/academia
-bash fix_vps_db.sh
+
+# 1. Atualizar código
+git pull origin main
+
+# 2. Recriar tabelas Wellhub
+node recreate_wellhub_tables.js
+
+# 3. Compilar projeto
+npm run build
+
+# 4. Reiniciar PM2
+pm2 restart academia-api
+
+# 5. Verificar logs
+pm2 logs academia-api --lines 20
 ```
 
-## O que o script faz:
+---
 
-1. ✅ Atualiza código via git pull
-2. ✅ Verifica DATABASE_URL no .env
-3. ✅ Compila projeto (npm run build)
-4. ✅ **RECRIA** as 4 tabelas com estrutura correta:
-   - class_schedules
-   - class_bookings
-   - visitor_bookings
-   - payment_methods
-5. ✅ Reseta senha do admin
-6. ✅ Reinicia PM2
-7. ✅ Mostra logs
+## 📋 Verificação Pós-Deploy
 
-## Credenciais após deploy:
+Acesse o site e teste:
 
-- Email: `admin@fitlife.com`
-- Senha: `admin123`
-- CNPJ teste: `23.538.490/0001-80`
+🌐 **Site:** https://www.sysfitpro.com.br
 
-## Estrutura das tabelas criadas:
+### Páginas para testar:
+- ✅ Wellhub Members
+- ✅ Bank Accounts - Criação de contas bancárias
+- ✅ Cash Flow - Exportação de PDF
+- ✅ Defaulters - Exportação de PDF
 
-### class_schedules
-- id, gymId, professorId, name, **type**, description, dayOfWeek (INT), startTime, durationMinutes, capacity, active
+---
 
-### class_bookings
-- id, **scheduleId**, studentId, bookingDate, status
+## 🔧 Scripts Disponíveis
 
-### visitor_bookings
-- id, **gymId**, scheduleId, visitorName, visitorEmail, visitorPhone, bookingDate, status, notes, leadId
+### deploy_vps_complete.sh
+Deploy completo com todas as etapas (recomendado)
 
-### payment_methods
-- id, **gymId**, name, type, description, active
+### recreate_wellhub_tables.js
+Recria apenas as tabelas Wellhub
 
-**IMPORTANTE:** O script REMOVE e RECRIA estas 4 tabelas para garantir que a estrutura está correta. Isso vai apagar dados existentes nestas tabelas (se houver).
+### migrate_wellhub_tables_vps.js
+Migração inicial (não usar se tabelas já existem)
+
+---
+
+## ⚠️ Troubleshooting
+
+### Erro: "Unknown column 'lastCheckIn'"
+**Solução:** Execute node recreate_wellhub_tables.js na VPS
+
+### Erro: "Access denied"
+**Solução:** Script usará credenciais do arquivo .env automaticamente
+
+### PM2 não reinicia
+**Solução:** Use pm2 list para ver nome correto do processo (deve ser academia-api)
+
+---
+
+## 📞 Suporte
+
+Se encontrar problemas, verifique os logs:
+
+```bash
+# Logs do PM2
+pm2 logs academia-api --lines 50
+
+# Status do PM2
+pm2 status
+```
