@@ -664,3 +664,78 @@ export const siteSettings = mysqlTable("site_settings", {
 
 export type SiteSettings = typeof siteSettings.$inferSelect;
 export type InsertSiteSettings = typeof siteSettings.$inferInsert;
+
+/**
+ * Class Schedules - Aulas agendadas (horários de aulas coletivas)
+ */
+export const classSchedules = mysqlTable("class_schedules", {
+  id: int("id").autoincrement().primaryKey(),
+  gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
+  professorId: int("professorId").notNull().references(() => users.id, { onDelete: "restrict" }),
+  name: varchar("name", { length: 200 }).notNull(), // Nome da aula (Yoga, Spinning, etc)
+  description: text("description"),
+  dayOfWeek: int("dayOfWeek").notNull(), // 0-6 (Sunday-Saturday)
+  startTime: varchar("startTime", { length: 5 }).notNull(), // "08:00"
+  endTime: varchar("endTime", { length: 5 }).notNull(), // "09:00"
+  maxCapacity: int("maxCapacity").notNull().default(20),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ClassSchedule = typeof classSchedules.$inferSelect;
+export type InsertClassSchedule = typeof classSchedules.$inferInsert;
+
+/**
+ * Class Bookings - Reservas de alunos em aulas coletivas
+ */
+export const classBookings = mysqlTable("class_bookings", {
+  id: int("id").autoincrement().primaryKey(),
+  gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
+  classScheduleId: int("classScheduleId").notNull().references(() => classSchedules.id, { onDelete: "cascade" }),
+  studentId: int("studentId").notNull().references(() => students.id, { onDelete: "cascade" }),
+  bookingDate: timestamp("bookingDate").notNull(), // Data específica da aula
+  status: mysqlEnum("status", ["confirmed", "cancelled", "attended", "missed"]).default("confirmed").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ClassBooking = typeof classBookings.$inferSelect;
+export type InsertClassBooking = typeof classBookings.$inferInsert;
+
+/**
+ * Visitor Bookings - Agendamento de visitantes/aulas experimentais
+ */
+export const visitorBookings = mysqlTable("visitor_bookings", {
+  id: int("id").autoincrement().primaryKey(),
+  gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 200 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  visitDate: timestamp("visitDate").notNull(),
+  visitTime: varchar("visitTime", { length: 5 }).notNull(), // "14:00"
+  status: mysqlEnum("status", ["pending", "confirmed", "completed", "cancelled", "no_show"]).default("pending").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type VisitorBooking = typeof visitorBookings.$inferSelect;
+export type InsertVisitorBooking = typeof visitorBookings.$inferInsert;
+
+/**
+ * Payment Methods - Métodos de pagamento personalizados por academia
+ */
+export const paymentMethods = mysqlTable("payment_methods", {
+  id: int("id").autoincrement().primaryKey(),
+  gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(), // "Dinheiro", "Débito", "Crédito", etc
+  type: mysqlEnum("type", ["cash", "debit", "credit", "pix", "bank_transfer", "other"]).notNull(),
+  description: text("description"),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PaymentMethod = typeof paymentMethods.$inferSelect;
+export type InsertPaymentMethod = typeof paymentMethods.$inferInsert;
