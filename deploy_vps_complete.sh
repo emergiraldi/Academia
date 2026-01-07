@@ -12,8 +12,8 @@ echo "📥 1. Atualizando código do GitHub..."
 git pull origin main
 echo ""
 
-echo "🗄️  2. Executando migration Wellhub..."
-node migrate_wellhub_tables_vps.js
+echo "🗄️  2. Recriando tabelas Wellhub com estrutura correta..."
+node recreate_wellhub_tables.js
 echo ""
 
 echo "🏗️  3. Compilando projeto (npm run build)..."
