@@ -21,17 +21,22 @@ echo "🔍 Verificando DATABASE_URL..."
 grep "DATABASE_URL" .env
 echo ""
 
-# 4. Aplicar migrações do banco de dados
+# 4. Build do projeto
+echo "🏗️  Compilando projeto..."
+npm run build
+echo ""
+
+# 5. Aplicar migrações do banco de dados
 echo "🗄️  Aplicando migrações do banco de dados..."
 npm run db:push
 echo ""
 
-# 5. Executar create_admin.js para resetar senha
+# 6. Executar create_admin.js para resetar senha
 echo "🔐 Resetando senha do admin..."
 node create_admin.js
 echo ""
 
-# 6. Reiniciar PM2
+# 7. Reiniciar PM2
 echo "🔄 Reiniciando PM2..."
 pm2 restart all
 echo ""
