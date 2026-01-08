@@ -3,7 +3,7 @@
  * Usado para recuperação de senha e notificações
  */
 
-import nodemailer from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 import * as db from './db';
 
 interface EmailConfig {
