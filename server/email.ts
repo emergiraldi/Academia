@@ -4,6 +4,7 @@
  */
 
 import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 import * as db from './db';
 
 interface EmailConfig {
@@ -54,7 +55,7 @@ export class EmailService {
   /**
    * Cria um transporter do nodemailer com as configurações atuais
    */
-  private createTransporter() {
+  private createTransporter(): Transporter {
     if (!this.config) {
       throw new Error('Configurações SMTP não carregadas. Chame loadConfig() primeiro.');
     }
@@ -74,7 +75,9 @@ export class EmailService {
       transportOptions.requireTLS = true;
     }
 
-    return nodemailer.createTransporter(transportOptions);
+    // Handle both default and named exports for compatibility
+    const createTransporter = (nodemailer as any).default?.createTransporter || nodemailer.createTransporter;
+    return createTransporter(transportOptions);
   }
 
   /**
