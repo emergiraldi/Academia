@@ -64,28 +64,49 @@ export default function StudentFaceEnrollment({ student, onBack, onSuccess }: St
   };
 
   const uploadPhoto = async () => {
-    if (!photoPreview) return;
+    if (!photoPreview) {
+      toast.error("Nenhuma foto selecionada");
+      return;
+    }
 
     setUploading(true);
     try {
+      console.log('[uploadPhoto] Iniciando conversão para base64...');
+      console.log('[uploadPhoto] photoPreview.file size:', photoPreview.file.size);
+      console.log('[uploadPhoto] photoPreview.file type:', photoPreview.file.type);
+
       // Convert blob to base64
       const reader = new FileReader();
       const base64Promise = new Promise<string>((resolve, reject) => {
         reader.onloadend = () => {
           const base64String = reader.result as string;
+          console.log('[uploadPhoto] Base64 conversion complete, length:', base64String?.length || 0);
+
+          if (!base64String || base64String.length === 0) {
+            reject(new Error('Falha ao converter imagem para base64'));
+            return;
+          }
+
           resolve(base64String);
         };
-        reader.onerror = reject;
+        reader.onerror = (error) => {
+          console.error('[uploadPhoto] FileReader error:', error);
+          reject(error);
+        };
       });
 
       reader.readAsDataURL(photoPreview.file);
       const base64Data = await base64Promise;
+
+      console.log('[uploadPhoto] Enviando para servidor...');
+      console.log('[uploadPhoto] imageData length:', base64Data.length);
 
       // Call the tRPC mutation
       await uploadFaceMutation.mutateAsync({
         imageData: base64Data,
       });
 
+      console.log('[uploadPhoto] Upload concluído com sucesso!');
       setEnrolled(true);
       setPhotoPreview(null);
       toast.success("Cadastro facial realizado com sucesso!");
