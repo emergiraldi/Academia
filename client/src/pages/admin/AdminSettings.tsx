@@ -32,6 +32,7 @@ export default function AdminSettings() {
   const updateSettings = trpc.gymSettings.update.useMutation({
     onSuccess: () => {
       toast.success("Configurações salvas com sucesso!");
+      setIsInitialLoad(true); // Allow reload after save
       refetch();
     },
     onError: (error) => {
@@ -62,9 +63,12 @@ export default function AdminSettings() {
     smtpUseSsl: false,
   });
 
-  // Update form when settings are loaded
+  // Track if initial data was loaded
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Update form when settings are loaded (only on initial load)
   useEffect(() => {
-    if (settings) {
+    if (settings && isInitialLoad) {
       setFormData({
         daysToBlockAfterDue: settings.daysToBlockAfterDue,
         blockOnExpiredExam: settings.blockOnExpiredExam === 1,
@@ -86,8 +90,9 @@ export default function AdminSettings() {
         smtpUseTls: settings.smtpUseTls === 1,
         smtpUseSsl: settings.smtpUseSsl === 1,
       });
+      setIsInitialLoad(false);
     }
-  }, [settings]);
+  }, [settings, isInitialLoad]);
 
   const handleSave = async () => {
     try {
@@ -127,7 +132,7 @@ export default function AdminSettings() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="daysToBlock">
                   Dias após vencimento para bloquear catraca
                 </Label>
@@ -150,7 +155,7 @@ export default function AdminSettings() {
                 </p>
               </div>
 
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="blockExam">Bloquear com exame médico vencido</Label>
                   <Switch
@@ -168,7 +173,7 @@ export default function AdminSettings() {
             </div>
 
             {formData.blockOnExpiredExam && (
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="examValidity">
                   Validade do exame médico (dias)
                 </Label>
@@ -207,7 +212,7 @@ export default function AdminSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="minimumAge">Idade mínima (anos)</Label>
               <Input
                 id="minimumAge"
@@ -243,7 +248,7 @@ export default function AdminSettings() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-4 md:grid-cols-3">
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="daysToInterest">
                   Dias para começar a cobrar juros
                 </Label>
@@ -267,7 +272,7 @@ export default function AdminSettings() {
                 </p>
               </div>
 
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="interestRate">Taxa de juros ao mês (%)</Label>
                 <Input
                   id="interestRate"
@@ -288,7 +293,7 @@ export default function AdminSettings() {
                 </p>
               </div>
 
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="lateFee">Multa por atraso (%)</Label>
                 <Input
                   id="lateFee"
@@ -356,7 +361,7 @@ export default function AdminSettings() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between">
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-0.5">
+              <div className="space-y-0.5">
                 <Label htmlFor="allowInstallments">Permitir parcelamento</Label>
                 <p className="text-sm text-muted-foreground">
                   Habilitar parcelamento de débitos em atraso
@@ -375,7 +380,7 @@ export default function AdminSettings() {
               <>
                 <Separator />
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
+                  <div className="space-y-2">
                     <Label htmlFor="maxInstallments">Máximo de parcelas</Label>
                     <Input
                       id="maxInstallments"
@@ -395,7 +400,7 @@ export default function AdminSettings() {
                     </p>
                   </div>
 
-                  <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
+                  <div className="space-y-2">
                     <Label htmlFor="minInstallment">Valor mínimo da parcela (R$)</Label>
                     <Input
                       id="minInstallment"
