@@ -2821,13 +2821,21 @@ export const appRouter = router({
         description: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
-        return await db.createPaymentMethod({
-          gymId: gym.id,
-          name: input.name,
-          type: input.type,
-          description: input.description || null,
-        });
+        try {
+          const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
+          return await db.createPaymentMethod({
+            gymId: gym.id,
+            name: input.name,
+            type: input.type,
+            description: input.description || null,
+          });
+        } catch (error) {
+          console.error('[paymentMethods.create] Error:', error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error instanceof Error ? error.message : "Erro ao criar forma de pagamento"
+          });
+        }
       }),
 
     update: gymAdminProcedure
