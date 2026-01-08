@@ -20,23 +20,27 @@ echo "🗄️  3. Recriando tabelas Wellhub com estrutura correta..."
 node recreate_wellhub_tables.js
 echo ""
 
-echo "🏗️  4. Compilando projeto (npm run build)..."
+echo "📍 4. Adicionando campos de endereço à tabela students..."
+node migrate_student_address_fields.js
+echo ""
+
+echo "🏗️  5. Compilando projeto (npm run build)..."
 npm run build
 echo ""
 
-echo "🔄 5. Reiniciando PM2..."
+echo "🔄 6. Reiniciando PM2..."
 pm2 restart academia-api
 echo ""
 
-echo "⏳ 6. Aguardando backend iniciar..."
+echo "⏳ 7. Aguardando backend iniciar..."
 sleep 3
 echo ""
 
-echo "📋 7. Últimos logs do PM2:"
+echo "📋 8. Últimos logs do PM2:"
 pm2 logs academia-api --lines 20 --nostream
 echo ""
 
-echo "📊 8. Status do PM2:"
+echo "📊 9. Status do PM2:"
 pm2 status
 echo ""
 
