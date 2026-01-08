@@ -84,6 +84,37 @@ export type GymPayment = typeof gymPayments.$inferSelect;
 export type InsertGymPayment = typeof gymPayments.$inferInsert;
 
 /**
+ * SaaS Plans table - subscription plans for gyms
+ * Managed by super admin to define what features each plan includes
+ */
+export const saasPlans = mysqlTable("saasPlans", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // "Básico", "Profissional", "Enterprise"
+  slug: varchar("slug", { length: 50 }).unique().notNull(), // "basic", "professional", "enterprise"
+  description: text("description"), // Descrição completa do plano
+  priceInCents: int("priceInCents").notNull(), // Preço mensal em centavos
+
+  // Features incluídas no plano
+  features: text("features"), // JSON com lista de features: ["Wellhub", "Control ID", "Suporte prioritário"]
+  hasWellhub: boolean("hasWellhub").default(false).notNull(),
+  hasControlId: boolean("hasControlId").default(false).notNull(),
+  hasAdvancedReports: boolean("hasAdvancedReports").default(false).notNull(),
+  hasWhatsappIntegration: boolean("hasWhatsappIntegration").default(false).notNull(),
+  hasPrioritySupport: boolean("hasPrioritySupport").default(false).notNull(),
+
+  // Display
+  featured: boolean("featured").default(false).notNull(), // Destacar o plano na landing page
+  displayOrder: int("displayOrder").default(0).notNull(), // Ordem de exibição
+  active: boolean("active").default(true).notNull(),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SaasPlan = typeof saasPlans.$inferSelect;
+export type InsertSaasPlan = typeof saasPlans.$inferInsert;
+
+/**
  * Core user table backing auth flow.
  * Extended with roles for multi-tenant system
  */

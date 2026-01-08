@@ -1,9 +1,10 @@
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import {
   gyms, InsertGym,
   gymPayments, InsertGymPayment,
+  saasPlans, InsertSaasPlan,
   users, InsertUser,
   students, InsertStudent,
   plans, InsertPlan,
@@ -162,6 +163,58 @@ export async function getGymPaymentByReferenceMonth(gymId: number, referenceMont
     .where(and(eq(gymPayments.gymId, gymId), eq(gymPayments.referenceMonth, referenceMonth)))
     .limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+// ============ SAAS PLANS ============
+
+export async function listSaasPlans(activeOnly = false) {
+  const db = await getDb();
+  if (!db) return [];
+
+  if (activeOnly) {
+    return await db.select().from(saasPlans)
+      .where(eq(saasPlans.active, true))
+      .orderBy(asc(saasPlans.displayOrder));
+  }
+
+  return await db.select().from(saasPlans).orderBy(asc(saasPlans.displayOrder));
+}
+
+export async function getSaasPlanById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(saasPlans)
+    .where(eq(saasPlans.id, id))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getSaasPlanBySlug(slug: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(saasPlans)
+    .where(eq(saasPlans.slug, slug))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createSaasPlan(plan: InsertSaasPlan) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(saasPlans).values(plan);
+  return { insertId: Number(result[0].insertId) };
+}
+
+export async function updateSaasPlan(id: number, data: Partial<InsertSaasPlan>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(saasPlans).set(data).where(eq(saasPlans.id, id));
+}
+
+export async function deleteSaasPlan(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(saasPlans).where(eq(saasPlans.id, id));
 }
 
 // ============ USERS ============
