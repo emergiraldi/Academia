@@ -16,6 +16,9 @@ import {
   CreditCard,
   Save,
   Mail,
+  Image,
+  Upload,
+  X,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -62,6 +65,8 @@ export default function AdminSettings() {
     smtpFromName: 'Academia',
     smtpUseTls: true,
     smtpUseSsl: false,
+    // Logo da Academia
+    logoUrl: '',
   });
 
   // Track if initial data was loaded
@@ -90,10 +95,51 @@ export default function AdminSettings() {
         smtpFromName: settings.smtpFromName || 'Academia',
         smtpUseTls: settings.smtpUseTls === 1,
         smtpUseSsl: settings.smtpUseSsl === 1,
+        // Logo da Academia
+        logoUrl: settings.logoUrl || '',
       });
       setIsInitialLoad(false);
     }
   }, [settings, isInitialLoad]);
+
+  // Upload de logo da academia
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tamanho (máximo 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Imagem muito grande! Máximo 2MB');
+      return;
+    }
+
+    // Validar tipo
+    if (!file.type.startsWith('image/')) {
+      toast.error('Arquivo inválido! Envie uma imagem');
+      return;
+    }
+
+    try {
+      // Converter para base64
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setFormData({ ...formData, logoUrl: base64 });
+        toast.success('Logo carregado! Clique em "Salvar" para aplicar');
+      };
+      reader.onerror = () => {
+        toast.error('Erro ao ler a imagem');
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error('Erro ao processar imagem');
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setFormData({ ...formData, logoUrl: '' });
+    toast.success('Logo removido! Clique em "Salvar" para aplicar');
+  };
 
   const handleSave = async () => {
     try {
@@ -590,6 +636,89 @@ export default function AdminSettings() {
                 <li>• SSL: Desativado</li>
                 <li>• Use uma senha de app gerada em: myaccount.google.com/apppasswords</li>
               </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Logo da Academia */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Image className="w-5 h-5 text-primary" />
+              <CardTitle>Logo da Academia</CardTitle>
+            </div>
+            <CardDescription>
+              Personalize o app com o logo da sua academia (aparece no app do aluno e professor)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              {/* Preview do logo */}
+              {formData.logoUrl && (
+                <div className="flex items-start gap-4 p-4 border rounded-lg bg-muted/30">
+                  <img
+                    src={formData.logoUrl}
+                    alt="Logo da Academia"
+                    className="w-32 h-32 object-contain rounded-lg bg-white border"
+                  />
+                  <div className="flex-1">
+                    <h4 className="font-semibold mb-2">Preview do Logo</h4>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Assim ficará no app do aluno e professor
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRemoveLogo}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Remover Logo
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Upload do logo */}
+              <div className="space-y-2">
+                <Label htmlFor="logoUpload">
+                  {formData.logoUrl ? 'Trocar Logo' : 'Fazer Upload do Logo'}
+                </Label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="logoUpload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById('logoUpload')?.click()}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    {formData.logoUrl ? 'Escolher Outra Imagem' : 'Escolher Imagem'}
+                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    PNG, JPG ou SVG • Máximo 2MB
+                  </p>
+                </div>
+              </div>
+
+              {/* Dica */}
+              <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                <h4 className="font-semibold text-sm mb-2 text-blue-900 dark:text-blue-100">
+                  💡 Dica para melhor resultado:
+                </h4>
+                <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                  <li>• Use imagens quadradas ou circulares</li>
+                  <li>• Tamanho recomendado: 512x512 pixels</li>
+                  <li>• Fundo transparente (PNG) fica melhor</li>
+                  <li>• O logo aparecerá no header do app</li>
+                </ul>
+              </div>
             </div>
           </CardContent>
         </Card>
