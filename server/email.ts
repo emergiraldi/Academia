@@ -3,6 +3,7 @@
  * Usado para recuperação de senha e notificações
  */
 
+import nodemailer from 'nodemailer';
 import * as db from './db';
 
 interface EmailConfig {
@@ -53,13 +54,10 @@ export class EmailService {
   /**
    * Cria um transporter do nodemailer com as configurações atuais
    */
-  private async createTransporter() {
+  private createTransporter() {
     if (!this.config) {
       throw new Error('Configurações SMTP não carregadas. Chame loadConfig() primeiro.');
     }
-
-    // Dynamic import to avoid bundling issues
-    const nodemailer = await import('nodemailer');
 
     const transportOptions: any = {
       host: this.config.smtpHost,
@@ -76,9 +74,7 @@ export class EmailService {
       transportOptions.requireTLS = true;
     }
 
-    // Handle default export
-    const createTransporter = nodemailer.default?.createTransporter || nodemailer.createTransporter;
-    return createTransporter(transportOptions);
+    return nodemailer.createTransport(transportOptions);
   }
 
   /**
@@ -95,7 +91,7 @@ export class EmailService {
         return { success: false, message: 'Configurações de email não estão disponíveis' };
       }
 
-      const transporter = await this.createTransporter();
+      const transporter = this.createTransporter();
 
       const htmlContent = this.getResetCodeTemplate(userName, code, validityMinutes);
       const textContent = `
