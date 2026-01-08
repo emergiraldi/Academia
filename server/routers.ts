@@ -119,10 +119,31 @@ const gymAdminOrStaffProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 // Helper to check if user is student
-const studentProcedure = protectedProcedure.use(({ ctx, next }) => {
+const studentProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   if (ctx.user.role !== "student" && ctx.user.role !== "gym_admin" && ctx.user.role !== "super_admin") {
     throw new TRPCError({ code: "FORBIDDEN", message: "Student access required" });
   }
+
+  // If it's a student (not admin), check if they are active
+  if (ctx.user.role === "student") {
+    if (!ctx.user.gymId) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+    }
+
+    const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+    if (!student) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Aluno não encontrado" });
+    }
+
+    // Block inactive students from accessing the app
+    if (student.membershipStatus !== "active") {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Sua conta está inativa. Entre em contato com a academia para mais informações."
+      });
+    }
+  }
+
   return next({ ctx });
 });
 
@@ -587,6 +608,16 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
+
+        // Check if student has financial history
+        const hasFinancialHistory = await db.checkStudentHasFinancialHistory(input.studentId, gym.id);
+
+        if (hasFinancialHistory) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Não é possível excluir alunos com histórico financeiro. Por favor, inative o aluno em vez de excluí-lo."
+          });
+        }
 
         // Get student data before deletion
         const student = await db.getStudentById(input.studentId, gym.id);

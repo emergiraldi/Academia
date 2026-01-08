@@ -383,6 +383,18 @@ export async function updateStudent(id: number, gymId: number, data: Partial<Ins
   await db.update(students).set(data).where(and(eq(students.id, id), eq(students.gymId, gymId)));
 }
 
+export async function checkStudentHasFinancialHistory(studentId: number, gymId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Check if student has any payment records (active, paid, pending, or failed)
+  const studentPayments = await db.select().from(payments)
+    .where(and(eq(payments.studentId, studentId), eq(payments.gymId, gymId)))
+    .limit(1);
+
+  return studentPayments.length > 0;
+}
+
 export async function deleteStudent(id: number, gymId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
