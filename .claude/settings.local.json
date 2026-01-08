@@ -16,7 +16,8 @@
       "Bash(node add_smtp_settings.js:*)",
       "Bash(node create_password_reset_table.js:*)",
       "Bash(npm install:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

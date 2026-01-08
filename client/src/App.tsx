@@ -7,6 +7,9 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import StudentLogin from "./pages/StudentLogin";
 import StudentRegister from "./pages/StudentRegister";
+import StudentForgotPassword from "./pages/StudentForgotPassword";
+import StudentVerifyCode from "./pages/StudentVerifyCode";
+import StudentResetPassword from "./pages/StudentResetPassword";
 import StudentDashboard from "./pages/StudentDashboardNew";
 import StudentWorkoutDetail from "./pages/StudentWorkoutDetailNew";
 import AdminLogin from "./pages/AdminLogin";
@@ -61,6 +64,9 @@ function Router() {
       {/* Student Routes */}
       <Route path={"/student/login"} component={StudentLogin} />
       <Route path={"/student/register"} component={StudentRegister} />
+      <Route path={"/student/forgot-password"} component={StudentForgotPassword} />
+      <Route path={"/student/verify-code"} component={StudentVerifyCode} />
+      <Route path={"/student/reset-password"} component={StudentResetPassword} />
       <Route path={"/student/dashboard"} component={StudentDashboard} />
       <Route path={"/student/workout/:id"} component={StudentWorkoutDetail} />
       
