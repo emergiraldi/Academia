@@ -115,40 +115,34 @@ async function createSaasPlansTable() {
     await connection.query(`
       INSERT INTO saasPlans (
         name, slug, description, priceInCents,
-        maxStudents, maxProfessors, maxStaff,
+        features,
         hasWellhub, hasControlId, hasAdvancedReports, hasWhatsappIntegration, hasPrioritySupport,
         featured, displayOrder, active
       ) VALUES
       (
         'Básico',
         'basic',
-        'Ideal para academias pequenas que estão começando',
+        'Perfeito para academias iniciantes',
         14900,
-        100,
-        2,
-        2,
+        '["Gestão de alunos e pagamentos", "PIX com QR Code automático", "Controle de exames médicos", "Carteirinha digital", "CRM para leads", "Relatórios básicos", "Suporte por email"]',
         0, 0, 0, 0, 0,
         0, 1, 1
       ),
       (
-        'Profissional',
+        'Professional',
         'professional',
-        'Perfeito para academias em crescimento com integração Wellhub',
+        'Ideal para academias em crescimento',
         29900,
-        500,
-        5,
-        5,
-        1, 0, 1, 1, 0,
+        '["Tudo do Plano Básico", "App mobile para alunos", "Treinos personalizados (fotos/vídeos)", "Gestão de professores", "Control ID - Reconhecimento facial", "Bloqueio automático por inadimplência", "Gestão financeira completa", "Relatórios avançados", "Suporte prioritário"]',
+        0, 1, 1, 0, 1,
         1, 2, 1
       ),
       (
         'Enterprise',
         'enterprise',
-        'Solução completa com todos os recursos e suporte prioritário',
+        'Para grandes redes de academias',
         59900,
-        NULL,
-        NULL,
-        NULL,
+        '["Tudo do Plano Professional", "Integração Wellhub (Gympass)", "Check-in automático Wellhub", "App mobile whitelabel", "Control ID avançado (múltiplos pontos)", "API para integrações customizadas", "Múltiplas unidades/filiais", "Relatórios customizados", "Suporte 24/7 (WhatsApp + Telefone)", "Treinamento e onboarding completo"]',
         1, 1, 1, 1, 1,
         0, 3, 1
       )
@@ -156,9 +150,9 @@ async function createSaasPlansTable() {
 
     console.log('✅ Planos padrão inseridos com sucesso!');
     console.log('\n📋 Estrutura da tabela:');
-    console.log('   - Plano Básico: R$ 149/mês - até 100 alunos');
-    console.log('   - Plano Profissional: R$ 299/mês - até 500 alunos + Wellhub');
-    console.log('   - Plano Enterprise: R$ 599/mês - alunos ilimitados + todos recursos');
+    console.log('   - Plano Básico: R$ 149/mês - Recursos essenciais');
+    console.log('   - Plano Professional: R$ 299/mês - Com Control ID');
+    console.log('   - Plano Enterprise: R$ 599/mês - Com Wellhub + todos recursos');
     console.log('\n📝 Próximos passos:');
     console.log('   1. Página Super Admin para gerenciar planos');
     console.log('   2. Academias escolhem plano no cadastro');
