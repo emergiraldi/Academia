@@ -47,12 +47,14 @@ export default function AdminStudents() {
     state: "",
     zipCode: "",
     planId: "",
+    professorId: "",
   });
 
   const { gymSlug } = useGym();
 
   const { data: students, refetch: refetchStudents } = trpc.students.listAll.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
   const { data: plans } = trpc.plans.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
+  const { data: professors = [] } = trpc.professors.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
   const { data: studentPayments = [], refetch: refetchPayments } = trpc.payments.getByStudent.useQuery(
     { gymSlug, studentId: viewingStudentPayments?.id || 0 },
     { enabled: !!viewingStudentPayments?.id }
@@ -234,6 +236,7 @@ export default function AdminStudents() {
       state: "",
       zipCode: "",
       planId: "",
+      professorId: "",
     });
   };
 
@@ -305,6 +308,7 @@ export default function AdminStudents() {
       gymSlug,
       ...formData,
       planId: parseInt(formData.planId),
+      professorId: formData.professorId ? parseInt(formData.professorId) : undefined,
     });
   };
 
@@ -330,6 +334,7 @@ export default function AdminStudents() {
       studentId: editingStudent.id,
       ...formData,
       planId: formData.planId ? parseInt(formData.planId) : undefined,
+      professorId: formData.professorId ? parseInt(formData.professorId) : null,
     });
   };
 
@@ -350,6 +355,7 @@ export default function AdminStudents() {
       state: student.state || "",
       zipCode: student.zipCode || "",
       planId: student.planId?.toString() || "",
+      professorId: student.professorId?.toString() || "",
     });
     setIsEditOpen(true);
   };
@@ -568,20 +574,39 @@ export default function AdminStudents() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="planId">Plano de Mensalidade *</Label>
-                  <Select value={formData.planId} onValueChange={(value) => setFormData({ ...formData, planId: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um plano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {plans?.map((plan) => (
-                        <SelectItem key={plan.id} value={plan.id.toString()}>
-                          {plan.name} - R$ {(plan.priceInCents / 100).toFixed(2)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="planId">Plano de Mensalidade *</Label>
+                    <Select value={formData.planId} onValueChange={(value) => setFormData({ ...formData, planId: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plans?.map((plan) => (
+                          <SelectItem key={plan.id} value={plan.id.toString()}>
+                            {plan.name} - R$ {(plan.priceInCents / 100).toFixed(2)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="professorId">Professor Responsável</Label>
+                    <Select value={formData.professorId} onValueChange={(value) => setFormData({ ...formData, professorId: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um professor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Sem professor</SelectItem>
+                        {professors?.map((professor: any) => (
+                          <SelectItem key={professor.id} value={professor.id.toString()}>
+                            {professor.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 {/* Cadastro Facial */}
@@ -1220,20 +1245,39 @@ export default function AdminStudents() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-planId">Plano de Mensalidade</Label>
-                <Select value={formData.planId} onValueChange={(value) => setFormData({ ...formData, planId: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um plano" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {plans?.map((plan) => (
-                      <SelectItem key={plan.id} value={plan.id.toString()}>
-                        {plan.name} - R$ {(plan.priceInCents / 100).toFixed(2)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-planId">Plano de Mensalidade</Label>
+                  <Select value={formData.planId} onValueChange={(value) => setFormData({ ...formData, planId: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um plano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plans?.map((plan) => (
+                        <SelectItem key={plan.id} value={plan.id.toString()}>
+                          {plan.name} - R$ {(plan.priceInCents / 100).toFixed(2)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-professorId">Professor Responsável</Label>
+                  <Select value={formData.professorId} onValueChange={(value) => setFormData({ ...formData, professorId: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um professor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Sem professor</SelectItem>
+                      {professors?.map((professor: any) => (
+                        <SelectItem key={professor.id} value={professor.id.toString()}>
+                          {professor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {/* Cadastro Facial */}

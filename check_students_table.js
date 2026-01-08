@@ -1,37 +1,47 @@
 import mysql from 'mysql2/promise';
 
 async function checkStudentsTable() {
-  const connection = await mysql.createConnection(process.env.DATABASE_URL);
-  
+  const connection = await mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'academia_db'
+  });
+
   try {
-    // Verificar se tabela students existe
-    const [tables] = await connection.execute(
-      "SHOW TABLES LIKE 'students'"
-    );
-    
-    if (tables.length === 0) {
-      console.log('❌ Tabela students NÃO existe');
-      return;
+    console.log('=== Estrutura da tabela students ===\n');
+
+    const [columns] = await connection.execute('DESCRIBE students');
+    columns.forEach(col => {
+      console.log(`${col.Field.padEnd(25)} | ${col.Type.padEnd(20)} | ${col.Null.padEnd(5)} | ${col.Key.padEnd(5)} | ${col.Default || 'NULL'}`);
+    });
+
+    console.log('\n=== Verificando relação com professores ===\n');
+
+    // Check if there's a professorId column
+    const hasProfessorId = columns.some(col => col.Field === 'professorId');
+
+    if (hasProfessorId) {
+      console.log('✅ Coluna professorId EXISTE na tabela students');
+
+      // Check how many students have professors assigned
+      const [stats] = await connection.execute(`
+        SELECT
+          COUNT(*) as total,
+          COUNT(professorId) as comProfessor,
+          COUNT(*) - COUNT(professorId) as semProfessor
+        FROM students
+      `);
+
+      console.log(`\n📊 Estatísticas:`);
+      console.log(`   Total de alunos: ${stats[0].total}`);
+      console.log(`   Com professor: ${stats[0].comProfessor}`);
+      console.log(`   Sem professor: ${stats[0].semProfessor}`);
+    } else {
+      console.log('❌ Coluna professorId NÃO EXISTE na tabela students');
+      console.log('   ⚠️  PROBLEMA: Não há como vincular alunos a professores!');
     }
-    
-    console.log('✅ Tabela students existe');
-    
-    // Contar quantos students existem
-    const [count] = await connection.execute(
-      'SELECT COUNT(*) as total FROM students'
-    );
-    
-    console.log(`📊 Total de alunos: ${count[0].total}`);
-    
-    // Mostrar alguns alunos
-    if (count[0].total > 0) {
-      const [students] = await connection.execute(
-        'SELECT s.id, u.name, u.email FROM students s JOIN users u ON s.userId = u.id LIMIT 5'
-      );
-      console.log('👥 Primeiros alunos:');
-      students.forEach(s => console.log(`  - ${s.name} (${s.email})`));
-    }
-    
+
   } catch (error) {
     console.error('Erro:', error.message);
   } finally {

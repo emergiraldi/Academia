@@ -428,6 +428,7 @@ export const appRouter = router({
         state: z.string().optional(),
         zipCode: z.string().optional(),
         planId: z.number(),
+        professorId: z.number().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
@@ -458,6 +459,7 @@ export const appRouter = router({
           state: input.state || null,
           zipCode: input.zipCode || null,
           registrationNumber: `${gym.id}-${Date.now()}`,
+          professorId: input.professorId || null,
         });
 
         // Create subscription
@@ -505,6 +507,7 @@ export const appRouter = router({
         state: z.string().optional(),
         zipCode: z.string().optional(),
         planId: z.number().optional(),
+        professorId: z.number().optional().nullable(),
       }))
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
@@ -527,6 +530,7 @@ export const appRouter = router({
         if (input.city !== undefined) studentUpdates.city = input.city;
         if (input.state !== undefined) studentUpdates.state = input.state;
         if (input.zipCode !== undefined) studentUpdates.zipCode = input.zipCode;
+        if (input.professorId !== undefined) studentUpdates.professorId = input.professorId;
 
         if (Object.keys(studentUpdates).length > 0) {
           await db.updateStudent(input.studentId, gym.id, studentUpdates);
