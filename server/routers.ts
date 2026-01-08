@@ -110,9 +110,9 @@ const professorProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
-// Helper to check if user is gym admin or staff (allows staff to access admin features)
+// Helper to check if user is gym admin, staff or professor (allows staff and professors to access admin features)
 const gymAdminOrStaffProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "gym_admin" && ctx.user.role !== "super_admin" && ctx.user.role !== "staff") {
+  if (ctx.user.role !== "gym_admin" && ctx.user.role !== "super_admin" && ctx.user.role !== "staff" && ctx.user.role !== "professor") {
     throw new TRPCError({ code: "FORBIDDEN", message: "Acesso de administrador ou funcionário necessário" });
   }
   return next({ ctx });
