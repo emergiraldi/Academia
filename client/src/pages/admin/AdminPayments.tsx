@@ -85,7 +85,7 @@ export default function AdminPayments() {
   });
   const { data: students = [] } = trpc.students.list.useQuery();
   const { data: plans = [] } = trpc.plans.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
-  const { data: paymentMethods = [] } = trpc.paymentMethods.list.useQuery();
+  const { data: paymentMethods = [] } = trpc.paymentMethods.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
 
   // Mutations
   const generateMutation = trpc.payments.generateMonthlyPayments.useMutation({
