@@ -1,6 +1,15 @@
 import { z } from "zod";
-import { router, superAdminProcedure } from "../_core/trpc";
+import { router, protectedProcedure } from "../_core/trpc";
+import { TRPCError } from "@trpc/server";
 import * as db from "../db";
+
+// Helper to check if user is super admin
+const superAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== "super_admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Acesso de super administrador necessário" });
+  }
+  return next({ ctx });
+});
 
 /**
  * Super Admin Settings Router
