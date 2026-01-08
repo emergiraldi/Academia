@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, superAdminProcedure } from "../trpc";
+import { router, superAdminProcedure } from "../_core/trpc";
 import * as db from "../db";
 
 /**
