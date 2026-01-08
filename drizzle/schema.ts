@@ -46,6 +46,10 @@ export const gyms = mysqlTable("gyms", {
   wellhubApiKey: varchar("wellhubApiKey", { length: 255 }),
   wellhubWebhookSecret: varchar("wellhubWebhookSecret", { length: 255 }),
 
+  // Onboarding - senha temporária do admin (limpar após enviar email)
+  tempAdminPassword: varchar("tempAdminPassword", { length: 100 }),
+  tempAdminEmail: varchar("tempAdminEmail", { length: 320 }),
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

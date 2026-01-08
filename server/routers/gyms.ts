@@ -78,11 +78,58 @@ export const gymsRouter = router({
       // Criar a academia
       const { adminEmail, adminName, ...gymData } = input;
 
-      // Garantir que email seja fornecido (campo obrigatório no schema)
-      const finalGymData = {
-        ...gymData,
-        email: gymData.email || gymData.contactEmail || `contato@${input.slug}.com`,
+      // Gerar senha segura automática ANTES de criar a academia
+      const generatePassword = () => {
+        const length = 12;
+        const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+        const numbers = '0123456789';
+        const symbols = '!@#$%&*';
+        const allChars = uppercase + lowercase + numbers + symbols;
+
+        let pwd = '';
+        pwd += uppercase[Math.floor(Math.random() * uppercase.length)];
+        pwd += lowercase[Math.floor(Math.random() * lowercase.length)];
+        pwd += numbers[Math.floor(Math.random() * numbers.length)];
+        pwd += symbols[Math.floor(Math.random() * symbols.length)];
+
+        for (let i = pwd.length; i < length; i++) {
+          pwd += allChars[Math.floor(Math.random() * allChars.length)];
+        }
+
+        return pwd.split('').sort(() => Math.random() - 0.5).join('');
       };
+
+      const tempPassword = generatePassword();
+      const adminEmailToUse = adminEmail || gymData.contactEmail || `admin@${input.slug}.com`;
+
+      // Garantir que email seja fornecido (campo obrigatório no schema)
+      const finalGymData: any = {
+        name: gymData.name,
+        slug: gymData.slug,
+        email: gymData.email || gymData.contactEmail || `contato@${input.slug}.com`,
+        contactEmail: gymData.contactEmail || null,
+        contactPhone: gymData.contactPhone || null,
+        phone: gymData.phone || null,
+        city: gymData.city || null,
+        state: gymData.state || null,
+        plan: gymData.plan || "basic",
+        planStatus: gymData.planStatus || "trial",
+        status: "active",
+        tempAdminPassword: tempPassword,
+        tempAdminEmail: adminEmailToUse,
+      };
+
+      // Adicionar campos opcionais apenas se fornecidos
+      if (gymData.cnpj) finalGymData.cnpj = gymData.cnpj;
+      if (gymData.address) finalGymData.address = gymData.address;
+      if (gymData.zipCode) finalGymData.zipCode = gymData.zipCode;
+      if (gymData.pixKey) finalGymData.pixKey = gymData.pixKey;
+      if (gymData.pixKeyType) finalGymData.pixKeyType = gymData.pixKeyType;
+      if (gymData.merchantName) finalGymData.merchantName = gymData.merchantName;
+      if (gymData.merchantCity) finalGymData.merchantCity = gymData.merchantCity;
+      if (gymData.wellhubApiKey) finalGymData.wellhubApiKey = gymData.wellhubApiKey;
+      if (gymData.wellhubWebhookSecret) finalGymData.wellhubWebhookSecret = gymData.wellhubWebhookSecret;
 
       console.log("🟢 [CREATE GYM] Dados para inserir (finalGymData):", JSON.stringify(finalGymData, null, 2));
 
@@ -91,31 +138,34 @@ export const gymsRouter = router({
 
       console.log("🟢 [CREATE GYM] Academia criada com ID:", gymId);
 
-      // Gerar credenciais do admin
-      const tempPassword = `${input.slug}@2024`;
+      // Criar usuário admin para a academia
       const hashedPassword = await bcrypt.hash(tempPassword, 10);
-      const email = adminEmail || input.contactEmail || `admin@${input.slug}.com`;
       const name = adminName || `Admin ${input.name}`;
       const openId = `gym-admin-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
-      // Criar usuário admin para a academia
       await db.insert(users).values({
         gymId,
         openId,
-        email,
+        email: adminEmailToUse,
         password: hashedPassword,
         name,
         role: "gym_admin",
         phone: input.contactPhone || null,
       });
 
+      console.log(`🟢 [CREATE GYM] Admin criado com email: ${adminEmailToUse}`);
+
+      // TODO: Após pagamento confirmado, enviar email com credenciais
+      // Por enquanto, retornar credenciais para exibir na tela
       return {
         gymId,
+        gymSlug: input.slug,
         adminCredentials: {
           email,
           password: tempPassword,
           loginUrl: `/admin/login?gym=${input.slug}`,
         },
+        message: "Academia cadastrada! Aguardando confirmação de pagamento para ativar o sistema.",
       };
     }),
 
