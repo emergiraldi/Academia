@@ -731,7 +731,7 @@ export const paymentMethods = mysqlTable("payment_methods", {
   id: int("id").autoincrement().primaryKey(),
   gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 100 }).notNull(), // "Dinheiro", "Débito", "Crédito", etc
-  type: mysqlEnum("type", ["cash", "debit", "credit", "pix", "bank_transfer", "other"]).notNull(),
+  type: mysqlEnum("type", ["cash", "bank_transfer", "credit_card", "debit_card", "pix", "check", "other"]).notNull(),
   description: text("description"),
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
