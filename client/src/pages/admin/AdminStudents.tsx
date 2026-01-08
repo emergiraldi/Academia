@@ -802,6 +802,12 @@ export default function AdminStudents() {
                               <span>
                                 {(() => {
                                   try {
+                                    // Parse manual para evitar problemas de timezone
+                                    const dateStr = String(student.dateOfBirth);
+                                    if (dateStr.includes('-')) {
+                                      const [year, month, day] = dateStr.split('T')[0].split('-');
+                                      return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+                                    }
                                     const date = new Date(student.dateOfBirth);
                                     return isNaN(date.getTime()) ? 'Data inválida' : date.toLocaleDateString('pt-BR');
                                   } catch {
