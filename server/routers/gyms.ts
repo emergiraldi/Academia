@@ -155,18 +155,105 @@ export const gymsRouter = router({
 
       console.log(`🟢 [CREATE GYM] Admin criado com email: ${adminEmailToUse}`);
 
-      // TODO: Após pagamento confirmado, enviar email com credenciais
-      // Por enquanto, retornar credenciais para exibir na tela
-      return {
-        gymId,
-        gymSlug: input.slug,
-        adminCredentials: {
-          email,
-          password: tempPassword,
-          loginUrl: `/admin/login?gym=${input.slug}`,
-        },
-        message: "Academia cadastrada! Aguardando confirmação de pagamento para ativar o sistema.",
-      };
+      // Gerar PIX automaticamente para pagamento da assinatura
+      const plan = finalGymData.plan;
+      const now = new Date();
+      const referenceMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      console.log(`💰 [CREATE GYM] Gerando PIX de assinatura automático para plano: ${plan}`);
+
+      try {
+        // Buscar preços das configurações
+        const [settings] = await db.select().from(siteSettings).limit(1);
+
+        if (!settings) {
+          throw new Error("Configurações do site não encontradas");
+        }
+
+        const planPrices: Record<string, number> = {
+          basic: settings.basicPrice * 100,
+          professional: settings.professionalPrice * 100,
+          enterprise: settings.enterprisePrice * 100,
+        };
+
+        const amountInCents = planPrices[plan];
+
+        // Importar funções PIX
+        const { getPixService } = await import("../pix");
+        const { createGymPayment } = await import("../db");
+
+        // Criar cobrança PIX usando credenciais do Super Admin
+        const pixService = getPixService();
+
+        const pixCharge = await pixService.createImmediateCharge({
+          valor: amountInCents,
+          pagador: {
+            cpf: finalGymData.cnpj?.replace(/\D/g, "") || "00000000000",
+            nome: finalGymData.name,
+          },
+          infoAdicionais: `Assinatura ${plan} - ${finalGymData.name}`,
+          expiracao: 86400, // 24 horas
+        });
+
+        console.log(`✅ [CREATE GYM] PIX gerado! TXID: ${pixCharge.txid}`);
+
+        // Definir data de vencimento (dia 10 do mês)
+        const dueDate = new Date(now.getFullYear(), now.getMonth(), 10);
+        if (now.getDate() > 10) {
+          dueDate.setMonth(dueDate.getMonth() + 1);
+        }
+
+        // Salvar pagamento no banco
+        const planNames: Record<string, string> = {
+          basic: "Básico",
+          professional: "Professional",
+          enterprise: "Enterprise",
+        };
+
+        await createGymPayment({
+          gymId,
+          amountInCents,
+          status: "pending",
+          paymentMethod: "pix",
+          pixTxId: pixCharge.txid,
+          pixQrCode: pixCharge.pixCopiaECola,
+          pixQrCodeImage: pixCharge.qrcode,
+          pixCopyPaste: pixCharge.pixCopiaECola,
+          description: `Assinatura ${planNames[plan]} - ${referenceMonth}`,
+          referenceMonth,
+          dueDate,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        console.log(`✅ [CREATE GYM] Pagamento PIX salvo no banco`);
+
+        // Retornar dados incluindo PIX
+        return {
+          gymId,
+          gymSlug: input.slug,
+          plan,
+          pixPayment: {
+            txid: pixCharge.txid,
+            qrCode: pixCharge.pixCopiaECola,
+            qrCodeImage: pixCharge.qrcode,
+            amount: amountInCents,
+            amountFormatted: `R$ ${(amountInCents / 100).toFixed(2).replace('.', ',')}`,
+            dueDate: dueDate.toISOString(),
+          },
+          message: "Academia cadastrada! Pague o PIX para ativar o sistema.",
+        };
+
+      } catch (pixError: any) {
+        console.error("❌ [CREATE GYM] Erro ao gerar PIX:", pixError);
+        // Se falhar o PIX, ainda assim academia foi criada
+        return {
+          gymId,
+          gymSlug: input.slug,
+          error: `Academia criada, mas erro ao gerar PIX: ${pixError.message}`,
+          message: "Academia cadastrada! Entre em contato para finalizar o pagamento.",
+        };
+      }
     }),
 
   // Auto-cadastro de academia (público)
