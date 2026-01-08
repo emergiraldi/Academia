@@ -83,7 +83,7 @@ export default function StudentFaceEnrollment({ student, onBack, onSuccess }: St
 
       // Call the tRPC mutation
       await uploadFaceMutation.mutateAsync({
-        faceImageData: base64Data,
+        imageData: base64Data,
       });
 
       setEnrolled(true);
