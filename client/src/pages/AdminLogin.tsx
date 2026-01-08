@@ -14,9 +14,12 @@ export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const utils = trpc.useUtils();
 
   const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Refetch user data to ensure cache is updated before redirect
+      await utils.auth.me.refetch();
       toast.success("Login realizado com sucesso!");
       setLocation("/admin/dashboard");
     },

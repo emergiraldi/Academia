@@ -17,8 +17,8 @@ export default function StudentLogin() {
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: async () => {
-      // Invalidate and refetch user data to update cache
-      await utils.auth.me.invalidate();
+      // Refetch user data to ensure cache is updated before redirect
+      await utils.auth.me.refetch();
       toast.success("Login realizado com sucesso!");
       setLocation("/student/dashboard");
     },
