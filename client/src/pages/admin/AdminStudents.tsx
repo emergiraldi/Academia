@@ -802,14 +802,14 @@ export default function AdminStudents() {
                               <span>
                                 {(() => {
                                   try {
-                                    // Parse manual para evitar problemas de timezone
                                     const dateStr = String(student.dateOfBirth);
-                                    if (dateStr.includes('-')) {
-                                      const [year, month, day] = dateStr.split('T')[0].split('-');
-                                      return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+                                    // Extrai YYYY-MM-DD de qualquer formato (ISO, MySQL datetime, etc)
+                                    const match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+                                    if (match) {
+                                      const [, year, month, day] = match;
+                                      return `${day}/${month}/${year}`;
                                     }
-                                    const date = new Date(student.dateOfBirth);
-                                    return isNaN(date.getTime()) ? 'Data inválida' : date.toLocaleDateString('pt-BR');
+                                    return 'Data inválida';
                                   } catch {
                                     return 'Data inválida';
                                   }
