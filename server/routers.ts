@@ -541,12 +541,19 @@ export const appRouter = router({
           const userUpdates: any = {};
           if (input.name !== undefined) userUpdates.name = input.name;
           if (input.email !== undefined) userUpdates.email = input.email;
+
+          console.log('[students.update] Password received:', input.password ? `"${input.password}" (length: ${input.password.length})` : 'undefined/empty');
+
           if (input.password) {
-            userUpdates.password = await bcrypt.hash(input.password, 10);
+            const hashedPassword = await bcrypt.hash(input.password, 10);
+            userUpdates.password = hashedPassword;
+            console.log('[students.update] Password hashed successfully, hash length:', hashedPassword.length);
           }
 
           if (Object.keys(userUpdates).length > 0) {
+            console.log('[students.update] Updating user:', student.userId, 'with fields:', Object.keys(userUpdates));
             await db.updateUser(student.userId, userUpdates);
+            console.log('[students.update] User updated successfully');
           }
         }
 
