@@ -28,6 +28,86 @@ export async function processPixWebhook(payload: any) {
 
     console.log(`[PIX Webhook] Processing txid: ${txid}, amount: ${amountInCents}, paidAt: ${paidAt}`);
 
+    // ========== STEP 1: CHECK IF IT'S A GYM SUBSCRIPTION PAYMENT ==========
+    const gymPayment = await db.getGymPaymentByPixTxId(txid);
+
+    if (gymPayment) {
+      console.log(`[PIX Webhook] 🏢 Detected GYM SUBSCRIPTION payment - ID: ${gymPayment.id}`);
+
+      // Check if already processed
+      if (gymPayment.status === "paid") {
+        console.log(`[PIX Webhook] Gym payment ${gymPayment.id} already processed`);
+        return { success: true, message: "Already processed" };
+      }
+
+      // Update payment status
+      await db.updateGymPayment(gymPayment.id, gymPayment.gymId, {
+        status: "paid",
+        paidAt,
+      });
+
+      console.log(`[PIX Webhook] ✅ Gym payment ${gymPayment.id} marked as paid`);
+
+      // Get gym
+      const gym = await db.getGymById(gymPayment.gymId);
+      if (!gym) {
+        console.error("[PIX Webhook] Gym not found");
+        return { success: false, error: "Gym not found" };
+      }
+
+      // Send admin credentials if this is the first payment (onboarding)
+      try {
+        if (gym.tempAdminPassword && gym.tempAdminEmail) {
+          console.log(`[PIX Webhook] 📧 Sending admin credentials to ${gym.tempAdminEmail}...`);
+
+          const { sendGymAdminCredentials } = await import("./email");
+          await sendGymAdminCredentials(
+            gym.tempAdminEmail,
+            gym.tempAdminPassword,
+            gym.name,
+            gym.slug,
+            gym.plan
+          );
+
+          console.log(`[PIX Webhook] ✅ Credentials sent successfully!`);
+
+          // Clear temp credentials and activate plan
+          await db.updateGym(gym.id, {
+            tempAdminPassword: null,
+            tempAdminEmail: null,
+            planStatus: "active",
+            subscriptionStartsAt: paidAt,
+            nextBillingDate: new Date(paidAt.getFullYear(), paidAt.getMonth() + 1, 10),
+          });
+
+          console.log(`[PIX Webhook] ✅ Gym ${gym.id} plan activated - subscription starts!`);
+        } else {
+          console.log(`[PIX Webhook] ℹ️ No temp credentials found - this is a recurring payment`);
+
+          // For recurring payments, just update next billing date
+          await db.updateGym(gym.id, {
+            nextBillingDate: new Date(paidAt.getFullYear(), paidAt.getMonth() + 1, 10),
+            planStatus: "active", // Ensure plan stays active
+          });
+
+          console.log(`[PIX Webhook] ✅ Gym ${gym.id} billing updated for next month`);
+        }
+      } catch (emailError) {
+        console.error("[PIX Webhook] Failed to send credentials:", emailError);
+        // Don't fail the webhook if email fails
+      }
+
+      return {
+        success: true,
+        paymentId: gymPayment.id,
+        gymId: gym.id,
+        message: "Gym subscription payment confirmed and processed"
+      };
+    }
+
+    // ========== STEP 2: CHECK IF IT'S A STUDENT PAYMENT ==========
+    console.log(`[PIX Webhook] Not a gym payment, checking for student payment...`);
+
     // Try to find payment by txid in all gyms
     // (we need to search across gyms since webhook doesn't include gymId)
     const allGyms = await db.listGyms();

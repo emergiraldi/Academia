@@ -557,4 +557,114 @@ export const gymsRouter = router({
         throw new Error("Falha ao enviar email");
       }
     }),
+
+  // Gerar pagamento PIX para assinatura da academia
+  generateSubscriptionPayment: publicProcedure
+    .input(z.object({
+      gymId: z.number(),
+      plan: z.enum(["basic", "professional", "enterprise"]),
+      referenceMonth: z.string().optional(), // "2026-01"
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Buscar a academia
+      const [gym] = await db.select().from(gyms).where(eq(gyms.id, input.gymId));
+      if (!gym) throw new Error("Academia não encontrada");
+
+      // Importar funções
+      const { getPixService } = await import("../pix");
+      const { createGymPayment, getGymPaymentByReferenceMonth } = await import("../db");
+
+      // Definir mês de referência (padrão: mês atual)
+      const now = new Date();
+      const referenceMonth = input.referenceMonth ||
+        `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      // Verificar se já existe pagamento para este mês
+      const existingPayment = await getGymPaymentByReferenceMonth(input.gymId, referenceMonth);
+      if (existingPayment && existingPayment.status !== "cancelled") {
+        throw new Error("Já existe um pagamento para este mês");
+      }
+
+      // Definir valores dos planos
+      const planPrices: Record<string, number> = {
+        basic: 14900, // R$ 149,00 em centavos
+        professional: 29900, // R$ 299,00 em centavos
+        enterprise: 59900, // R$ 599,00 em centavos
+      };
+
+      const amountInCents = planPrices[input.plan];
+
+      // Definir data de vencimento (dia 10 do mês)
+      const dueDate = new Date(now.getFullYear(), now.getMonth(), 10);
+      if (now.getDate() > 10) {
+        // Se já passou do dia 10, vencimento é no próximo mês
+        dueDate.setMonth(dueDate.getMonth() + 1);
+      }
+
+      console.log(`💰 [GYM PAYMENT] Gerando PIX para academia ${gym.name}`);
+      console.log(`  - Plano: ${input.plan}`);
+      console.log(`  - Valor: R$ ${(amountInCents / 100).toFixed(2)}`);
+      console.log(`  - Vencimento: ${dueDate.toISOString()}`);
+      console.log(`  - Mês de referência: ${referenceMonth}`);
+
+      try {
+        // Criar cobrança PIX usando credenciais do Super Admin
+        const pixService = getPixService();
+
+        const pixCharge = await pixService.createImmediateCharge({
+          valor: amountInCents,
+          pagador: {
+            cpf: gym.cnpj?.replace(/\D/g, "") || "00000000000", // Usar CNPJ como CPF se disponível
+            nome: gym.name,
+          },
+          infoAdicionais: `Assinatura ${input.plan} - ${gym.name}`,
+          expiracao: 86400, // 24 horas
+        });
+
+        console.log(`✅ [GYM PAYMENT] PIX criado com sucesso!`);
+        console.log(`  - TXID: ${pixCharge.txid}`);
+        console.log(`  - QR Code: ${pixCharge.pixCopiaECola.substring(0, 50)}...`);
+
+        // Salvar pagamento no banco
+        const planNames: Record<string, string> = {
+          basic: "Básico",
+          professional: "Professional",
+          enterprise: "Enterprise",
+        };
+
+        const payment = await createGymPayment({
+          gymId: input.gymId,
+          amountInCents,
+          status: "pending",
+          paymentMethod: "pix",
+          pixTxId: pixCharge.txid,
+          pixQrCode: pixCharge.pixCopiaECola,
+          pixQrCodeImage: pixCharge.qrcode,
+          pixCopyPaste: pixCharge.pixCopiaECola,
+          description: `Assinatura ${planNames[input.plan]} - ${referenceMonth}`,
+          referenceMonth,
+          dueDate,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        console.log(`✅ [GYM PAYMENT] Pagamento salvo no banco - ID: ${payment.insertId}`);
+
+        return {
+          success: true,
+          paymentId: payment.insertId,
+          txid: pixCharge.txid,
+          qrCode: pixCharge.pixCopiaECola,
+          qrCodeImage: pixCharge.qrcode,
+          amount: amountInCents,
+          dueDate: dueDate.toISOString(),
+        };
+      } catch (error: any) {
+        console.error("❌ [GYM PAYMENT] Erro ao gerar PIX:", error);
+        throw new Error(`Erro ao gerar pagamento PIX: ${error.message}`);
+      }
+    }),
 });

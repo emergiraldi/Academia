@@ -58,6 +58,32 @@ export type Gym = typeof gyms.$inferSelect;
 export type InsertGym = typeof gyms.$inferInsert;
 
 /**
+ * Gym Payments table - tracks subscription payments for gyms
+ * Separate from student payments to handle SaaS billing
+ */
+export const gymPayments = mysqlTable("gymPayments", {
+  id: int("id").autoincrement().primaryKey(),
+  gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
+  amountInCents: int("amountInCents").notNull(),
+  status: mysqlEnum("status", ["pending", "paid", "failed", "refunded", "cancelled"]).default("pending").notNull(),
+  paymentMethod: varchar("paymentMethod", { length: 50 }).notNull(), // "pix", "credit_card", "boleto"
+  pixTxId: varchar("pixTxId", { length: 255 }).unique(), // Transaction ID from Efí Pay
+  pixQrCode: text("pixQrCode"), // QR Code para pagamento PIX
+  pixQrCodeImage: text("pixQrCodeImage"), // Base64 image do QR Code
+  pixCopyPaste: text("pixCopyPaste"), // Código copia e cola do PIX
+  receiptUrl: varchar("receiptUrl", { length: 500 }), // URL do comprovante no S3
+  description: varchar("description", { length: 500 }), // "Assinatura Professional - Janeiro 2026"
+  referenceMonth: varchar("referenceMonth", { length: 7 }), // "2026-01" para controlar duplicatas
+  dueDate: timestamp("dueDate").notNull(),
+  paidAt: timestamp("paidAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type GymPayment = typeof gymPayments.$inferSelect;
+export type InsertGymPayment = typeof gymPayments.$inferInsert;
+
+/**
  * Core user table backing auth flow.
  * Extended with roles for multi-tenant system
  */

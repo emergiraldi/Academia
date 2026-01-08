@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import {
   gyms, InsertGym,
+  gymPayments, InsertGymPayment,
   users, InsertUser,
   students, InsertStudent,
   plans, InsertPlan,
@@ -113,6 +114,54 @@ export async function updateGym(id: number, data: Partial<InsertGym>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(gyms).set(data).where(eq(gyms.id, id));
+}
+
+// ============ GYM PAYMENTS ============
+
+export async function createGymPayment(payment: InsertGymPayment) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(gymPayments).values(payment);
+  return { insertId: Number(result[0].insertId) };
+}
+
+export async function listGymPayments(gymId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(gymPayments).where(eq(gymPayments.gymId, gymId));
+}
+
+export async function getGymPaymentById(id: number, gymId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(gymPayments)
+    .where(and(eq(gymPayments.id, id), eq(gymPayments.gymId, gymId)))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getGymPaymentByPixTxId(txId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(gymPayments)
+    .where(eq(gymPayments.pixTxId, txId))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateGymPayment(id: number, gymId: number, data: Partial<InsertGymPayment>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(gymPayments).set(data).where(and(eq(gymPayments.id, id), eq(gymPayments.gymId, gymId)));
+}
+
+export async function getGymPaymentByReferenceMonth(gymId: number, referenceMonth: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(gymPayments)
+    .where(and(eq(gymPayments.gymId, gymId), eq(gymPayments.referenceMonth, referenceMonth)))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
 }
 
 // ============ USERS ============
