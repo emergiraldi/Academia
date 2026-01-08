@@ -329,16 +329,29 @@ export const appRouter = router({
     requestPasswordReset: publicProcedure
       .input(z.object({
         email: z.string().email(),
+        gymSlug: z.string().optional(), // Para identificar qual academia
       }))
       .mutation(async ({ input }) => {
         const user = await db.getUserByEmail(input.email);
+
+        // Sempre retorna sucesso mesmo se o email não existir (segurança)
         if (!user) {
-          return { success: true };
+          return { success: true, message: "Se o email existir, você receberá um código de recuperação." };
         }
 
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        // Verificar se o usuário tem academia associada
+        if (!user.gymId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Usuário sem academia associada"
+          });
+        }
 
+        // Gerar código de 6 dígitos
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+
+        // Salvar token no banco
         await db.createPasswordResetToken({
           userId: user.id,
           token: code,
@@ -346,8 +359,72 @@ export const appRouter = router({
           used: false,
         });
 
-        await sendPasswordResetEmail(user.email!, code, user.name || "Usuário");
-        return { success: true };
+        // Enviar email usando EmailService com SMTP configurado
+        try {
+          const { getEmailServiceForGym } = await import("./email");
+          const emailService = await getEmailServiceForGym(user.gymId);
+
+          if (!emailService) {
+            // Se não houver configuração SMTP, usar fallback (console.log)
+            console.log(`[Password Reset] Código para ${user.email}: ${code}`);
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Serviço de email não configurado. Entre em contato com a academia."
+            });
+          }
+
+          const result = await emailService.sendResetCodeEmail(
+            user.email!,
+            user.name || "Usuário",
+            code,
+            15
+          );
+
+          if (!result.success) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Erro ao enviar email. Tente novamente."
+            });
+          }
+
+          return {
+            success: true,
+            message: "Código enviado! Verifique seu email."
+          };
+        } catch (error: any) {
+          console.error("[Password Reset] Erro ao enviar email:", error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error.message || "Erro ao enviar código. Tente novamente."
+          });
+        }
+      }),
+
+    // Verify reset code (novo endpoint)
+    verifyResetCode: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        code: z.string().length(6),
+      }))
+      .mutation(async ({ input }) => {
+        const user = await db.getUserByEmail(input.email);
+        if (!user) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Usuário não encontrado" });
+        }
+
+        const tokenRecord = await db.getPasswordResetToken(input.code);
+        if (!tokenRecord || tokenRecord.userId !== user.id || tokenRecord.used) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Código inválido" });
+        }
+
+        if (new Date() > tokenRecord.expiresAt) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Código expirado" });
+        }
+
+        return {
+          success: true,
+          message: "Código verificado! Defina sua nova senha."
+        };
       }),
 
     // Reset password with code
@@ -360,23 +437,26 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const user = await db.getUserByEmail(input.email);
         if (!user) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Usuário não encontrado" });
         }
 
         const tokenRecord = await db.getPasswordResetToken(input.code);
         if (!tokenRecord || tokenRecord.userId !== user.id || tokenRecord.used) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid or expired code" });
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Código inválido" });
         }
 
         if (new Date() > tokenRecord.expiresAt) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Code expired" });
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Código expirado" });
         }
 
         const hashedPassword = await bcrypt.hash(input.newPassword, SALT_ROUNDS);
         await db.updateUserPassword(user.id, hashedPassword);
         await db.markTokenAsUsed(tokenRecord.id);
 
-        return { success: true };
+        return {
+          success: true,
+          message: "Senha alterada com sucesso!"
+        };
       }),
   }),
 

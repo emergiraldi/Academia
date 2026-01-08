@@ -2491,7 +2491,15 @@ export async function updateGymSettings(gymId: number, settings: any) {
       lateFeePercentage = ?,
       allowInstallments = ?,
       maxInstallments = ?,
-      minimumInstallmentValue = ?
+      minimumInstallmentValue = ?,
+      smtpHost = ?,
+      smtpPort = ?,
+      smtpUser = ?,
+      smtpPassword = ?,
+      smtpFromEmail = ?,
+      smtpFromName = ?,
+      smtpUseTls = ?,
+      smtpUseSsl = ?
     WHERE gymId = ?`,
     [
       settings.daysToBlockAfterDue,
@@ -2504,6 +2512,14 @@ export async function updateGymSettings(gymId: number, settings: any) {
       settings.allowInstallments,
       settings.maxInstallments,
       settings.minimumInstallmentValue,
+      settings.smtpHost || null,
+      settings.smtpPort || 587,
+      settings.smtpUser || null,
+      settings.smtpPassword || null,
+      settings.smtpFromEmail || null,
+      settings.smtpFromName || 'Academia',
+      settings.smtpUseTls ?? true,
+      settings.smtpUseSsl ?? false,
       gymId
     ]
   );

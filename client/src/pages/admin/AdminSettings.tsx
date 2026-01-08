@@ -15,6 +15,7 @@ import {
   FileCheck,
   CreditCard,
   Save,
+  Mail,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -50,6 +51,15 @@ export default function AdminSettings() {
     allowInstallments: true,
     maxInstallments: 6,
     minimumInstallmentValue: 5000, // em centavos (R$ 50,00)
+    // Configurações SMTP
+    smtpHost: '',
+    smtpPort: 587,
+    smtpUser: '',
+    smtpPassword: '',
+    smtpFromEmail: '',
+    smtpFromName: 'Academia',
+    smtpUseTls: true,
+    smtpUseSsl: false,
   });
 
   // Update form when settings are loaded
@@ -66,6 +76,15 @@ export default function AdminSettings() {
         allowInstallments: settings.allowInstallments === 1,
         maxInstallments: settings.maxInstallments,
         minimumInstallmentValue: settings.minimumInstallmentValue,
+        // Configurações SMTP
+        smtpHost: settings.smtpHost || '',
+        smtpPort: settings.smtpPort || 587,
+        smtpUser: settings.smtpUser || '',
+        smtpPassword: settings.smtpPassword || '',
+        smtpFromEmail: settings.smtpFromEmail || '',
+        smtpFromName: settings.smtpFromName || 'Academia',
+        smtpUseTls: settings.smtpUseTls === 1,
+        smtpUseSsl: settings.smtpUseSsl === 1,
       });
     }
   }, [settings]);
@@ -401,6 +420,171 @@ export default function AdminSettings() {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Configurações de Email (SMTP) */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Mail className="w-5 h-5 text-primary" />
+              <CardTitle>Configurações de Email (SMTP)</CardTitle>
+            </div>
+            <CardDescription>
+              Configure o servidor SMTP para envio de emails de recuperação de senha
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="smtpHost">Servidor SMTP *</Label>
+                <Input
+                  id="smtpHost"
+                  type="text"
+                  placeholder="smtp.gmail.com"
+                  value={formData.smtpHost}
+                  onChange={(e) =>
+                    setFormData({ ...formData, smtpHost: e.target.value })
+                  }
+                />
+                <p className="text-sm text-muted-foreground">
+                  Endereço do servidor SMTP
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="smtpPort">Porta SMTP *</Label>
+                <Input
+                  id="smtpPort"
+                  type="number"
+                  min="1"
+                  max="65535"
+                  value={formData.smtpPort}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      smtpPort: parseInt(e.target.value) || 587,
+                    })
+                  }
+                />
+                <p className="text-sm text-muted-foreground">
+                  587 para TLS, 465 para SSL
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="smtpUser">Usuário/Email *</Label>
+                <Input
+                  id="smtpUser"
+                  type="text"
+                  placeholder="seu-email@gmail.com"
+                  value={formData.smtpUser}
+                  onChange={(e) =>
+                    setFormData({ ...formData, smtpUser: e.target.value })
+                  }
+                />
+                <p className="text-sm text-muted-foreground">
+                  Email para autenticação SMTP
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="smtpPassword">Senha SMTP *</Label>
+                <Input
+                  id="smtpPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.smtpPassword}
+                  onChange={(e) =>
+                    setFormData({ ...formData, smtpPassword: e.target.value })
+                  }
+                />
+                <p className="text-sm text-muted-foreground">
+                  Senha ou senha de app do email
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="smtpFromEmail">Email Remetente</Label>
+                <Input
+                  id="smtpFromEmail"
+                  type="email"
+                  placeholder="noreply@academia.com"
+                  value={formData.smtpFromEmail}
+                  onChange={(e) =>
+                    setFormData({ ...formData, smtpFromEmail: e.target.value })
+                  }
+                />
+                <p className="text-sm text-muted-foreground">
+                  Email que aparece como remetente
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="smtpFromName">Nome do Remetente</Label>
+                <Input
+                  id="smtpFromName"
+                  type="text"
+                  placeholder="Minha Academia"
+                  value={formData.smtpFromName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, smtpFromName: e.target.value })
+                  }
+                />
+                <p className="text-sm text-muted-foreground">
+                  Nome que aparece no email
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="smtpUseTls">Usar TLS (STARTTLS)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Recomendado para porta 587
+                  </p>
+                </div>
+                <Switch
+                  id="smtpUseTls"
+                  checked={formData.smtpUseTls}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, smtpUseTls: checked })
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="smtpUseSsl">Usar SSL</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Recomendado para porta 465
+                  </p>
+                </div>
+                <Switch
+                  id="smtpUseSsl"
+                  checked={formData.smtpUseSsl}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, smtpUseSsl: checked })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
+              <h4 className="font-semibold text-sm mb-2 text-amber-900 dark:text-amber-100">
+                💡 Configuração recomendada para Gmail:
+              </h4>
+              <ul className="text-sm text-amber-800 dark:text-amber-200 space-y-1">
+                <li>• Servidor: smtp.gmail.com</li>
+                <li>• Porta: 587</li>
+                <li>• TLS: Ativado</li>
+                <li>• SSL: Desativado</li>
+                <li>• Use uma senha de app gerada em: myaccount.google.com/apppasswords</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
 

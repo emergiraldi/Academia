@@ -12,7 +12,11 @@
       "Bash(ssh:*)",
       "Bash(mysql:*)",
       "Bash(sshpass -p \"935559Emerson@\" ssh -o StrictHostKeyChecking=no root@138.197.8.136 \"cd /var/www/academia && echo ''📥 1. Atualizando código do GitHub...'' && git pull origin main && echo '''' && echo ''🔍 2. Verificando emails duplicados e adicionando constraint UNIQUE...'' && node add_unique_email_constraint.js && echo '''' && echo ''🏗️ 3. Compilando projeto...'' && npm run build && echo '''' && echo ''🔄 4. Reiniciando PM2...'' && pm2 restart academia-api && echo '''' && echo ''⏳ 5. Aguardando backend iniciar...'' && sleep 3 && echo '''' && echo ''📋 6. Últimos logs do PM2:'' && pm2 logs academia-api --lines 20 --nostream && echo '''' && echo ''📊 7. Status do PM2:'' && pm2 status && echo '''' && echo ''========================================'' && echo ''✅ Deploy concluído com sucesso!'' && echo ''========================================'' && echo '''' && echo ''🌐 Site: https://www.sysfitpro.com.br''\")",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(node add_smtp_settings.js:*)",
+      "Bash(node create_password_reset_table.js:*)",
+      "Bash(npm install:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
