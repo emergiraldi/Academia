@@ -243,19 +243,28 @@ async function uploadFaceImage(data) {
   const imageBuffer = Buffer.from(data.imageBase64, 'base64');
   const timestamp = data.timestamp || Math.floor(Date.now() / 1000);
 
-  const response = await axios.post(
-    getLeitoraUrl(`/user_set_image.fcgi?user_id=${data.userId}&timestamp=${timestamp}&match=1&session=${session}`),
-    imageBuffer,
-    {
-      headers: {
-        'Content-Type': 'application/octet-stream'
-      },
-      timeout: 30000
-    }
-  );
+  try {
+    const response = await axios.post(
+      getLeitoraUrl(`/user_set_image.fcgi?user_id=${data.userId}&timestamp=${timestamp}&match=1&session=${session}`),
+      imageBuffer,
+      {
+        headers: {
+          'Content-Type': 'application/octet-stream'
+        },
+        timeout: 30000
+      }
+    );
 
-  log('success', `Imagem enviada para usuário ${data.userId}`);
-  return response.data;
+    log('success', `Imagem enviada para usuário ${data.userId}`);
+    return response.data;
+  } catch (error) {
+    log('error', `Erro ao enviar imagem: ${error.message}`);
+    if (error.response) {
+      log('error', `Status: ${error.response.status}`);
+      log('error', `Data: ${JSON.stringify(error.response.data)}`);
+    }
+    throw error;
+  }
 }
 
 async function bloquearUsuario(data) {

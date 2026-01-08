@@ -878,6 +878,53 @@ export const appRouter = router({
         }
       }),
 
+    // Remove face image - student can delete their own face
+    removeFaceImage: studentProcedure
+      .mutation(async ({ ctx }) => {
+        if (!ctx.user.gymId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        }
+        const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+        if (!student) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Aluno não encontrado" });
+        }
+
+        console.log('[removeFaceImage] 🗑️  Removendo foto facial do aluno...');
+        console.log('[removeFaceImage] Student ID:', student.id);
+        console.log('[removeFaceImage] Control ID User ID:', student.controlIdUserId);
+
+        // Remove from Control ID if user exists
+        if (student.controlIdUserId) {
+          try {
+            const { getControlIdServiceForGym } = await import('./controlId');
+            const controlIdService = await getControlIdServiceForGym(ctx.user.gymId);
+
+            if (controlIdService) {
+              console.log('[removeFaceImage] 📸 Removendo foto da leitora Control ID...');
+              await controlIdService.removeUserFace(student.controlIdUserId);
+              console.log('[removeFaceImage] ✅ Foto removida da leitora Control ID');
+            }
+          } catch (error: any) {
+            console.error('[removeFaceImage] ⚠️  Erro ao remover foto da leitora:', error);
+            // Continue even if Control ID removal fails - we still want to clear the database
+          }
+        }
+
+        // Reset face data in database
+        await db.updateStudent(student.id, ctx.user.gymId, {
+          faceImageUrl: null,
+          faceEnrolled: false,
+          controlIdUserId: null,
+        });
+
+        console.log('[removeFaceImage] ✅ Dados faciais resetados no banco de dados');
+
+        return {
+          success: true,
+          message: 'Foto facial removida com sucesso'
+        };
+      }),
+
     // Enroll face with base64 image (from webcam or upload)
     enrollFace: gymAdminProcedure
       .input(z.object({

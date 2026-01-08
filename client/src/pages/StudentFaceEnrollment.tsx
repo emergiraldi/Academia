@@ -15,10 +15,12 @@ export default function StudentFaceEnrollment({ student, onBack, onSuccess }: St
   const [photoPreview, setPhotoPreview] = useState<{ file: Blob; url: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [enrolled, setEnrolled] = useState(student?.faceEnrolled || false);
+  const [removing, setRemoving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const uploadFaceMutation = trpc.students.uploadFaceImage.useMutation();
+  const removeFaceMutation = trpc.students.removeFaceImage.useMutation();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -127,6 +129,23 @@ export default function StudentFaceEnrollment({ student, onBack, onSuccess }: St
     if (cameraInputRef.current) cameraInputRef.current.value = "";
   };
 
+  const handleRemoveFace = async () => {
+    setRemoving(true);
+    try {
+      await removeFaceMutation.mutateAsync();
+      setEnrolled(false);
+      toast.success("Foto facial removida com sucesso!");
+
+      // Trigger parent component refresh
+      onSuccess?.();
+    } catch (error: any) {
+      console.error("Erro ao remover foto facial:", error);
+      toast.error(error.message || "Erro ao remover foto facial. Tente novamente.");
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-20">
       {/* Header */}
@@ -162,11 +181,19 @@ export default function StudentFaceEnrollment({ student, onBack, onSuccess }: St
                     Seu rosto já está cadastrado no sistema de controle de acesso. Você pode utilizar a leitora facial para entrar na academia.
                   </p>
                   <Button
-                    onClick={() => setEnrolled(false)}
+                    onClick={handleRemoveFace}
                     variant="outline"
+                    disabled={removing}
                     className="border-green-600 text-green-700 hover:bg-green-100"
                   >
-                    Recadastrar Foto
+                    {removing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Removendo...
+                      </>
+                    ) : (
+                      "Recadastrar Foto"
+                    )}
                   </Button>
                 </div>
               </div>

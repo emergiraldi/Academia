@@ -1,0 +1,49 @@
+========================================
+🚀 COMANDOS PARA DEPLOY DO BANCO
+========================================
+
+SENHA (use em todos os comandos): 935559Emerson@
+
+========================================
+COMANDO 1: UPLOAD DO BACKUP
+========================================
+
+Copie e cole este comando no PowerShell ou CMD:
+
+scp academia_db_backup.sql root@72.60.2.237:/var/www/academia/
+
+(Digite a senha quando pedir)
+
+
+========================================
+COMANDO 2: RESTAURAR BANCO NA VPS
+========================================
+
+Copie e cole este comando no PowerShell ou CMD:
+
+ssh root@72.60.2.237
+
+(Digite a senha quando pedir)
+
+========================================
+COMANDOS DENTRO DA VPS
+========================================
+
+Depois que conectar, copie e cole TUDO de uma vez:
+
+cd /var/www/academia && git pull origin main && mysql -u root -e "DROP DATABASE IF EXISTS academia_db;" && mysql -u root < academia_db_backup.sql && rm academia_db_backup.sql && npm run build && pm2 restart academia-api && sleep 3 && pm2 logs academia-api --lines 30 --nostream && pm2 status
+
+========================================
+SAIR DA VPS
+========================================
+
+exit
+
+========================================
+✅ PRONTO!
+========================================
+
+Acesse: https://www.sysfitpro.com.br
+
+- Entre na área de treinos → deve mostrar 873 exercícios
+- Entre na área de alunos → deve mostrar professores vinculados

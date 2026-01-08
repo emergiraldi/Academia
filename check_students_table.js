@@ -1,52 +1,74 @@
 import mysql from 'mysql2/promise';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
-async function checkStudentsTable() {
+async function checkStudent() {
+  const dbUrl = process.env.DATABASE_URL || 'mysql://root@localhost:3306/academia_db';
+  const url = new URL(dbUrl);
+
   const connection = await mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'academia_db'
+    host: url.hostname,
+    port: parseInt(url.port) || 3306,
+    user: url.username || 'root',
+    password: url.password || '',
+    database: url.pathname.substring(1)
   });
 
   try {
-    console.log('=== Estrutura da tabela students ===\n');
+    console.log('🔍 Verificando dados do aluno ID 3...\n');
 
-    const [columns] = await connection.execute('DESCRIBE students');
-    columns.forEach(col => {
-      console.log(`${col.Field.padEnd(25)} | ${col.Type.padEnd(20)} | ${col.Null.padEnd(5)} | ${col.Key.padEnd(5)} | ${col.Default || 'NULL'}`);
-    });
+    // Check student data with user info
+    const [rows] = await connection.query(`
+      SELECT
+        s.id,
+        s.userId,
+        s.gymId,
+        s.registrationNumber,
+        s.controlIdUserId,
+        s.faceEnrolled,
+        u.name as userName,
+        u.email as userEmail
+      FROM students s
+      LEFT JOIN users u ON s.userId = u.id
+      WHERE s.id = 3
+    `);
 
-    console.log('\n=== Verificando relação com professores ===\n');
+    if (Array.isArray(rows) && rows.length > 0) {
+      console.log('📋 Dados do aluno:');
+      console.table(rows);
 
-    // Check if there's a professorId column
-    const hasProfessorId = columns.some(col => col.Field === 'professorId');
+      const student = rows[0];
 
-    if (hasProfessorId) {
-      console.log('✅ Coluna professorId EXISTE na tabela students');
+      console.log('\n🔑 Informações importantes:');
+      console.log(`- Student ID: ${student.id}`);
+      console.log(`- User ID: ${student.userId}`);
+      console.log(`- Gym ID: ${student.gymId}`);
+      console.log(`- Control ID User ID: ${student.controlIdUserId || 'NÃO DEFINIDO (NULL)'}`);
+      console.log(`- Face Enrolled: ${student.faceEnrolled ? 'SIM' : 'NÃO'}`);
+      console.log(`- Nome: ${student.userName}`);
+      console.log(`- Email: ${student.userEmail}`);
 
-      // Check how many students have professors assigned
-      const [stats] = await connection.execute(`
-        SELECT
-          COUNT(*) as total,
-          COUNT(professorId) as comProfessor,
-          COUNT(*) - COUNT(professorId) as semProfessor
-        FROM students
-      `);
+      if (!student.controlIdUserId) {
+        console.log('\n❌ PROBLEMA ENCONTRADO!');
+        console.log('O campo controlIdUserId está NULL.');
+        console.log('O usuário precisa ser criado na leitora Control ID antes de enviar a foto facial.');
+        console.log('\nO backend deveria criar automaticamente quando controlIdUserId é NULL.');
+      } else {
+        console.log('\n✅ controlIdUserId está definido.');
+        console.log('Mas a leitora está retornando "User does not exist".');
+        console.log('Isso significa que o usuário foi deletado da leitora ou nunca foi criado lá.');
+      }
 
-      console.log(`\n📊 Estatísticas:`);
-      console.log(`   Total de alunos: ${stats[0].total}`);
-      console.log(`   Com professor: ${stats[0].comProfessor}`);
-      console.log(`   Sem professor: ${stats[0].semProfessor}`);
     } else {
-      console.log('❌ Coluna professorId NÃO EXISTE na tabela students');
-      console.log('   ⚠️  PROBLEMA: Não há como vincular alunos a professores!');
+      console.log('❌ Aluno com ID 3 não encontrado no banco de dados.');
     }
 
   } catch (error) {
-    console.error('Erro:', error.message);
+    console.error('❌ Erro:', error);
+    throw error;
   } finally {
     await connection.end();
   }
 }
 
-checkStudentsTable();
+checkStudent().catch(console.error);
