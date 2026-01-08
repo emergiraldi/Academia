@@ -3,6 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { gymsRouter } from "./routers/gyms";
 import { settingsRouter } from "./routers/settings";
+import { usersRouter } from "./routers/users";
 import { publicProcedure, protectedProcedure, router, gymAdminProcedure, professorProcedure, studentProcedure } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
@@ -151,6 +152,7 @@ export const appRouter = router({
   system: systemRouter,
   gyms: gymsRouter,
   settings: settingsRouter,
+  users: usersRouter,
 
   auth: router({
     me: publicProcedure.query(async ({ ctx }) => {

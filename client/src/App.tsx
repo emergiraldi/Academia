@@ -43,6 +43,7 @@ import WorkoutBuilder from "./pages/WorkoutBuilder";
 import SuperAdminLogin from "./pages/super-admin/SuperAdminLogin";
 import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
 import SuperAdminGyms from "./pages/super-admin/SuperAdminGyms";
+import SuperAdminUsers from "./pages/super-admin/SuperAdminUsers";
 import SuperAdminSettings from "./pages/super-admin/SuperAdminSettings";
 import LandingPage from "./pages/LandingPage";
 import Pricing from "./pages/Pricing";
@@ -83,6 +84,7 @@ function Router() {
       <Route path={"/super-admin"} component={SuperAdminDashboard} />
       <Route path={"/super-admin/dashboard"} component={SuperAdminDashboard} />
       <Route path={"/super-admin/gyms"} component={SuperAdminGyms} />
+      <Route path={"/super-admin/users"} component={SuperAdminUsers} />
       <Route path={"/super-admin/settings"} component={SuperAdminSettings} />
 
       {/* Admin Routes (direct access only) */}
