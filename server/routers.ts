@@ -910,14 +910,14 @@ export const appRouter = router({
           }
         }
 
-        // Reset face data in database
+        // Reset face data in database (but keep controlIdUserId to reuse)
         await db.updateStudent(student.id, ctx.user.gymId, {
           faceImageUrl: null,
           faceEnrolled: false,
-          controlIdUserId: null,
+          // Keep controlIdUserId so we can reuse the same user in Control ID
         });
 
-        console.log('[removeFaceImage] ✅ Dados faciais resetados no banco de dados');
+        console.log('[removeFaceImage] ✅ Foto removida, mas controlIdUserId mantido para reutilização');
 
         return {
           success: true,
