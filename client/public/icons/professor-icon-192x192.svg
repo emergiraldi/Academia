@@ -1,0 +1,33 @@
+
+<svg width="192" height="192" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradProf" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="110" fill="url(#gradProf)"/>
+
+  <!-- Pessoa estilizada -->
+  <g transform="translate(220, 180)">
+    <!-- Cabeça -->
+    <circle cx="0" cy="0" r="40" fill="white" opacity="0.95"/>
+
+    <!-- Corpo -->
+    <ellipse cx="0" cy="80" rx="55" ry="65" fill="white" opacity="0.95"/>
+
+    <!-- Braços -->
+    <ellipse cx="-45" cy="60" rx="16" ry="45" fill="white" opacity="0.9" transform="rotate(-15 -45 60)"/>
+    <ellipse cx="45" cy="60" rx="16" ry="45" fill="white" opacity="0.9" transform="rotate(15 45 60)"/>
+  </g>
+
+  <!-- Prancheta -->
+  <g transform="translate(330, 250)">
+    <rect x="0" y="0" width="80" height="110" rx="8" fill="white" opacity="0.95"/>
+    <rect x="10" y="15" width="60" height="8" rx="4" fill="#10b981" opacity="0.7"/>
+    <rect x="10" y="35" width="60" height="8" rx="4" fill="#10b981" opacity="0.7"/>
+    <rect x="10" y="55" width="40" height="8" rx="4" fill="#10b981" opacity="0.7"/>
+  </g>
+</svg>

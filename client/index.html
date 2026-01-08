@@ -18,18 +18,67 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="SysFit Pro" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#3b82f6" />
+    <meta name="theme-color" content="#3b82f6" id="theme-color-meta" />
 
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json" />
+    <!-- PWA Manifest (será definido dinamicamente) -->
+    <link rel="manifest" href="/manifest.json" id="manifest-link" />
 
-    <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
+    <!-- Apple Touch Icons (serão definidos dinamicamente) -->
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.svg" id="apple-icon-152" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.svg" id="apple-icon-180" />
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-72x72.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72x72.png" />
+    <!-- Favicon (será definido dinamicamente) -->
+    <link rel="icon" type="image/svg+xml" sizes="32x32" href="/icons/icon-72x72.svg" id="favicon-32" />
+    <link rel="icon" type="image/svg+xml" sizes="16x16" href="/icons/icon-72x72.svg" id="favicon-16" />
+
+    <!-- Detectar tipo de usuário e carregar manifest correto -->
+    <script>
+      (function() {
+        const path = window.location.pathname;
+        let manifestPath = '/manifest.json';
+        let iconPrefix = 'icon';
+        let themeColor = '#3b82f6'; // Azul padrão
+        let appTitle = 'SysFit Pro';
+
+        // Detectar tipo de usuário pela URL
+        if (path.startsWith('/student')) {
+          manifestPath = '/manifest-student.json';
+          iconPrefix = 'student-icon';
+          themeColor = '#3b82f6'; // Azul
+          appTitle = 'SysFit Aluno';
+        } else if (path.startsWith('/professor')) {
+          manifestPath = '/manifest-professor.json';
+          iconPrefix = 'professor-icon';
+          themeColor = '#10b981'; // Verde
+          appTitle = 'SysFit Professor';
+        } else if (path.startsWith('/admin')) {
+          manifestPath = '/manifest-admin.json';
+          iconPrefix = 'admin-icon';
+          themeColor = '#8b5cf6'; // Roxo
+          appTitle = 'SysFit Admin';
+        }
+
+        // Atualizar manifest
+        document.getElementById('manifest-link').href = manifestPath;
+
+        // Atualizar theme color
+        document.getElementById('theme-color-meta').content = themeColor;
+
+        // Atualizar Apple icons
+        document.getElementById('apple-icon-152').href = `/icons/${iconPrefix}-152x152.svg`;
+        document.getElementById('apple-icon-180').href = `/icons/${iconPrefix}-192x192.svg`;
+
+        // Atualizar favicon
+        document.getElementById('favicon-32').href = `/icons/${iconPrefix}-72x72.svg`;
+        document.getElementById('favicon-16').href = `/icons/${iconPrefix}-72x72.svg`;
+
+        // Atualizar título da página
+        document.querySelector('meta[name="application-name"]').content = appTitle;
+        document.querySelector('meta[name="apple-mobile-web-app-title"]').content = appTitle;
+
+        console.log(`📱 PWA configurado para: ${appTitle} (${themeColor})`);
+      })();
+    </script>
 
     <!-- THIS IS THE START OF A COMMENT BLOCK, BLOCK TO BE DELETED: Google Fonts here, example:
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -62,7 +111,6 @@
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                     console.log('🔄 Nova versão disponível! Recarregue a página.');
-                    // Você pode adicionar uma notificação visual aqui
                   }
                 });
               });
