@@ -24,23 +24,27 @@ echo "📍 4. Adicionando campos de endereço à tabela students..."
 node migrate_student_address_fields.js
 echo ""
 
-echo "🏗️  5. Compilando projeto (npm run build)..."
+echo "📚 5. Importando biblioteca de exercícios..."
+node import_exercises_library.js
+echo ""
+
+echo "🏗️  6. Compilando projeto (npm run build)..."
 npm run build
 echo ""
 
-echo "🔄 6. Reiniciando PM2..."
+echo "🔄 7. Reiniciando PM2..."
 pm2 restart academia-api
 echo ""
 
-echo "⏳ 7. Aguardando backend iniciar..."
+echo "⏳ 8. Aguardando backend iniciar..."
 sleep 3
 echo ""
 
-echo "📋 8. Últimos logs do PM2:"
+echo "📋 9. Últimos logs do PM2:"
 pm2 logs academia-api --lines 20 --nostream
 echo ""
 
-echo "📊 9. Status do PM2:"
+echo "📊 10. Status do PM2:"
 pm2 status
 echo ""
 
