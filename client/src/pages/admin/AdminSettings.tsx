@@ -27,12 +27,14 @@ export default function AdminSettings() {
 
   // Query settings
   const { data: settings, refetch } = trpc.gymSettings.get.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
+  const utils = trpc.useUtils();
 
   // Mutation
   const updateSettings = trpc.gymSettings.update.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Configurações salvas com sucesso!");
-      // Não precisa fazer refetch - os dados já estão corretos no formulário
+      // Invalidate cache to ensure fresh data on next load
+      await utils.gymSettings.get.invalidate();
     },
     onError: (error) => {
       toast.error(`Erro ao salvar configurações: ${error.message}`);

@@ -3233,6 +3233,15 @@ export const appRouter = router({
         allowInstallments: z.boolean(),
         maxInstallments: z.number().min(1).max(24),
         minimumInstallmentValue: z.number().min(1000),
+        // SMTP Settings
+        smtpHost: z.string().optional(),
+        smtpPort: z.number().min(1).max(65535).optional(),
+        smtpUser: z.string().optional(),
+        smtpPassword: z.string().optional(),
+        smtpFromEmail: z.string().optional(),
+        smtpFromName: z.string().optional(),
+        smtpUseTls: z.boolean().optional(),
+        smtpUseSsl: z.boolean().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
