@@ -592,13 +592,12 @@ export default function AdminStudents() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="professorId">Professor Responsável</Label>
+                    <Label htmlFor="professorId">Professor Responsável (Opcional)</Label>
                     <Select value={formData.professorId} onValueChange={(value) => setFormData({ ...formData, professorId: value })}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione um professor" />
+                        <SelectValue placeholder="Selecione um professor (opcional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Sem professor</SelectItem>
                         {professors?.map((professor: any) => (
                           <SelectItem key={professor.id} value={professor.id.toString()}>
                             {professor.name}
@@ -1263,13 +1262,12 @@ export default function AdminStudents() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-professorId">Professor Responsável</Label>
+                  <Label htmlFor="edit-professorId">Professor Responsável (Opcional)</Label>
                   <Select value={formData.professorId} onValueChange={(value) => setFormData({ ...formData, professorId: value })}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione um professor" />
+                      <SelectValue placeholder="Selecione um professor (opcional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sem professor</SelectItem>
                       {professors?.map((professor: any) => (
                         <SelectItem key={professor.id} value={professor.id.toString()}>
                           {professor.name}
