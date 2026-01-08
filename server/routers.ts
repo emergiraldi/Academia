@@ -3173,7 +3173,12 @@ export const appRouter = router({
         if (!ctx.user.gymId) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
         }
-        return await db.getUpcomingClassBookings(ctx.user.gymId);
+        try {
+          return await db.getUpcomingClassBookings(ctx.user.gymId);
+        } catch (error) {
+          console.error('[bookings.upcoming] Error:', error);
+          return [];
+        }
       }),
 
     // Criar novo agendamento
@@ -3256,7 +3261,12 @@ export const appRouter = router({
     // Listar próximos agendamentos de visitantes (7 dias)
     upcoming: gymAdminOrStaffProcedure
       .query(async () => {
-        return await db.getUpcomingVisitorBookings();
+        try {
+          return await db.getUpcomingVisitorBookings();
+        } catch (error) {
+          console.error('[visitorBookings.upcoming] Error:', error);
+          return [];
+        }
       }),
 
     // Criar novo agendamento de visitante
