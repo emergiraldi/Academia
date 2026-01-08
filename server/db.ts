@@ -3112,19 +3112,19 @@ export async function getStudentAlerts(gymId: number) {
   
   // Inactive students (no access in last 7 days)
   const [inactiveStudents] = await conn.execute(
-    `SELECT 
+    `SELECT
       s.id,
       u.name as studentName,
       MAX(al.timestamp) as lastAccess,
       'inactive_student' as alertType
      FROM students s
      INNER JOIN users u ON s.userId = u.id
-     LEFT JOIN access_logs al ON s.id = al.studentId
+     LEFT JOIN access_logs al ON s.id = al.studentId AND al.gymId = ?
      WHERE s.gymId = ? AND s.membershipStatus = 'active'
-     GROUP BY s.id, u.name
+     GROUP BY s.id, u.name, u.id
      HAVING lastAccess IS NULL OR lastAccess < DATE_SUB(NOW(), INTERVAL 7 DAY)
      LIMIT 10`,
-    [gymId]
+    [gymId, gymId]
   );
 
   // Expired workouts (endDate passed)

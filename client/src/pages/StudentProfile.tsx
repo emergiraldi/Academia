@@ -74,10 +74,12 @@ export default function StudentProfile() {
   );
 
   // Fetch progress data for charts
-  const { data: progressData } = trpc.assessments.getProgressData.useQuery(
-    { studentId },
-    { enabled: studentId > 0 }
-  );
+  // TODO: Implementar endpoint assessments.getProgressData no backend
+  // const { data: progressData } = trpc.assessments.getProgressData.useQuery(
+  //   { studentId },
+  //   { enabled: studentId > 0 }
+  // );
+  const progressData = undefined;
 
   // Create assessment mutation
   const createAssessmentMutation = trpc.assessments.create.useMutation({
