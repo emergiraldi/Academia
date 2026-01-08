@@ -3242,6 +3242,8 @@ export const appRouter = router({
         smtpFromName: z.string().optional(),
         smtpUseTls: z.boolean().optional(),
         smtpUseSsl: z.boolean().optional(),
+        // Logo da Academia
+        logoUrl: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);

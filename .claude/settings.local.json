@@ -25,7 +25,8 @@
       "Bash(powershell -ExecutionPolicy Bypass -File quick_deploy.ps1)",
       "Bash(node generate-pwa-icons.js:*)",
       "Bash(npm run build:*)",
-      "Bash(node generate-pwa-icons-multi.js:*)"
+      "Bash(node generate-pwa-icons-multi.js:*)",
+      "Bash(node add_gym_logo.js:*)"
     ],
     "deny": [],
     "ask": []
