@@ -50,7 +50,7 @@ export default function AdminFinancialDashboard() {
 
   // Buscar próximas aulas (próximos 7 dias)
   const { data: schedules = [] } = trpc.schedules.list.useQuery();
-  // const { data: upcomingBookings = [] } = trpc.bookings.upcoming.useQuery();
+  const { data: upcomingBookings = [] } = trpc.bookings.upcoming.useQuery();
   const { data: leads = [] } = trpc.leads.list.useQuery();
 
   // Calculate metrics
