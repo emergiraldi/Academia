@@ -4,6 +4,13 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Helper function to convert ISO date to MySQL datetime format
+function toMySQLDatetime(isoString) {
+  if (!isoString) return null;
+  // Convert '2025-12-19T11:34:53.000Z' to '2025-12-19 11:34:53'
+  return isoString.replace('T', ' ').replace(/\.\d{3}Z$/, '');
+}
+
 async function importExercisesLibrary() {
   // Read export file
   const filename = 'exercises_library_export.json';
@@ -89,8 +96,8 @@ async function importExercisesLibrary() {
         exercise.equipment,
         exercise.imageUrl,
         exercise.videoUrl,
-        exercise.createdAt,
-        exercise.updatedAt
+        toMySQLDatetime(exercise.createdAt),
+        toMySQLDatetime(exercise.updatedAt)
       ]);
 
       exerciseIdMap.set(exercise.id, result.insertId);
@@ -112,7 +119,7 @@ async function importExercisesLibrary() {
             photo.photoUrl,
             photo.caption,
             photo.orderIndex,
-            photo.createdAt
+            toMySQLDatetime(photo.createdAt)
           ]);
           console.log(`  ✓ Foto adicionada para exercício ID ${newExerciseId}`);
         }
@@ -137,7 +144,7 @@ async function importExercisesLibrary() {
             video.description,
             video.duration,
             video.orderIndex,
-            video.createdAt
+            toMySQLDatetime(video.createdAt)
           ]);
           console.log(`  ✓ Vídeo adicionado para exercício ID ${newExerciseId}`);
         }
