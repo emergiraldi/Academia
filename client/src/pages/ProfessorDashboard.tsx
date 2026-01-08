@@ -1119,7 +1119,7 @@ export default function ProfessorDashboard() {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setLocation(`/professor/workout/${studentWorkouts[0].id}`);
+                                  setLocation(`/professor/workout/${studentWorkouts[0].id}/edit`);
                                 }}
                                 title="Visualizar treino"
                               >
