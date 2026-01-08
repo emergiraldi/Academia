@@ -508,4 +508,53 @@ export const gymsRouter = router({
         activeStudents: studentsCount.filter(s => s.membershipStatus === "active").length,
       };
     }),
+
+  // Enviar credenciais para admin da academia (após pagamento)
+  sendAdminCredentials: publicProcedure
+    .input(z.object({ gymId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Buscar a academia
+      const [gym] = await db.select().from(gyms).where(eq(gyms.id, input.gymId));
+      if (!gym) throw new Error("Academia não encontrada");
+
+      // Verificar se tem credenciais temporárias
+      if (!gym.tempAdminPassword || !gym.tempAdminEmail) {
+        throw new Error("Credenciais temporárias não encontradas. Academia já foi ativada?");
+      }
+
+      // Importar função de email
+      const { sendGymAdminCredentials } = await import("../email");
+
+      // Enviar email
+      const sent = await sendGymAdminCredentials(
+        gym.tempAdminEmail,
+        gym.tempAdminPassword,
+        gym.name,
+        gym.slug,
+        gym.plan
+      );
+
+      if (sent) {
+        // Limpar credenciais temporárias após enviar email
+        await db.update(gyms)
+          .set({
+            tempAdminPassword: null,
+            tempAdminEmail: null,
+            planStatus: "active", // Ativar o plano
+          })
+          .where(eq(gyms.id, input.gymId));
+
+        console.log(`✅ [SEND CREDENTIALS] Email enviado para ${gym.tempAdminEmail}`);
+
+        return {
+          success: true,
+          message: "Credenciais enviadas com sucesso!",
+        };
+      } else {
+        throw new Error("Falha ao enviar email");
+      }
+    }),
 });
