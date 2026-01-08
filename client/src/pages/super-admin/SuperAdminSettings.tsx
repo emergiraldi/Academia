@@ -11,6 +11,7 @@ import {
   Image,
   Save,
   Upload,
+  CreditCard,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -57,7 +58,21 @@ const tabs = [
   { id: "content", label: "Conteúdo", icon: Settings },
   { id: "pricing", label: "Preços", icon: DollarSign },
   { id: "media", label: "Mídias", icon: Image },
+  { id: "payments", label: "Pagamentos PIX", icon: CreditCard },
 ];
+
+interface PaymentSettings {
+  pixKey: string;
+  pixKeyType: "cpf" | "cnpj" | "email" | "phone" | "random";
+  merchantName: string;
+  merchantCity: string;
+  pixClientId: string;
+  pixClientSecret: string;
+  pixCertificate: string;
+  bankName: string;
+  bankAccount: string;
+  bankAgency: string;
+}
 
 export default function SuperAdminSettings() {
   const [activeTab, setActiveTab] = useState("branding");
@@ -97,13 +112,36 @@ export default function SuperAdminSettings() {
     linkedinUrl: "",
   });
 
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({
+    pixKey: "",
+    pixKeyType: "cnpj",
+    merchantName: "",
+    merchantCity: "",
+    pixClientId: "",
+    pixClientSecret: "",
+    pixCertificate: "",
+    bankName: "",
+    bankAccount: "",
+    bankAgency: "",
+  });
+
   const { data: settingsData, isLoading } = trpc.settings.get.useQuery();
+  const { data: paymentData } = trpc.superAdminSettings.get.useQuery();
   const updateMutation = trpc.settings.update.useMutation({
     onSuccess: () => {
       toast.success("Configurações salvas com sucesso!");
     },
     onError: (error) => {
       toast.error("Erro ao salvar configurações: " + error.message);
+    },
+  });
+
+  const updatePaymentMutation = trpc.superAdminSettings.update.useMutation({
+    onSuccess: () => {
+      toast.success("Configurações de pagamento salvas com sucesso!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao salvar configurações de pagamento: " + error.message);
     },
   });
 
@@ -137,6 +175,24 @@ export default function SuperAdminSettings() {
     }
   }, [settingsData]);
 
+  // Load payment settings from backend
+  useEffect(() => {
+    if (paymentData) {
+      setPaymentSettings({
+        pixKey: paymentData.pixKey || "",
+        pixKeyType: paymentData.pixKeyType || "cnpj",
+        merchantName: paymentData.merchantName || "",
+        merchantCity: paymentData.merchantCity || "",
+        pixClientId: paymentData.pixClientId || "",
+        pixClientSecret: paymentData.pixClientSecret || "",
+        pixCertificate: paymentData.pixCertificate || "",
+        bankName: paymentData.bankName || "",
+        bankAccount: paymentData.bankAccount || "",
+        bankAgency: paymentData.bankAgency || "",
+      });
+    }
+  }, [paymentData]);
+
   const handleSave = async () => {
     updateMutation.mutate({
       siteName: settings.siteName,
@@ -162,6 +218,10 @@ export default function SuperAdminSettings() {
       instagramUrl: settings.instagramUrl || null,
       linkedinUrl: settings.linkedinUrl || null,
     });
+  };
+
+  const handleSavePayments = async () => {
+    updatePaymentMutation.mutate(paymentSettings);
   };
 
   const handleFileUpload = (field: "banner1Image" | "banner2Image") => (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -571,6 +631,171 @@ export default function SuperAdminSettings() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        );
+
+      case "payments":
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações PIX para Receber Pagamentos</CardTitle>
+                <p className="text-sm text-gray-600">
+                  Configure sua chave PIX e credenciais da Efí Pay para receber pagamentos das academias
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="pixKey">Chave PIX *</Label>
+                    <Input
+                      id="pixKey"
+                      value={paymentSettings.pixKey}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, pixKey: e.target.value })}
+                      placeholder="00.000.000/0000-00"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Chave PIX que receberá os pagamentos das assinaturas
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="pixKeyType">Tipo de Chave PIX *</Label>
+                    <select
+                      id="pixKeyType"
+                      value={paymentSettings.pixKeyType}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, pixKeyType: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="cpf">CPF</option>
+                      <option value="cnpj">CNPJ</option>
+                      <option value="email">Email</option>
+                      <option value="phone">Telefone</option>
+                      <option value="random">Aleatória</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="merchantName">Nome do Beneficiário *</Label>
+                    <Input
+                      id="merchantName"
+                      value={paymentSettings.merchantName}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, merchantName: e.target.value })}
+                      placeholder="SysFit Tecnologia LTDA"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Nome que aparecerá no QR Code PIX
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="merchantCity">Cidade do Beneficiário *</Label>
+                    <Input
+                      id="merchantCity"
+                      value={paymentSettings.merchantCity}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, merchantCity: e.target.value })}
+                      placeholder="São Paulo"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Credenciais Efí Pay (API PIX)</CardTitle>
+                <p className="text-sm text-gray-600">
+                  Configure suas credenciais da API Efí Pay para gerar cobranças PIX automáticas
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="pixClientId">Client ID</Label>
+                  <Input
+                    id="pixClientId"
+                    type="password"
+                    value={paymentSettings.pixClientId}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, pixClientId: e.target.value })}
+                    placeholder="Client_Id_xxxxxxxxxxxxx"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pixClientSecret">Client Secret</Label>
+                  <Input
+                    id="pixClientSecret"
+                    type="password"
+                    value={paymentSettings.pixClientSecret}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, pixClientSecret: e.target.value })}
+                    placeholder="Client_Secret_xxxxxxxxxxxxx"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pixCertificate">Certificado (.p12 em Base64)</Label>
+                  <Textarea
+                    id="pixCertificate"
+                    rows={3}
+                    value={paymentSettings.pixCertificate}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, pixCertificate: e.target.value })}
+                    placeholder="MIIxxxxxxxxxxxxxxx..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Cole o conteúdo do certificado .p12 convertido para Base64
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Dados Bancários (Opcional)</CardTitle>
+                <p className="text-sm text-gray-600">
+                  Informações adicionais para controle interno
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="bankName">Banco</Label>
+                    <Input
+                      id="bankName"
+                      value={paymentSettings.bankName}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, bankName: e.target.value })}
+                      placeholder="Banco do Brasil"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="bankAgency">Agência</Label>
+                    <Input
+                      id="bankAgency"
+                      value={paymentSettings.bankAgency}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, bankAgency: e.target.value })}
+                      placeholder="1234-5"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="bankAccount">Conta</Label>
+                    <Input
+                      id="bankAccount"
+                      value={paymentSettings.bankAccount}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, bankAccount: e.target.value })}
+                      placeholder="12345-6"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSavePayments}
+                disabled={updatePaymentMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+                size="lg"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {updatePaymentMutation.isPending ? "Salvando..." : "Salvar Configurações de Pagamento"}
+              </Button>
+            </div>
           </div>
         );
 

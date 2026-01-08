@@ -5,6 +5,7 @@ import {
   gyms, InsertGym,
   gymPayments, InsertGymPayment,
   saasPlans, InsertSaasPlan,
+  superAdminSettings, InsertSuperAdminSettings,
   users, InsertUser,
   students, InsertStudent,
   plans, InsertPlan,
@@ -215,6 +216,40 @@ export async function deleteSaasPlan(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(saasPlans).where(eq(saasPlans.id, id));
+}
+
+// ============ SUPER ADMIN SETTINGS ============
+
+export async function getSuperAdminSettings() {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(superAdminSettings).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createSuperAdminSettings(settings: InsertSuperAdminSettings) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(superAdminSettings).values(settings);
+  return { insertId: Number(result[0].insertId) };
+}
+
+export async function updateSuperAdminSettings(data: Partial<InsertSuperAdminSettings>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Get existing settings or create if not exists
+  const existing = await getSuperAdminSettings();
+
+  if (existing) {
+    await db.update(superAdminSettings)
+      .set(data)
+      .where(eq(superAdminSettings.id, existing.id));
+    return existing.id;
+  } else {
+    const result = await createSuperAdminSettings(data as InsertSuperAdminSettings);
+    return result.insertId;
+  }
 }
 
 // ============ USERS ============

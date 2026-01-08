@@ -115,6 +115,34 @@ export type SaasPlan = typeof saasPlans.$inferSelect;
 export type InsertSaasPlan = typeof saasPlans.$inferInsert;
 
 /**
+ * Super Admin Settings - Global platform configuration
+ * Single row table for Super Admin payment settings (PIX for gym subscriptions)
+ */
+export const superAdminSettings = mysqlTable("superAdminSettings", {
+  id: int("id").autoincrement().primaryKey(),
+
+  // PIX settings for receiving gym subscription payments
+  pixClientId: varchar("pixClientId", { length: 255 }),
+  pixClientSecret: varchar("pixClientSecret", { length: 255 }),
+  pixCertificate: text("pixCertificate"),
+  pixKey: varchar("pixKey", { length: 255 }), // Chave PIX do Super Admin
+  pixKeyType: mysqlEnum("pixKeyType", ["cpf", "cnpj", "email", "phone", "random"]),
+  merchantName: varchar("merchantName", { length: 200 }), // Nome que aparece no PIX
+  merchantCity: varchar("merchantCity", { length: 100 }), // Cidade do beneficiário
+
+  // Bank account info (optional, for display)
+  bankName: varchar("bankName", { length: 100 }),
+  bankAccount: varchar("bankAccount", { length: 50 }),
+  bankAgency: varchar("bankAgency", { length: 20 }),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SuperAdminSettings = typeof superAdminSettings.$inferSelect;
+export type InsertSuperAdminSettings = typeof superAdminSettings.$inferInsert;
+
+/**
  * Core user table backing auth flow.
  * Extended with roles for multi-tenant system
  */
