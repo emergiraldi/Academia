@@ -976,7 +976,31 @@ export async function getStudentAssessments(studentId: number, gymId: number) {
     )
     .orderBy(desc(physicalAssessments.assessmentDate));
 
-  return assessmentsList;
+  // Map to frontend expected format and calculate BMI
+  return assessmentsList.map(assessment => {
+    const weightKg = assessment.weight || 0;
+    const heightCm = assessment.height || 0;
+    const heightM = heightCm / 100;
+    const bmi = heightM > 0 ? weightKg / (heightM * heightM) : 0;
+
+    return {
+      ...assessment,
+      weightKg,
+      heightCm,
+      bodyFatPercentage: assessment.bodyFat,
+      muscleMassKg: assessment.muscleMass,
+      bmi,
+      chestCm: assessment.chest,
+      waistCm: assessment.waist,
+      hipCm: assessment.hips,
+      rightArmCm: assessment.rightArm,
+      leftArmCm: assessment.leftArm,
+      rightThighCm: assessment.rightThigh,
+      leftThighCm: assessment.leftThigh,
+      rightCalfCm: assessment.rightCalf,
+      leftCalfCm: assessment.leftCalf,
+    };
+  });
 }
 
 export async function getLatestAssessment(studentId: number, gymId: number) {
@@ -1049,7 +1073,31 @@ export async function getAllAssessmentsByGym(gymId: number) {
     .where(eq(physicalAssessments.gymId, gymId))
     .orderBy(desc(physicalAssessments.assessmentDate));
 
-  return assessmentsList;
+  // Map to frontend expected format and calculate BMI
+  return assessmentsList.map(assessment => {
+    const weightKg = assessment.weight || 0;
+    const heightCm = assessment.height || 0;
+    const heightM = heightCm / 100;
+    const bmi = heightM > 0 ? weightKg / (heightM * heightM) : 0;
+
+    return {
+      ...assessment,
+      weightKg,
+      heightCm,
+      bodyFatPercentage: assessment.bodyFat,
+      muscleMassKg: assessment.muscleMass,
+      bmi,
+      chestCm: assessment.chest,
+      waistCm: assessment.waist,
+      hipCm: assessment.hips,
+      rightArmCm: assessment.rightArm,
+      leftArmCm: assessment.leftArm,
+      rightThighCm: assessment.rightThigh,
+      leftThighCm: assessment.leftThigh,
+      rightCalfCm: assessment.rightCalf,
+      leftCalfCm: assessment.leftCalf,
+    };
+  });
 }
 
 export async function getAssessmentById(assessmentId: number, gymId: number) {
