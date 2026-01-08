@@ -19,6 +19,8 @@ export default function StudentLogin() {
     onSuccess: async () => {
       // Refetch user data to ensure cache is updated before redirect
       await utils.auth.me.refetch();
+      // Also invalidate student data to prevent race condition on dashboard
+      await utils.students.me.invalidate();
       toast.success("Login realizado com sucesso!");
       setLocation("/student/dashboard");
     },
