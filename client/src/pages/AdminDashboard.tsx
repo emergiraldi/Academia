@@ -39,8 +39,8 @@ export default function AdminDashboard() {
     { enabled: !!gymSlug }
   );
   const { data: schedules = [] } = trpc.schedules.list.useQuery();
-  const { data: upcomingBookings = [] } = trpc.bookings.upcoming.useQuery();
-  const { data: upcomingVisitorBookings = [] } = trpc.visitorBookings.upcoming.useQuery();
+  // const { data: upcomingBookings = [] } = trpc.bookings.upcoming.useQuery();
+  // const { data: upcomingVisitorBookings = [] } = trpc.visitorBookings.upcoming.useQuery();
 
   const activeStudents = students.filter(s => s.membershipStatus === "active").length;
   const inactiveStudents = students.filter(s => s.membershipStatus === "inactive").length;

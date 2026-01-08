@@ -179,10 +179,9 @@ export default function AdminPaymentMethods() {
     const labels: Record<string, string> = {
       cash: "Dinheiro",
       bank_transfer: "Transferência Bancária",
-      credit_card: "Cartão de Crédito",
-      debit_card: "Cartão de Débito",
+      credit: "Cartão de Crédito",
+      debit: "Cartão de Débito",
       pix: "PIX",
-      check: "Cheque",
       other: "Outro"
     };
     return labels[type] || type;
@@ -236,10 +235,9 @@ export default function AdminPaymentMethods() {
                     <SelectContent>
                       <SelectItem value="cash">Dinheiro</SelectItem>
                       <SelectItem value="pix">PIX</SelectItem>
-                      <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
-                      <SelectItem value="debit_card">Cartão de Débito</SelectItem>
+                      <SelectItem value="credit">Cartão de Crédito</SelectItem>
+                      <SelectItem value="debit">Cartão de Débito</SelectItem>
                       <SelectItem value="bank_transfer">Transferência Bancária</SelectItem>
-                      <SelectItem value="check">Cheque</SelectItem>
                       <SelectItem value="other">Outro</SelectItem>
                     </SelectContent>
                   </Select>
@@ -478,10 +476,9 @@ export default function AdminPaymentMethods() {
                   <SelectContent>
                     <SelectItem value="cash">Dinheiro</SelectItem>
                     <SelectItem value="pix">PIX</SelectItem>
-                    <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
-                    <SelectItem value="debit_card">Cartão de Débito</SelectItem>
+                    <SelectItem value="credit">Cartão de Crédito</SelectItem>
+                    <SelectItem value="debit">Cartão de Débito</SelectItem>
                     <SelectItem value="bank_transfer">Transferência Bancária</SelectItem>
-                    <SelectItem value="check">Cheque</SelectItem>
                     <SelectItem value="other">Outro</SelectItem>
                   </SelectContent>
                 </Select>
