@@ -32,8 +32,7 @@ export default function AdminSettings() {
   const updateSettings = trpc.gymSettings.update.useMutation({
     onSuccess: () => {
       toast.success("Configurações salvas com sucesso!");
-      setIsInitialLoad(true); // Allow reload after save
-      refetch();
+      // Não precisa fazer refetch - os dados já estão corretos no formulário
     },
     onError: (error) => {
       toast.error(`Erro ao salvar configurações: ${error.message}`);
