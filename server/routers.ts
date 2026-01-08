@@ -781,7 +781,40 @@ export const appRouter = router({
 
             console.log('[uploadFaceImage]    Tamanho da foto:', (imageBuffer.length / 1024).toFixed(2), 'KB');
 
-            const result = await controlIdService.uploadFaceImage(controlIdUserId, imageBuffer);
+            let result;
+            try {
+              result = await controlIdService.uploadFaceImage(controlIdUserId, imageBuffer);
+            } catch (uploadError: any) {
+              // Check if error is "User does not exist"
+              if (uploadError.message && uploadError.message.includes('User does not exist')) {
+                console.log('[uploadFaceImage] ⚠️  Usuário não existe na leitora, recriando...');
+
+                // Reset controlIdUserId in database
+                await db.updateStudent(student.id, ctx.user.gymId, {
+                  controlIdUserId: null,
+                  faceEnrolled: false,
+                });
+
+                // Create user in Control ID again
+                controlIdUserId = await controlIdService.createUser(
+                  ctx.user.name || 'Student',
+                  student.registrationNumber || String(student.id)
+                );
+
+                console.log('[uploadFaceImage] ✅ Usuário recriado no Control ID com ID:', controlIdUserId);
+
+                // Update database with new controlIdUserId
+                await db.updateStudent(student.id, ctx.user.gymId, {
+                  controlIdUserId: controlIdUserId,
+                });
+
+                // Try upload again with new user ID
+                result = await controlIdService.uploadFaceImage(controlIdUserId, imageBuffer);
+              } else {
+                // Re-throw other errors
+                throw uploadError;
+              }
+            }
 
             console.log('[uploadFaceImage] 📊 Resultado do upload:', JSON.stringify(result, null, 2));
 
