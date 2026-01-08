@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb, createGymSettings } from "../db";
-import { gyms, students, users } from "../../drizzle/schema";
+import { gyms, students, users, siteSettings } from "../../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { TRPCError } from "@trpc/server";
@@ -588,14 +588,25 @@ export const gymsRouter = router({
         throw new Error("Já existe um pagamento para este mês");
       }
 
-      // Definir valores dos planos
+      // Buscar valores dos planos das configurações do site
+      const [settings] = await db.select().from(siteSettings).limit(1);
+
+      if (!settings) {
+        throw new Error("Configurações do site não encontradas. Configure os preços no Super Admin.");
+      }
+
       const planPrices: Record<string, number> = {
-        basic: 14900, // R$ 149,00 em centavos
-        professional: 29900, // R$ 299,00 em centavos
-        enterprise: 59900, // R$ 599,00 em centavos
+        basic: settings.basicPrice * 100, // Converter de reais para centavos
+        professional: settings.professionalPrice * 100,
+        enterprise: settings.enterprisePrice * 100,
       };
 
       const amountInCents = planPrices[input.plan];
+
+      console.log(`💰 [GYM PAYMENT] Preços obtidos do Super Admin:`);
+      console.log(`  - Básico: R$ ${settings.basicPrice}`);
+      console.log(`  - Professional: R$ ${settings.professionalPrice}`);
+      console.log(`  - Enterprise: R$ ${settings.enterprisePrice}`);
 
       // Definir data de vencimento (dia 10 do mês)
       const dueDate = new Date(now.getFullYear(), now.getMonth(), 10);
