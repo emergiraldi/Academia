@@ -802,7 +802,11 @@ export default function AdminStudents() {
                               <span>
                                 {(() => {
                                   try {
-                                    const dateStr = String(student.dateOfBirth);
+                                    // Se for objeto Date, converte para string ISO
+                                    let dateStr = student.dateOfBirth instanceof Date
+                                      ? student.dateOfBirth.toISOString()
+                                      : String(student.dateOfBirth);
+
                                     // Extrai YYYY-MM-DD de qualquer formato (ISO, MySQL datetime, etc)
                                     const match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
                                     if (match) {
