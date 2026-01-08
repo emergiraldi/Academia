@@ -3196,14 +3196,14 @@ export async function getStudentProfile(studentId: number, gymId: number) {
 
   // Workout history (last 30 days)
   const [workoutHistory] = await conn.execute(
-    `SELECT 
-      al.timestamp,
+    `SELECT
+      DATE(al.timestamp) as timestamp,
       COUNT(*) as accessCount
      FROM access_logs al
      WHERE al.studentId = ? AND al.gymId = ?
      AND al.timestamp >= DATE_SUB(NOW(), INTERVAL 30 DAY)
      GROUP BY DATE(al.timestamp)
-     ORDER BY al.timestamp DESC`,
+     ORDER BY DATE(al.timestamp) DESC`,
     [studentId, gymId]
   );
 
