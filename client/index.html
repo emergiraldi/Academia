@@ -1,12 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>Sistema de Academia com Control ID e PIX</title>    
+      content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+
+    <!-- Primary Meta Tags -->
+    <title>SysFit Pro - Sistema de Academia</title>
+    <meta name="title" content="SysFit Pro - Sistema de Academia" />
+    <meta name="description" content="Sistema completo de gestão de academias com controle de acesso, treinos personalizados e pagamentos via PIX" />
+
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="SysFit Pro" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SysFit Pro" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#3b82f6" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-72x72.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72x72.png" />
+
     <!-- THIS IS THE START OF A COMMENT BLOCK, BLOCK TO BE DELETED: Google Fonts here, example:
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,6 +41,48 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('/sw.js')
+            .then((registration) => {
+              console.log('✅ Service Worker registrado com sucesso:', registration.scope);
+
+              // Verificar atualizações periodicamente
+              setInterval(() => {
+                registration.update();
+              }, 60000); // Verifica a cada 60 segundos
+
+              // Notificar quando houver atualização disponível
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('🔄 Nova versão disponível! Recarregue a página.');
+                    // Você pode adicionar uma notificação visual aqui
+                  }
+                });
+              });
+            })
+            .catch((error) => {
+              console.error('❌ Erro ao registrar Service Worker:', error);
+            });
+        });
+
+        // Recarregar página quando novo service worker for ativado
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
+      }
+    </script>
+
     <!-- Analytics desabilitado - configure VITE_ANALYTICS_ENDPOINT e VITE_ANALYTICS_WEBSITE_ID no .env se necessário -->
   </body>
 
