@@ -17,18 +17,14 @@ export default function StudentLogin() {
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: async () => {
-      try {
-        // Refetch both auth and student data BEFORE redirect
-        await Promise.all([
-          utils.auth.me.refetch(),
-          utils.students.me.refetch()
-        ]);
-        toast.success("Login realizado com sucesso!");
+      // Refetch auth data and invalidate all queries to force reload
+      await utils.auth.me.refetch();
+      utils.invalidate();
+      toast.success("Login realizado com sucesso!");
+      // Small delay to ensure cookies are set
+      setTimeout(() => {
         setLocation("/student/dashboard");
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        toast.error("Erro ao carregar dados. Tente novamente.");
-      }
+      }, 100);
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao fazer login");
