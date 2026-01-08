@@ -62,7 +62,7 @@ export const users = mysqlTable("users", {
   gymId: int("gymId").references(() => gyms.id, { onDelete: "cascade" }), // null for super_admin
   openId: varchar("openId", { length: 64 }).unique(),
   name: text("name"),
-  email: varchar("email", { length: 320 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
   password: varchar("password", { length: 255 }),
   phone: varchar("phone", { length: 20 }),
   loginMethod: varchar("loginMethod", { length: 64 }),

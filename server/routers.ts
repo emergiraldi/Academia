@@ -433,6 +433,15 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
 
+        // Check if email already exists
+        const existingUser = await db.getUserByEmail(input.email);
+        if (existingUser) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Email ${input.email} já está cadastrado no sistema`
+          });
+        }
+
         // Create user first
         const hashedPassword = await bcrypt.hash(input.password, 10);
         const userResult = await db.createUser({
@@ -540,7 +549,18 @@ export const appRouter = router({
         if (student.userId) {
           const userUpdates: any = {};
           if (input.name !== undefined) userUpdates.name = input.name;
-          if (input.email !== undefined) userUpdates.email = input.email;
+
+          // Check if email is being changed and if new email already exists
+          if (input.email !== undefined) {
+            const existingUser = await db.getUserByEmail(input.email);
+            if (existingUser && existingUser.id !== student.userId) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `Email ${input.email} já está cadastrado no sistema`
+              });
+            }
+            userUpdates.email = input.email;
+          }
 
           console.log('[students.update] Password received:', input.password ? `"${input.password}" (length: ${input.password.length})` : 'undefined/empty');
 
