@@ -29,13 +29,18 @@ export const superAdminSettingsRouter = router({
   update: superAdminProcedure
     .input(
       z.object({
+        pixProvider: z.string().optional(),
         pixClientId: z.string().optional(),
         pixClientSecret: z.string().optional(),
         pixCertificate: z.string().optional(),
+        pixPrivateKey: z.string().optional(),
         pixKey: z.string().optional(),
         pixKeyType: z.enum(["cpf", "cnpj", "email", "phone", "random"]).optional(),
         merchantName: z.string().optional(),
         merchantCity: z.string().optional(),
+        pixApiUrl: z.string().optional(),
+        pixTokenUrl: z.string().optional(),
+        bankCode: z.string().optional(),
         bankName: z.string().optional(),
         bankAccount: z.string().optional(),
         bankAgency: z.string().optional(),

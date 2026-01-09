@@ -23,55 +23,63 @@ async function copyGymPixToSuperAdmin() {
   try {
     console.log('📋 Copiando dados PIX da academia para o Super Admin...\n');
 
-    // Listar todas as academias
-    const [allGyms] = await connection.query('SELECT id, name, pixKey, pixClientId FROM gyms');
-
-    console.log('📋 Academias cadastradas:');
-    allGyms.forEach((gym, index) => {
-      const hasPixKey = gym.pixKey ? '✅' : '❌';
-      const hasClientId = gym.pixClientId ? '✅' : '❌';
-      console.log(`   ${index + 1}. ${gym.name} (ID: ${gym.id})`);
-      console.log(`      Chave PIX: ${hasPixKey} | Client ID: ${hasClientId}`);
-    });
-    console.log('');
-
-    // Buscar dados PIX da primeira academia que tiver QUALQUER dado configurado
-    const [gyms] = await connection.query(`
+    // Buscar conta bancária da primeira academia (onde estão os dados PIX completos)
+    const [bankAccounts] = await connection.query(`
       SELECT
-        id,
-        name,
-        pixClientId,
-        pixClientSecret,
-        pixCertificate,
-        pixKey,
-        pixKeyType,
-        merchantName,
-        merchantCity
-      FROM gyms
-      ORDER BY id ASC
+        ba.id,
+        ba.gymId,
+        ba.titularNome,
+        ba.banco,
+        ba.agenciaNumero,
+        ba.contaNumero,
+        ba.contaDv,
+        ba.pixChave,
+        ba.pixTipoChave,
+        ba.pixClientId,
+        ba.pixClientSecret,
+        ba.pixCertificado,
+        ba.pixChavePrivada,
+        ba.pixUrlBase,
+        ba.pixUrlToken,
+        g.name as gymName
+      FROM bankAccounts ba
+      INNER JOIN gyms g ON ba.gymId = g.id
+      WHERE ba.pixChave IS NOT NULL
+      ORDER BY ba.id ASC
       LIMIT 1
     `);
 
-    if (gyms.length === 0) {
-      console.log('⚠️  Nenhuma academia cadastrada.');
+    if (bankAccounts.length === 0) {
+      console.log('⚠️  Nenhuma conta bancária com PIX configurado encontrada.');
+      console.log('💡 Configure os dados PIX em Admin > Configurações > Contas Bancárias primeiro.\n');
       return;
     }
 
-    const gymData = gyms[0];
-    console.log(`✅ Usando dados da academia: ${gymData.name} (ID: ${gymData.id})`);
+    const bankData = bankAccounts[0];
+    console.log(`✅ Usando dados da conta bancária da academia: ${bankData.gymName} (ID: ${bankData.gymId})`);
     console.log('');
     console.log('📋 Dados que serão copiados:');
-    console.log(`   - Chave PIX: ${gymData.pixKey || 'não configurada'}`);
-    console.log(`   - Tipo: ${gymData.pixKeyType || 'não configurado'}`);
-    console.log(`   - Beneficiário: ${gymData.merchantName || 'não configurado'}`);
-    console.log(`   - Cidade: ${gymData.merchantCity || 'não configurada'}`);
-    console.log(`   - Client ID: ${gymData.pixClientId ? '***configurado***' : 'não configurado'}`);
-    console.log(`   - Client Secret: ${gymData.pixClientSecret ? '***configurado***' : 'não configurado'}`);
-    console.log(`   - Certificado: ${gymData.pixCertificate ? '***configurado***' : 'não configurado'}`);
+    console.log(`   - Titular: ${bankData.titularNome || 'não configurado'}`);
+    console.log(`   - Banco: ${bankData.banco || 'não configurado'}`);
+    console.log(`   - Agência: ${bankData.agenciaNumero || 'não configurada'}`);
+    console.log(`   - Conta: ${bankData.contaNumero}${bankData.contaDv ? '-' + bankData.contaDv : ''}`);
+    console.log(`   - Chave PIX: ${bankData.pixChave || 'não configurada'}`);
+    console.log(`   - Tipo: ${bankData.pixTipoChave || 'não configurado'}`);
+    console.log(`   - Client ID: ${bankData.pixClientId ? '***configurado***' : 'não configurado'}`);
+    console.log(`   - Client Secret: ${bankData.pixClientSecret ? '***configurado***' : 'não configurado'}`);
+    console.log(`   - Certificado: ${bankData.pixCertificado ? `***${Buffer.byteLength(bankData.pixCertificado, 'utf8')} bytes***` : 'não configurado'}`);
+    console.log(`   - Chave Privada: ${bankData.pixChavePrivada ? `***${Buffer.byteLength(bankData.pixChavePrivada, 'utf8')} bytes***` : 'não configurada'}`);
+    console.log(`   - URL API: ${bankData.pixUrlBase || 'não configurada'}`);
+    console.log(`   - URL Token: ${bankData.pixUrlToken || 'não configurada'}`);
     console.log('');
 
     // Verificar se já existe configuração no Super Admin
     const [existing] = await connection.query('SELECT id FROM superAdminSettings LIMIT 1');
+
+    // Determinar o provider baseado na URL da API
+    const pixProvider = bankData.pixUrlBase?.includes('sicoob') ? 'sicoob' :
+                       bankData.pixUrlBase?.includes('gerencianet') || bankData.pixUrlBase?.includes('efi') ? 'efi' :
+                       'other';
 
     if (existing.length > 0) {
       // Atualizar registro existente
@@ -80,22 +88,38 @@ async function copyGymPixToSuperAdmin() {
       await connection.query(`
         UPDATE superAdminSettings
         SET
+          pixProvider = ?,
           pixClientId = ?,
           pixClientSecret = ?,
           pixCertificate = ?,
+          pixPrivateKey = ?,
           pixKey = ?,
           pixKeyType = ?,
           merchantName = ?,
-          merchantCity = ?
+          merchantCity = ?,
+          pixApiUrl = ?,
+          pixTokenUrl = ?,
+          bankCode = ?,
+          bankName = ?,
+          bankAccount = ?,
+          bankAgency = ?
         WHERE id = ?
       `, [
-        gymData.pixClientId,
-        gymData.pixClientSecret,
-        gymData.pixCertificate,
-        gymData.pixKey,
-        gymData.pixKeyType,
-        gymData.merchantName,
-        gymData.merchantCity,
+        pixProvider,
+        bankData.pixClientId,
+        bankData.pixClientSecret,
+        bankData.pixCertificado,
+        bankData.pixChavePrivada,
+        bankData.pixChave,
+        bankData.pixTipoChave || 'random',
+        bankData.titularNome,
+        null, // merchantCity - não temos no bankAccounts
+        bankData.pixUrlBase,
+        bankData.pixUrlToken,
+        bankData.banco?.toString(),
+        null, // bankName - podemos adicionar depois
+        bankData.contaNumero ? `${bankData.contaNumero}${bankData.contaDv ? '-' + bankData.contaDv : ''}` : null,
+        bankData.agenciaNumero,
         existing[0].id
       ]);
 
@@ -106,22 +130,38 @@ async function copyGymPixToSuperAdmin() {
 
       await connection.query(`
         INSERT INTO superAdminSettings (
+          pixProvider,
           pixClientId,
           pixClientSecret,
           pixCertificate,
+          pixPrivateKey,
           pixKey,
           pixKeyType,
           merchantName,
-          merchantCity
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          merchantCity,
+          pixApiUrl,
+          pixTokenUrl,
+          bankCode,
+          bankName,
+          bankAccount,
+          bankAgency
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        gymData.pixClientId,
-        gymData.pixClientSecret,
-        gymData.pixCertificate,
-        gymData.pixKey,
-        gymData.pixKeyType,
-        gymData.merchantName,
-        gymData.merchantCity
+        pixProvider,
+        bankData.pixClientId,
+        bankData.pixClientSecret,
+        bankData.pixCertificado,
+        bankData.pixChavePrivada,
+        bankData.pixChave,
+        bankData.pixTipoChave || 'random',
+        bankData.titularNome,
+        null, // merchantCity
+        bankData.pixUrlBase,
+        bankData.pixUrlToken,
+        bankData.banco?.toString(),
+        null, // bankName
+        bankData.contaNumero ? `${bankData.contaNumero}${bankData.contaDv ? '-' + bankData.contaDv : ''}` : null,
+        bankData.agenciaNumero
       ]);
 
       console.log('✅ Configurações do Super Admin criadas com sucesso!');

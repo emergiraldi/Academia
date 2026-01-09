@@ -121,16 +121,25 @@ export type InsertSaasPlan = typeof saasPlans.$inferInsert;
 export const superAdminSettings = mysqlTable("superAdminSettings", {
   id: int("id").autoincrement().primaryKey(),
 
+  // PIX provider configuration
+  pixProvider: varchar("pixProvider", { length: 50 }).default("sicoob"), // "efi", "sicoob", "other"
+
   // PIX settings for receiving gym subscription payments
   pixClientId: varchar("pixClientId", { length: 255 }),
   pixClientSecret: varchar("pixClientSecret", { length: 255 }),
-  pixCertificate: text("pixCertificate"),
+  pixCertificate: text("pixCertificate"), // Certificado completo (conteúdo PEM)
+  pixPrivateKey: text("pixPrivateKey"), // Chave privada completa (conteúdo PEM)
   pixKey: varchar("pixKey", { length: 255 }), // Chave PIX do Super Admin
   pixKeyType: mysqlEnum("pixKeyType", ["cpf", "cnpj", "email", "phone", "random"]),
   merchantName: varchar("merchantName", { length: 200 }), // Nome que aparece no PIX
   merchantCity: varchar("merchantCity", { length: 100 }), // Cidade do beneficiário
 
+  // API URLs (Sicoob específico)
+  pixApiUrl: varchar("pixApiUrl", { length: 500 }), // https://api.sicoob.com.br/pix/api/v2
+  pixTokenUrl: varchar("pixTokenUrl", { length: 500 }), // https://auth.sicoob.com.br/auth/realms/cooperado/protocol/openid-connect/token
+
   // Bank account info (optional, for display)
+  bankCode: varchar("bankCode", { length: 10 }), // 756 for Sicoob
   bankName: varchar("bankName", { length: 100 }),
   bankAccount: varchar("bankAccount", { length: 50 }),
   bankAgency: varchar("bankAgency", { length: 20 }),

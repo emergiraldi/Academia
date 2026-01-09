@@ -62,6 +62,7 @@ const tabs = [
 ];
 
 interface PaymentSettings {
+  pixProvider: string;
   pixKey: string;
   pixKeyType: "cpf" | "cnpj" | "email" | "phone" | "random";
   merchantName: string;
@@ -69,6 +70,10 @@ interface PaymentSettings {
   pixClientId: string;
   pixClientSecret: string;
   pixCertificate: string;
+  pixPrivateKey: string;
+  pixApiUrl: string;
+  pixTokenUrl: string;
+  bankCode: string;
   bankName: string;
   bankAccount: string;
   bankAgency: string;
@@ -113,6 +118,7 @@ export default function SuperAdminSettings() {
   });
 
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({
+    pixProvider: "sicoob",
     pixKey: "",
     pixKeyType: "cnpj",
     merchantName: "",
@@ -120,6 +126,10 @@ export default function SuperAdminSettings() {
     pixClientId: "",
     pixClientSecret: "",
     pixCertificate: "",
+    pixPrivateKey: "",
+    pixApiUrl: "",
+    pixTokenUrl: "",
+    bankCode: "",
     bankName: "",
     bankAccount: "",
     bankAgency: "",
@@ -179,6 +189,7 @@ export default function SuperAdminSettings() {
   useEffect(() => {
     if (paymentData) {
       setPaymentSettings({
+        pixProvider: paymentData.pixProvider || "sicoob",
         pixKey: paymentData.pixKey || "",
         pixKeyType: paymentData.pixKeyType || "cnpj",
         merchantName: paymentData.merchantName || "",
@@ -186,6 +197,10 @@ export default function SuperAdminSettings() {
         pixClientId: paymentData.pixClientId || "",
         pixClientSecret: paymentData.pixClientSecret || "",
         pixCertificate: paymentData.pixCertificate || "",
+        pixPrivateKey: paymentData.pixPrivateKey || "",
+        pixApiUrl: paymentData.pixApiUrl || "",
+        pixTokenUrl: paymentData.pixTokenUrl || "",
+        bankCode: paymentData.bankCode || "",
         bankName: paymentData.bankName || "",
         bankAccount: paymentData.bankAccount || "",
         bankAgency: paymentData.bankAgency || "",
@@ -703,14 +718,28 @@ export default function SuperAdminSettings() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Credenciais Efí Pay (API PIX)</CardTitle>
+                <CardTitle>Provedor PIX e Credenciais API</CardTitle>
                 <p className="text-sm text-gray-600">
-                  Configure suas credenciais da API Efí Pay para gerar cobranças PIX automáticas
+                  Configure o provedor PIX e as credenciais para gerar cobranças automáticas
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="pixClientId">Client ID</Label>
+                  <Label htmlFor="pixProvider">Provedor PIX</Label>
+                  <select
+                    id="pixProvider"
+                    value={paymentSettings.pixProvider}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, pixProvider: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="sicoob">Sicoob</option>
+                    <option value="efi">Efí Pay (Gerencianet)</option>
+                    <option value="other">Outro</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="pixClientId">Client ID OAuth *</Label>
                   <Input
                     id="pixClientId"
                     type="password"
@@ -719,8 +748,9 @@ export default function SuperAdminSettings() {
                     placeholder="Client_Id_xxxxxxxxxxxxx"
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="pixClientSecret">Client Secret</Label>
+                  <Label htmlFor="pixClientSecret">Client Secret OAuth *</Label>
                   <Input
                     id="pixClientSecret"
                     type="password"
@@ -729,18 +759,58 @@ export default function SuperAdminSettings() {
                     placeholder="Client_Secret_xxxxxxxxxxxxx"
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="pixCertificate">Certificado (.p12 em Base64)</Label>
+                  <Label htmlFor="pixCertificate">Certificado (PEM) *</Label>
                   <Textarea
                     id="pixCertificate"
-                    rows={3}
+                    rows={4}
                     value={paymentSettings.pixCertificate}
                     onChange={(e) => setPaymentSettings({ ...paymentSettings, pixCertificate: e.target.value })}
-                    placeholder="MIIxxxxxxxxxxxxxxx..."
+                    placeholder="-----BEGIN CERTIFICATE-----
+MIIxxxxxxxxxxxxxxx...
+-----END CERTIFICATE-----"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Cole o conteúdo do certificado .p12 convertido para Base64
+                    Cole o conteúdo completo do certificado em formato PEM
                   </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="pixPrivateKey">Chave Privada (PEM) *</Label>
+                  <Textarea
+                    id="pixPrivateKey"
+                    rows={4}
+                    value={paymentSettings.pixPrivateKey}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, pixPrivateKey: e.target.value })}
+                    placeholder="-----BEGIN PRIVATE KEY-----
+MIIxxxxxxxxxxxxxxx...
+-----END PRIVATE KEY-----"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Cole o conteúdo completo da chave privada em formato PEM
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="pixApiUrl">URL da API PIX</Label>
+                    <Input
+                      id="pixApiUrl"
+                      value={paymentSettings.pixApiUrl}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, pixApiUrl: e.target.value })}
+                      placeholder="https://api.sicoob.com.br/pix/api/v2"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="pixTokenUrl">URL do Token OAuth</Label>
+                    <Input
+                      id="pixTokenUrl"
+                      value={paymentSettings.pixTokenUrl}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, pixTokenUrl: e.target.value })}
+                      placeholder="https://auth.sicoob.com.br/auth/realms/..."
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -753,14 +823,26 @@ export default function SuperAdminSettings() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-4 gap-4">
                   <div>
-                    <Label htmlFor="bankName">Banco</Label>
+                    <Label htmlFor="bankCode">Código do Banco</Label>
+                    <Input
+                      id="bankCode"
+                      value={paymentSettings.bankCode}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, bankCode: e.target.value })}
+                      placeholder="756"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Ex: 756 para Sicoob
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="bankName">Nome do Banco</Label>
                     <Input
                       id="bankName"
                       value={paymentSettings.bankName}
                       onChange={(e) => setPaymentSettings({ ...paymentSettings, bankName: e.target.value })}
-                      placeholder="Banco do Brasil"
+                      placeholder="Sicoob"
                     />
                   </div>
                   <div>
@@ -769,7 +851,7 @@ export default function SuperAdminSettings() {
                       id="bankAgency"
                       value={paymentSettings.bankAgency}
                       onChange={(e) => setPaymentSettings({ ...paymentSettings, bankAgency: e.target.value })}
-                      placeholder="1234-5"
+                      placeholder="3197"
                     />
                   </div>
                   <div>
@@ -778,7 +860,7 @@ export default function SuperAdminSettings() {
                       id="bankAccount"
                       value={paymentSettings.bankAccount}
                       onChange={(e) => setPaymentSettings({ ...paymentSettings, bankAccount: e.target.value })}
-                      placeholder="12345-6"
+                      placeholder="82411-9"
                     />
                   </div>
                 </div>
