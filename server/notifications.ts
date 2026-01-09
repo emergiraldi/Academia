@@ -1057,8 +1057,8 @@ export async function generateMonthlyBillingCycles() {
           continue;
         }
 
-        // Calculate due date
-        const dueDate = new Date(now.getFullYear(), now.getMonth(), dueDay);
+        // Calculate due date (set time to noon to avoid timezone issues)
+        const dueDate = new Date(now.getFullYear(), now.getMonth(), dueDay, 12, 0, 0);
 
         // Create billing cycle
         await createBillingCycle({
