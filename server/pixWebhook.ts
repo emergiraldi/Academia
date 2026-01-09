@@ -173,8 +173,8 @@ export async function processPixWebhook(payload: any) {
           // Send confirmation email to gym admin
           try {
             // Get gym admin user
-            const admins = await db.listUsers(gymForBilling.id);
-            const adminUser = admins.find(u => u.role === "admin");
+            const admins = await db.getUsersByRole(gymForBilling.id, "admin");
+            const adminUser = admins[0];
 
             if (adminUser?.email) {
               console.log(`[PIX Webhook] 📧 Sending billing confirmation email to ${adminUser.email}...`);
