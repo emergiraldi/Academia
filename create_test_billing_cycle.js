@@ -35,15 +35,9 @@ async function createTestBillingCycle() {
     const gym = gymResult[0];
     console.log(`✅ Academia encontrada: ${gym.name} (Plano: ${gym.plan})`);
 
-    // 2. Usar preço fixo para teste (R$ 297,00 para plano professional)
-    const planPrices = {
-      'basic': 9700,      // R$ 97,00
-      'professional': 29700,  // R$ 297,00
-      'enterprise': 49700     // R$ 497,00
-    };
-
-    const planPrice = planPrices[gym.plan] || 29700; // Default: R$ 297,00
-    console.log(`✅ Preço do plano ${gym.plan}: R$ ${(planPrice / 100).toFixed(2)}`);
+    // 2. Usar valor fixo para teste: R$ 1,00
+    const planPrice = 100; // R$ 1,00 em centavos
+    console.log(`✅ Valor da mensalidade (teste): R$ ${(planPrice / 100).toFixed(2)}`);
 
     // 3. Usar dia de vencimento padrão (dia 15)
     const dueDay = 15;
