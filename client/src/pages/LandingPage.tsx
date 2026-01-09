@@ -124,6 +124,9 @@ export default function LandingPage() {
   // Buscar planos SaaS dinâmicos
   const { data: saasPlans, isLoading: plansLoading } = trpc.saasPlans.listActive.useQuery();
 
+  // Buscar configurações de trial do Super Admin
+  const { data: superAdminSettings } = trpc.superAdminSettings.get.useQuery();
+
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % screenshots.length);
@@ -456,7 +459,11 @@ export default function LandingPage() {
               Planos e Preços
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Escolha o plano ideal para sua academia. Todos os planos incluem 14 dias grátis.
+              Escolha o plano ideal para sua academia.{" "}
+              {superAdminSettings?.trialEnabled
+                ? `Todos os planos incluem ${superAdminSettings.trialDays} dias grátis.`
+                : "Comece agora mesmo!"
+              }
             </p>
           </div>
 

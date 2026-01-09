@@ -155,12 +155,68 @@ export const gymsRouter = router({
 
       console.log(`🟢 [CREATE GYM] Admin criado com email: ${adminEmailToUse}`);
 
-      // Gerar PIX automaticamente para pagamento da assinatura
+      // Buscar configurações do Super Admin para verificar trial
+      const { getSuperAdminSettings } = await import("../db");
+      const superAdminSettings = await getSuperAdminSettings();
+
       const plan = finalGymData.plan;
       const now = new Date();
-      const referenceMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-      console.log(`💰 [CREATE GYM] Gerando PIX de assinatura automático para plano: ${plan}`);
+      // Verificar se período de teste está habilitado
+      if (superAdminSettings?.trialEnabled) {
+        console.log(`🎁 [CREATE GYM] Trial habilitado! Dando ${superAdminSettings.trialDays} dias de acesso grátis`);
+
+        // Calcular data de fim do trial
+        const trialEndsAt = new Date(now);
+        trialEndsAt.setDate(trialEndsAt.getDate() + superAdminSettings.trialDays);
+
+        // Atualizar academia com dados do trial
+        await db.update(gyms).set({
+          trialEndsAt,
+          planStatus: "trial",
+          subscriptionStartsAt: now, // Começa trial agora
+        }).where(eq(gyms.id, gymId));
+
+        console.log(`✅ [CREATE GYM] Trial configurado até: ${trialEndsAt.toISOString()}`);
+
+        // Enviar email de boas-vindas com informações do trial
+        try {
+          const { sendGymAdminCredentials } = await import("../email");
+          await sendGymAdminCredentials(
+            adminEmailToUse,
+            tempPassword,
+            finalGymData.name,
+            finalGymData.slug,
+            plan
+          );
+          console.log(`✅ [CREATE GYM] Email de boas-vindas enviado para ${adminEmailToUse}`);
+        } catch (emailError) {
+          console.error("❌ [CREATE GYM] Erro ao enviar email:", emailError);
+          // Continuar mesmo se email falhar
+        }
+
+        // Retornar sucesso com informações do trial
+        return {
+          gymId,
+          gymSlug: input.slug,
+          plan,
+          trial: {
+            enabled: true,
+            days: superAdminSettings.trialDays,
+            endsAt: trialEndsAt.toISOString(),
+          },
+          credentials: {
+            email: adminEmailToUse,
+            password: tempPassword,
+          },
+          message: `Academia cadastrada! Você tem ${superAdminSettings.trialDays} dias de acesso grátis.`,
+        };
+      }
+
+      // Se trial NÃO está habilitado, gerar PIX imediatamente
+      console.log(`💰 [CREATE GYM] Trial desabilitado - Gerando PIX de assinatura para plano: ${plan}`);
+
+      const referenceMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
       try {
         // Buscar valores dos planos da tabela saasPlans
@@ -234,6 +290,9 @@ export const gymsRouter = router({
           gymId,
           gymSlug: input.slug,
           plan,
+          trial: {
+            enabled: false,
+          },
           pixPayment: {
             txid: pixCharge.txid,
             qrCode: pixCharge.pixCopiaECola,

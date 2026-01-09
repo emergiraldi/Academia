@@ -46,6 +46,9 @@ export default function Signup() {
   // Buscar planos SaaS dinâmicos
   const { data: saasPlans } = trpc.saasPlans.listActive.useQuery();
 
+  // Buscar configurações do Super Admin para verificar trial
+  const { data: superAdminSettings } = trpc.superAdminSettings.get.useQuery();
+
   useEffect(() => {
     // Get plan from URL params
     const params = new URLSearchParams(window.location.search);
@@ -83,11 +86,14 @@ export default function Signup() {
     }
   }, [saasPlans]);
 
+  const [creationResult, setCreationResult] = useState<any>(null);
+
   const createGymMutation = trpc.gyms.create.useMutation({
     onSuccess: (data) => {
+      console.log("[Signup] Resultado da criação:", data);
+      setCreationResult(data);
       toast.success("Academia cadastrada com sucesso!");
       setStep(4);
-      // Aqui você poderia redirecionar para confirmação ou dashboard
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao cadastrar academia");
@@ -252,29 +258,36 @@ export default function Signup() {
             </div>
 
             <div className="space-y-4">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800">
-                  <strong>Teste Grátis:</strong> Você terá 14 dias de teste grátis. A cobrança
-                  só será realizada após este período.
-                </p>
-              </div>
-
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
-                <div className="flex items-start space-x-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              {superAdminSettings?.trialEnabled ? (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <p className="text-sm text-green-800">
-                    Acesso imediato a todas as funcionalidades do plano {formData.plan}
+                    <strong>🎉 Teste Grátis:</strong> Você terá <strong>{superAdminSettings.trialDays} dias de teste grátis</strong> com acesso completo ao sistema. A cobrança só será realizada após este período.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <p className="text-sm text-yellow-800">
+                    <strong>💳 Pagamento Imediato:</strong> Após o cadastro, você receberá um QR Code PIX para pagamento. Seu acesso será liberado automaticamente após a confirmação do pagamento.
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-start space-x-3">
+                  <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-blue-800">
+                    Acesso completo a todas as funcionalidades do plano {formData.plan}
                   </p>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-green-800">
+                  <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-blue-800">
                     Suporte técnico para configuração inicial
                   </p>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-green-800">
+                  <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-blue-800">
                     Cancelamento a qualquer momento sem multa
                   </p>
                 </div>
@@ -284,6 +297,132 @@ export default function Signup() {
         );
 
       case 4:
+        // Trial habilitado - mostrar credenciais
+        if (creationResult?.trial?.enabled) {
+          return (
+            <div className="text-center py-8">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-12 h-12 text-green-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                Academia Cadastrada com Sucesso!
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Você tem <strong>{creationResult.trial.days} dias de acesso grátis</strong> para testar todas as funcionalidades!
+              </p>
+
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-left max-w-md mx-auto mb-6">
+                <p className="text-sm text-green-900 font-semibold mb-3">
+                  🎉 Suas credenciais de acesso:
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-green-700">Email:</Label>
+                    <div className="bg-white border border-green-300 rounded px-3 py-2 font-mono text-sm">
+                      {creationResult.credentials?.email}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-green-700">Senha temporária:</Label>
+                    <div className="bg-white border border-green-300 rounded px-3 py-2 font-mono text-sm">
+                      {creationResult.credentials?.password}
+                    </div>
+                  </div>
+                  <p className="text-xs text-green-700 mt-2">
+                    ⚠️ Guarde essas credenciais! Você também receberá um email de confirmação.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-left max-w-md mx-auto mb-6">
+                <p className="text-sm text-indigo-900 font-semibold mb-2">
+                  Próximos passos:
+                </p>
+                <ol className="text-sm text-indigo-800 space-y-2 list-decimal list-inside">
+                  <li>Faça login no painel administrativo</li>
+                  <li>Complete a configuração da sua academia</li>
+                  <li>Cadastre seus primeiros alunos</li>
+                  <li>Explore todas as funcionalidades do sistema</li>
+                </ol>
+              </div>
+
+              <Button
+                onClick={() => setLocation("/admin/login")}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                size="lg"
+              >
+                Ir para Login
+              </Button>
+            </div>
+          );
+        }
+
+        // Trial desabilitado - mostrar PIX
+        if (creationResult?.pixPayment) {
+          return (
+            <div className="text-center py-8">
+              <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CreditCard className="w-12 h-12 text-yellow-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                Academia Cadastrada!
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Realize o pagamento via PIX para ativar sua conta
+              </p>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto mb-6">
+                <p className="text-sm text-blue-900 font-semibold mb-4">
+                  Valor a pagar: <span className="text-2xl">{creationResult.pixPayment.amountFormatted}</span>
+                </p>
+
+                {/* QR Code */}
+                {creationResult.pixPayment.qrCodeImage && (
+                  <div className="mb-4">
+                    <img
+                      src={`data:image/png;base64,${creationResult.pixPayment.qrCodeImage}`}
+                      alt="QR Code PIX"
+                      className="mx-auto border-4 border-white rounded-lg shadow-lg"
+                      style={{ maxWidth: "250px" }}
+                    />
+                  </div>
+                )}
+
+                {/* Código Copia e Cola */}
+                <div className="mt-4">
+                  <Label className="text-xs text-blue-700">Código PIX (Copia e Cola):</Label>
+                  <div className="bg-white border border-blue-300 rounded px-3 py-2 text-xs font-mono break-all mt-1">
+                    {creationResult.pixPayment.qrCode}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => {
+                      navigator.clipboard.writeText(creationResult.pixPayment.qrCode);
+                      toast.success("Código PIX copiado!");
+                    }}
+                  >
+                    Copiar Código
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left max-w-md mx-auto mb-6">
+                <p className="text-sm text-yellow-900 font-semibold mb-2">
+                  ⏱️ Após o pagamento:
+                </p>
+                <ol className="text-sm text-yellow-800 space-y-2 list-decimal list-inside">
+                  <li>Você receberá um email com as credenciais de acesso</li>
+                  <li>Sua academia será ativada automaticamente</li>
+                  <li>Poderá começar a usar o sistema imediatamente</li>
+                </ol>
+              </div>
+            </div>
+          );
+        }
+
+        // Fallback - caso padrão
         return (
           <div className="text-center py-8">
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
