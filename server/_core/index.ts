@@ -9,6 +9,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startCronJobs } from "../cron";
 import wellhubWebhookRouter from "../wellhubWebhook";
+import pixWebhookRouter from "../pixWebhookRouter";
 import { initializeAgentWebSocket } from "../agentWebSocket";
 
 async function startServer() {
@@ -23,6 +24,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Wellhub webhook endpoint
   app.use(wellhubWebhookRouter);
+  // PIX webhook endpoint
+  app.use(pixWebhookRouter);
   // tRPC API
   app.use(
     "/api/trpc",
