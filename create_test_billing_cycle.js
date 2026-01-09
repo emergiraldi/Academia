@@ -37,7 +37,7 @@ async function createTestBillingCycle() {
 
     // 2. Buscar o preço do plano enterprise
     const [planResult] = await connection.query(
-      "SELECT priceMonthly FROM saasPlans WHERE id = 'enterprise'"
+      "SELECT priceInCents FROM saasPlans WHERE slug = 'enterprise'"
     );
 
     if (planResult.length === 0) {
@@ -45,7 +45,7 @@ async function createTestBillingCycle() {
       return;
     }
 
-    const planPrice = planResult[0].priceMonthly;
+    const planPrice = planResult[0].priceInCents;
     console.log(`✅ Preço do plano: R$ ${(planPrice / 100).toFixed(2)}`);
 
     // 3. Buscar configurações de billing
