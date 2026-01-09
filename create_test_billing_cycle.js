@@ -75,14 +75,14 @@ async function createTestBillingCycle() {
 
     // 5. Verificar se já existe uma mensalidade para este mês
     const [existingResult] = await connection.query(
-      'SELECT id FROM gym_billing_cycles WHERE gymId = ? AND referenceMonth = ?',
+      'SELECT id FROM gym_billing_cycles WHERE gym_id = ? AND reference_month = ?',
       [gym.id, referenceMonth]
     );
 
     if (existingResult.length > 0) {
       console.log('\n⚠️  Já existe uma mensalidade para este mês. Deletando...');
       await connection.query(
-        'DELETE FROM gym_billing_cycles WHERE gymId = ? AND referenceMonth = ?',
+        'DELETE FROM gym_billing_cycles WHERE gym_id = ? AND reference_month = ?',
         [gym.id, referenceMonth]
       );
     }
@@ -90,7 +90,7 @@ async function createTestBillingCycle() {
     // 6. Criar a mensalidade
     const [insertResult] = await connection.query(
       `INSERT INTO gym_billing_cycles
-        (gymId, referenceMonth, dueDate, amountCents, status, createdAt)
+        (gym_id, reference_month, due_date, amount_cents, status, created_at)
        VALUES (?, ?, ?, ?, ?, NOW())`,
       [gym.id, referenceMonth, dueDate, planPrice, 'pending']
     );
