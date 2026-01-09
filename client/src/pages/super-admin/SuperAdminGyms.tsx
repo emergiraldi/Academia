@@ -70,7 +70,7 @@ export default function SuperAdminGyms() {
 
   const utils = trpc.useUtils();
   const { data: gyms, isLoading } = trpc.gyms.list.useQuery();
-  const { data: settings } = trpc.settings.get.useQuery(); // Buscar configurações para preços dinâmicos
+  const { data: saasPlans } = trpc.saasPlans.list.useQuery(); // Buscar planos dinâmicos
 
   const createMutation = trpc.gyms.create.useMutation({
     onSuccess: (data: any) => {
@@ -798,9 +798,21 @@ export default function SuperAdminGyms() {
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="basic">Básico - R$ {settings?.basicPrice || 149}/mês</SelectItem>
-                        <SelectItem value="professional">Professional - R$ {settings?.professionalPrice || 299}/mês</SelectItem>
-                        <SelectItem value="enterprise">Enterprise - R$ {settings?.enterprisePrice || 599}/mês</SelectItem>
+                        {saasPlans && saasPlans.length > 0 ? (
+                          saasPlans
+                            .sort((a, b) => a.displayOrder - b.displayOrder)
+                            .map((plan) => (
+                              <SelectItem key={plan.id} value={plan.slug}>
+                                {plan.name} - R$ {(plan.priceInCents / 100).toFixed(2).replace('.', ',')}/mês
+                              </SelectItem>
+                            ))
+                        ) : (
+                          <>
+                            <SelectItem value="basic">Básico</SelectItem>
+                            <SelectItem value="professional">Professional</SelectItem>
+                            <SelectItem value="enterprise">Enterprise</SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-gray-500 mt-1">Valor atual: {formData.plan || "basic"}</p>
