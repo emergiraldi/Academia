@@ -98,6 +98,23 @@ export const gymsRouter = router({
       // Criar a academia
       const { adminEmail, adminName, ...gymData } = input;
 
+      // 🔍 Buscar planos SaaS disponíveis para seleção dinâmica
+      const { listSaasPlans } = await import("../db");
+      const availablePlans = await listSaasPlans(false); // false = apenas ativos
+
+      if (availablePlans.length === 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Nenhum plano SaaS disponível. Configure os planos no Super Admin."
+        });
+      }
+
+      // Usar o primeiro plano ativo se não for especificado
+      const defaultPlan = availablePlans[0];
+      const planSlug = gymData.plan || defaultPlan.slug;
+
+      console.log(`📋 [CREATE GYM] Plano selecionado: ${planSlug} (disponíveis: ${availablePlans.map((p: any) => p.slug).join(', ')})`);
+
       // Gerar senha segura automática ANTES de criar a academia
       const generatePassword = () => {
         const length = 12;
@@ -133,7 +150,7 @@ export const gymsRouter = router({
         phone: gymData.phone || null,
         city: gymData.city || null,
         state: gymData.state || null,
-        plan: gymData.plan || "basic",
+        plan: planSlug,
         planStatus: gymData.planStatus || "trial",
         status: "active",
         tempAdminPassword: tempPassword,
@@ -157,7 +174,7 @@ export const gymsRouter = router({
       const { getSuperAdminSettings } = await import("../db");
       const superAdminSettings = await getSuperAdminSettings();
 
-      const plan = finalGymData.plan;
+      const plan = planSlug; // Usar o plano selecionado dinamicamente
       const now = new Date();
 
       // ⚠️ Se trial está DESABILITADO, academia começa BLOQUEADA até pagar
@@ -225,19 +242,11 @@ export const gymsRouter = router({
         console.log(`💳 [CREATE GYM] Trial desabilitado - Gerando PIX para academia ${gymId!}`);
         try {
           const { getPixServiceFromSuperAdmin } = await import("../pix");
-          const { createGymPayment, listSaasPlans } = await import("../db");
+          const { createGymPayment } = await import("../db");
 
-          console.log(`📋 [CREATE GYM] Buscando planos SaaS...`);
-          const allPlans = await listSaasPlans(false);
-          console.log(`📋 [CREATE GYM] ${allPlans.length} planos encontrados`);
-
-          const plansMap: Record<string, any> = {};
-          allPlans.forEach((p: any) => {
-            plansMap[p.slug] = p;
-          });
-
-          const selectedPlan = plansMap[plan];
-          console.log(`📋 [CREATE GYM] Plano selecionado: ${plan}, encontrado: ${!!selectedPlan}`);
+          // Encontrar o plano selecionado nos planos já carregados
+          const selectedPlan = availablePlans.find((p: any) => p.slug === plan);
+          console.log(`📋 [CREATE GYM] Plano para PIX: ${plan}, encontrado: ${!!selectedPlan}`);
 
           if (selectedPlan) {
             const amountInCents = selectedPlan.priceInCents;
@@ -389,6 +398,21 @@ export const gymsRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Este email já está cadastrado." });
       }
 
+      // 🔍 Buscar planos SaaS disponíveis para seleção dinâmica
+      const { listSaasPlans } = await import("../db");
+      const availablePlans = await listSaasPlans(false); // false = apenas ativos
+
+      if (availablePlans.length === 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Nenhum plano SaaS disponível. Entre em contato com o suporte."
+        });
+      }
+
+      // Usar o primeiro plano ativo disponível
+      const defaultPlan = availablePlans[0];
+      console.log(`📋 [SIGNUP] Usando plano: ${defaultPlan.slug} (${defaultPlan.name})`);
+
       // Preparar senha hash ANTES da transação
       const hashedPassword = await bcrypt.hash(input.adminPassword, 10);
       const openId = `gym-admin-${Date.now()}-${Math.random().toString(36).substring(7)}`;
@@ -408,7 +432,7 @@ export const gymsRouter = router({
           city: input.city || null,
           state: input.state || null,
           zipCode: input.zipCode || null,
-          plan: "basic",
+          plan: defaultPlan.slug,
           planStatus: "trial",
           status: "active",
         });
