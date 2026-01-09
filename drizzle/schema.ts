@@ -147,6 +147,8 @@ export const superAdminSettings = mysqlTable("superAdminSettings", {
   // Trial period configuration
   trialEnabled: boolean("trialEnabled").default(true).notNull(), // Se o período de teste está ativo
   trialDays: int("trialDays").default(14).notNull(), // Quantos dias de teste grátis
+  trialWarningDays: int("trialWarningDays").default(3).notNull(), // Quantos dias antes do trial acabar para enviar email de aviso
+  trialGracePeriodDays: int("trialGracePeriodDays").default(7).notNull(), // Quantos dias após trial acabar antes de bloquear
 
   // SMTP configuration for sending emails (gym credentials, etc)
   smtpHost: varchar("smtpHost", { length: 255 }), // smtp.gmail.com, smtp.office365.com, etc

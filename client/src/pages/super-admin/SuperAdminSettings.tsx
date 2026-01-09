@@ -77,6 +77,8 @@ interface PaymentSettings {
   bankAgency: string;
   trialEnabled: boolean;
   trialDays: number;
+  trialWarningDays: number;
+  trialGracePeriodDays: number;
   // SMTP settings
   smtpHost: string;
   smtpPort: number;
@@ -144,6 +146,8 @@ export default function SuperAdminSettings() {
     bankAgency: "",
     trialEnabled: true,
     trialDays: 14,
+    trialWarningDays: 3,
+    trialGracePeriodDays: 7,
     // SMTP defaults
     smtpHost: "",
     smtpPort: 587,
@@ -226,6 +230,8 @@ export default function SuperAdminSettings() {
         bankAgency: paymentData.bankAgency || "",
         trialEnabled: paymentData.trialEnabled ?? true,
         trialDays: paymentData.trialDays || 14,
+        trialWarningDays: paymentData.trialWarningDays || 3,
+        trialGracePeriodDays: paymentData.trialGracePeriodDays || 7,
         // SMTP settings
         smtpHost: paymentData.smtpHost || "",
         smtpPort: paymentData.smtpPort || 587,
@@ -912,20 +918,54 @@ MIIxxxxxxxxxxxxxxx...
                 </div>
 
                 {paymentSettings.trialEnabled && (
-                  <div>
-                    <Label htmlFor="trialDays">Duração do teste (dias)</Label>
-                    <Input
-                      id="trialDays"
-                      type="number"
-                      min="1"
-                      max="90"
-                      value={paymentSettings.trialDays}
-                      onChange={(e) => setPaymentSettings({ ...paymentSettings, trialDays: parseInt(e.target.value) || 14 })}
-                      className="max-w-xs"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Academias terão acesso completo por {paymentSettings.trialDays} dias antes da primeira cobrança
-                    </p>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="trialDays">Duração do teste (dias)</Label>
+                      <Input
+                        id="trialDays"
+                        type="number"
+                        min="1"
+                        max="90"
+                        value={paymentSettings.trialDays}
+                        onChange={(e) => setPaymentSettings({ ...paymentSettings, trialDays: parseInt(e.target.value) || 14 })}
+                        className="max-w-xs"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Academias terão acesso completo por {paymentSettings.trialDays} dias antes da primeira cobrança
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="trialWarningDays">Aviso antes do fim do trial (dias)</Label>
+                      <Input
+                        id="trialWarningDays"
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={paymentSettings.trialWarningDays}
+                        onChange={(e) => setPaymentSettings({ ...paymentSettings, trialWarningDays: parseInt(e.target.value) || 3 })}
+                        className="max-w-xs"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Email de aviso será enviado {paymentSettings.trialWarningDays} dias ANTES do trial acabar
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="trialGracePeriodDays">Carência após trial (dias)</Label>
+                      <Input
+                        id="trialGracePeriodDays"
+                        type="number"
+                        min="0"
+                        max="30"
+                        value={paymentSettings.trialGracePeriodDays}
+                        onChange={(e) => setPaymentSettings({ ...paymentSettings, trialGracePeriodDays: parseInt(e.target.value) || 7 })}
+                        className="max-w-xs"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Academia será bloqueada {paymentSettings.trialGracePeriodDays} dias DEPOIS do trial acabar se não houver pagamento
+                      </p>
+                    </div>
                   </div>
                 )}
 

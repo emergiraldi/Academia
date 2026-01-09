@@ -720,3 +720,203 @@ export async function syncAccessLogsFromControlId() {
     console.error("[CRON] ❌ Error in access logs sync:", error);
   }
 }
+
+/**
+ * Check trial expirations and send warnings/block gyms
+ * Runs daily to:
+ * 1. Send warning emails X days before trial ends
+ * 2. Send expiration emails when trial ends
+ * 3. Block gyms after grace period if no payment
+ */
+export async function checkTrialExpirations() {
+  try {
+    console.log("[CRON] 🔍 Checking trial expirations...");
+
+    // Get Super Admin settings for trial configuration
+    const db = await getDb();
+    if (!db) {
+      console.error("[CRON] ❌ Database not available");
+      return;
+    }
+
+    const { getSuperAdminSettings } = await import("./db");
+    const settings = await getSuperAdminSettings();
+
+    if (!settings || !settings.trialEnabled) {
+      console.log("[CRON] ⏭️  Trial period disabled, skipping check");
+      return;
+    }
+
+    const trialWarningDays = settings.trialWarningDays || 3;
+    const trialGracePeriodDays = settings.trialGracePeriodDays || 7;
+
+    console.log(`[CRON] Configuration:`);
+    console.log(`  - Warning days before expiry: ${trialWarningDays}`);
+    console.log(`  - Grace period after expiry: ${trialGracePeriodDays}`);
+
+    // Import email functions
+    const { sendTrialWarningEmail, sendTrialExpiredEmail } = await import("./email");
+    const { gyms } = await import("../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+
+    // Get all gyms in trial
+    const gymsInTrial = await db.select().from(gyms).where(eq(gyms.planStatus, "trial"));
+
+    if (gymsInTrial.length === 0) {
+      console.log("[CRON] ℹ️  No gyms in trial period");
+      return;
+    }
+
+    console.log(`[CRON] Found ${gymsInTrial.length} gym(s) in trial`);
+
+    const now = new Date();
+
+    for (const gym of gymsInTrial) {
+      try {
+        if (!gym.trialEndsAt) {
+          console.log(`[CRON] ⚠️  Gym ${gym.id} (${gym.name}) has no trial end date, skipping`);
+          continue;
+        }
+
+        const trialEndDate = new Date(gym.trialEndsAt);
+        const daysUntilExpiry = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        console.log(`[CRON] Gym ${gym.id} (${gym.name}):`);
+        console.log(`  - Trial ends: ${trialEndDate.toLocaleDateString('pt-BR')}`);
+        console.log(`  - Days until expiry: ${daysUntilExpiry}`);
+
+        // Case 1: Trial expires soon - send warning email
+        if (daysUntilExpiry > 0 && daysUntilExpiry <= trialWarningDays) {
+          console.log(`[CRON] ⚠️  Trial expiring soon for gym ${gym.id}, sending warning email`);
+
+          const adminEmail = gym.tempAdminEmail || gym.email;
+          try {
+            await sendTrialWarningEmail(adminEmail, gym.name, gym.slug, daysUntilExpiry);
+            console.log(`[CRON] ✅ Warning email sent to ${adminEmail}`);
+          } catch (emailError) {
+            console.error(`[CRON] ❌ Failed to send warning email:`, emailError);
+          }
+        }
+
+        // Case 2: Trial just expired - send expiration email
+        else if (daysUntilExpiry === 0 || (daysUntilExpiry < 0 && daysUntilExpiry >= -trialGracePeriodDays)) {
+          const daysSinceExpiry = Math.abs(Math.min(daysUntilExpiry, 0));
+          console.log(`[CRON] ⌛ Trial expired for gym ${gym.id} (${daysSinceExpiry} days ago)`);
+
+          // Generate PIX payment for the gym if not already generated
+          // Check if there's already a pending payment for this month
+          const { getGymPaymentByReferenceMonth } = await import("./db");
+          const now = new Date();
+          const referenceMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+          const existingPayment = await getGymPaymentByReferenceMonth(gym.id, referenceMonth);
+
+          let pixQrCode: string | undefined;
+          let pixCopyPaste: string | undefined;
+
+          if (!existingPayment || existingPayment.status === 'cancelled') {
+            console.log(`[CRON] 💳 Generating PIX payment for gym ${gym.id}`);
+            try {
+              // Generate PIX payment automatically
+              const { getPixServiceFromSuperAdmin } = await import("./pix");
+              const { createGymPayment, listSaasPlans } = await import("./db");
+
+              const allPlans = await listSaasPlans(false);
+              const plansMap: Record<string, any> = {};
+              allPlans.forEach((p: any) => {
+                plansMap[p.slug] = p;
+              });
+
+              const selectedPlan = plansMap[gym.plan];
+              if (selectedPlan) {
+                const amountInCents = selectedPlan.priceInCents;
+                const dueDate = new Date();
+                dueDate.setDate(dueDate.getDate() + 10); // 10 days to pay
+
+                const pixService = await getPixServiceFromSuperAdmin();
+                const pixCharge = await pixService.createImmediateCharge({
+                  valor: amountInCents,
+                  pagador: {
+                    cpf: gym.cnpj?.replace(/\D/g, "") || "00000000000",
+                    nome: gym.name,
+                  },
+                  infoAdicionais: `Assinatura ${selectedPlan.name} - ${gym.name}`,
+                  expiracao: 86400 * 10, // 10 days
+                });
+
+                // Save payment
+                await createGymPayment({
+                  gymId: gym.id,
+                  amountInCents,
+                  status: "pending",
+                  paymentMethod: "pix",
+                  pixTxId: pixCharge.txid,
+                  pixQrCode: pixCharge.pixCopiaECola,
+                  pixQrCodeImage: pixCharge.qrcode,
+                  pixCopyPaste: pixCharge.pixCopiaECola,
+                  description: `Assinatura ${selectedPlan.name} - ${referenceMonth}`,
+                  referenceMonth,
+                  dueDate,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                });
+
+                pixQrCode = pixCharge.qrcode;
+                pixCopyPaste = pixCharge.pixCopiaECola;
+
+                console.log(`[CRON] ✅ PIX payment generated for gym ${gym.id}`);
+              }
+            } catch (pixError) {
+              console.error(`[CRON] ❌ Failed to generate PIX:`, pixError);
+            }
+          } else if (existingPayment.status === 'pending') {
+            console.log(`[CRON] ℹ️  PIX payment already exists for gym ${gym.id}`);
+            pixQrCode = existingPayment.pixQrCodeImage || undefined;
+            pixCopyPaste = existingPayment.pixCopyPaste || undefined;
+          }
+
+          // Send expiration email
+          const adminEmail = gym.tempAdminEmail || gym.email;
+          try {
+            await sendTrialExpiredEmail(
+              adminEmail,
+              gym.name,
+              gym.slug,
+              trialGracePeriodDays,
+              pixQrCode,
+              pixCopyPaste
+            );
+            console.log(`[CRON] ✅ Expiration email sent to ${adminEmail}`);
+          } catch (emailError) {
+            console.error(`[CRON] ❌ Failed to send expiration email:`, emailError);
+          }
+        }
+
+        // Case 3: Trial expired beyond grace period - block gym
+        else if (daysUntilExpiry < -trialGracePeriodDays) {
+          console.log(`[CRON] 🚫 Grace period expired for gym ${gym.id}, blocking access`);
+
+          try {
+            await db.update(gyms).set({
+              status: "suspended",
+              planStatus: "suspended",
+              blockedReason: "Período de teste expirado. Realize o pagamento para reativar o acesso.",
+            }).where(eq(gyms.id, gym.id));
+
+            console.log(`[CRON] ✅ Gym ${gym.id} blocked successfully`);
+          } catch (blockError) {
+            console.error(`[CRON] ❌ Failed to block gym ${gym.id}:`, blockError);
+          }
+        }
+
+      } catch (gymError) {
+        console.error(`[CRON] ❌ Error processing gym ${gym.id}:`, gymError);
+      }
+    }
+
+    console.log("[CRON] ✅ Trial expiration check completed");
+
+  } catch (error) {
+    console.error("[CRON] ❌ Error in trial expiration check:", error);
+  }
+}

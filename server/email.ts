@@ -728,3 +728,196 @@ export async function sendGymAdminCredentials(
     html,
   });
 }
+
+/**
+ * Enviar email de aviso de trial expirando
+ */
+export async function sendTrialWarningEmail(
+  email: string,
+  gymName: string,
+  gymSlug: string,
+  daysRemaining: number
+): Promise<boolean> {
+  const loginUrl = `https://www.sysfitpro.com.br/admin/login?gym=${gymSlug}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Seu trial está acabando!</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); padding: 40px 20px; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px;">⏰ Seu Trial Está Acabando!</h1>
+                  <p style="color: #fef3c7; margin: 0; font-size: 16px;">Aproveite para garantir seu acesso</p>
+                </td>
+              </tr>
+
+              <!-- Mensagem -->
+              <tr>
+                <td style="padding: 40px 30px;">
+                  <h2 style="color: #333; margin: 0 0 20px 0; font-size: 24px;">Olá, ${gymName}! 👋</h2>
+                  <p style="margin: 0 0 20px 0; font-size: 16px; color: #666; line-height: 1.6;">
+                    Seu período de teste grátis acaba em <strong style="color: #ef4444;">${daysRemaining} dia${daysRemaining > 1 ? 's' : ''}</strong>!
+                  </p>
+                  <p style="margin: 0 0 20px 0; font-size: 16px; color: #666; line-height: 1.6;">
+                    Para continuar usando o SysFit Pro sem interrupções, faça o pagamento da sua assinatura através do sistema.
+                  </p>
+
+                  <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 14px; color: #92400e;">
+                      <strong>⚠️ Importante:</strong> Após o vencimento do trial, você terá alguns dias de carência para realizar o pagamento. Caso não seja efetuado, o acesso ao sistema será bloqueado temporariamente.
+                    </p>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Botão -->
+              <tr>
+                <td style="padding: 0 30px 30px 30px; text-align: center;">
+                  <a href="${loginUrl}"
+                     style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 8px; font-size: 18px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">
+                    💳 Acessar e Realizar Pagamento
+                  </a>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
+                  <p style="margin: 0; font-size: 12px; color: #6c757d;">
+                    © 2026 SysFit Pro - Sistema completo de gestão para academias
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return await sendEmailFromSuperAdmin({
+    to: email,
+    subject: `⏰ ${gymName} - Seu Trial Acaba em ${daysRemaining} Dia${daysRemaining > 1 ? 's' : ''}!`,
+    html,
+  });
+}
+
+/**
+ * Enviar email de trial expirado com instruções de pagamento
+ */
+export async function sendTrialExpiredEmail(
+  email: string,
+  gymName: string,
+  gymSlug: string,
+  gracePeriodDays: number,
+  pixQrCode?: string,
+  pixCopyPaste?: string
+): Promise<boolean> {
+  const loginUrl = `https://www.sysfitpro.com.br/admin/login?gym=${gymSlug}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Seu trial expirou</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 40px 20px; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px;">⌛ Seu Trial Expirou</h1>
+                  <p style="color: #fecaca; margin: 0; font-size: 16px;">Faça o pagamento para continuar usando</p>
+                </td>
+              </tr>
+
+              <!-- Mensagem -->
+              <tr>
+                <td style="padding: 40px 30px;">
+                  <h2 style="color: #333; margin: 0 0 20px 0; font-size: 24px;">Olá, ${gymName}! 👋</h2>
+                  <p style="margin: 0 0 20px 0; font-size: 16px; color: #666; line-height: 1.6;">
+                    Seu período de teste grátis expirou. Para continuar usando o SysFit Pro, realize o pagamento da sua assinatura.
+                  </p>
+
+                  <div style="background-color: #fee2e2; border-left: 4px solid #ef4444; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #991b1b;">
+                      <strong>⚠️ Atenção:</strong> Você tem <strong>${gracePeriodDays} dias</strong> de carência para realizar o pagamento.
+                    </p>
+                    <p style="margin: 0; font-size: 14px; color: #991b1b;">
+                      Após esse período, o acesso ao sistema será bloqueado até a regularização.
+                    </p>
+                  </div>
+
+                  ${pixCopyPaste ? `
+                  <div style="background-color: #f0f9ff; border: 2px solid #0284c7; padding: 20px; margin: 20px 0; border-radius: 8px;">
+                    <h3 style="margin: 0 0 15px 0; color: #0369a1; font-size: 18px;">💳 Pagamento via PIX</h3>
+
+                    ${pixQrCode ? `
+                    <div style="text-align: center; margin: 20px 0;">
+                      <img src="${pixQrCode}" alt="QR Code PIX" style="max-width: 200px; border: 2px solid #0284c7; border-radius: 8px;" />
+                    </div>
+                    ` : ''}
+
+                    <p style="margin: 10px 0; font-size: 14px; color: #0369a1;">
+                      <strong>Código Pix Copia e Cola:</strong>
+                    </p>
+                    <div style="background-color: #ffffff; padding: 15px; border-radius: 4px; border: 1px solid #bae6fd; word-break: break-all; font-family: monospace; font-size: 12px; color: #0369a1;">
+                      ${pixCopyPaste}
+                    </div>
+                  </div>
+                  ` : ''}
+                </td>
+              </tr>
+
+              <!-- Botão -->
+              <tr>
+                <td style="padding: 0 30px 30px 30px; text-align: center;">
+                  <a href="${loginUrl}"
+                     style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 8px; font-size: 18px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">
+                    💳 Acessar Sistema e Pagar
+                  </a>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
+                  <p style="margin: 0; font-size: 12px; color: #6c757d;">
+                    © 2026 SysFit Pro - Sistema completo de gestão para academias
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return await sendEmailFromSuperAdmin({
+    to: email,
+    subject: `⌛ ${gymName} - Seu Trial Expirou - Faça o Pagamento`,
+    html,
+  });
+}

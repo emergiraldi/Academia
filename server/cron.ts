@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { sendDailyPaymentReminders, sendDailyMedicalExamReminders, checkAndBlockDefaulters, syncAccessLogsFromControlId } from "./notifications";
+import { sendDailyPaymentReminders, sendDailyMedicalExamReminders, checkAndBlockDefaulters, syncAccessLogsFromControlId, checkTrialExpirations } from "./notifications";
 
 /**
  * Cron job scheduler for automated notifications
@@ -48,8 +48,19 @@ export function startCronJobs() {
     }
   });
 
+  // Run daily at 8:00 AM - Check trial expirations and send warnings
+  cron.schedule("0 8 * * *", async () => {
+    console.log("Running trial expiration check job...");
+    try {
+      await checkTrialExpirations();
+    } catch (error) {
+      console.error("Error in trial expiration check cron job:", error);
+    }
+  });
+
   console.log("✅ Cron jobs started successfully");
   console.log("  - Defaulter blocking: Daily at 6:00 AM");
+  console.log("  - Trial expiration check: Daily at 8:00 AM");
   console.log("  - Payment reminders: Daily at 9:00 AM");
   console.log("  - Medical exam reminders: Daily at 10:00 AM");
   console.log("  - Access logs sync: Every 30 seconds");

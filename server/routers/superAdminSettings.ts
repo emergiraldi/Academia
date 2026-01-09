@@ -46,6 +46,8 @@ export const superAdminSettingsRouter = router({
         bankAgency: z.string().optional(),
         trialEnabled: z.boolean().optional(),
         trialDays: z.number().optional(),
+        trialWarningDays: z.number().optional(),
+        trialGracePeriodDays: z.number().optional(),
         // SMTP settings
         smtpHost: z.string().optional(),
         smtpPort: z.number().optional(),
