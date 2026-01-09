@@ -17,9 +17,9 @@ send "git pull origin main\r"
 expect "$ "
 send "echo ''\r"
 expect "$ "
-send "echo '💾 2. Copiando credenciais PIX da Academia FitLife para Super Admin...'\r"
+send "echo '📦 2. Copiando credenciais PIX da Academia FitLife para Super Admin...'\r"
 expect "$ "
-send "node copy_pix_to_super_admin.js\r"
+send "node copy_gym_pix_to_super_admin.js\r"
 expect "$ "
 send "echo ''\r"
 expect "$ "
@@ -83,7 +83,7 @@ try {
     Write-Host "Depois execute:" -ForegroundColor Cyan
     Write-Host "cd /var/www/academia" -ForegroundColor White
     Write-Host "git pull origin main" -ForegroundColor White
-    Write-Host "node copy_pix_to_super_admin.js" -ForegroundColor White
+    Write-Host "node copy_gym_pix_to_super_admin.js" -ForegroundColor White
     Write-Host "npm run build" -ForegroundColor White
     Write-Host "pm2 restart academia-api" -ForegroundColor White
     Write-Host "pm2 logs academia-api --lines 20 --nostream" -ForegroundColor White

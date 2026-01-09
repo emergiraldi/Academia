@@ -99,6 +99,10 @@ Email: suporte@sysfitpro.com.br
 Docs: C:\Projeto\Academia\docs\
 
 
+
+node agent.js --gym-id=1 --server=wss://www.sysfitpro.com.br:8080
+
+
 ===============================================
 Última atualização: Janeiro 2025
 ===============================================
