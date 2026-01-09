@@ -11,7 +11,6 @@ import { toast } from "sonner";
 interface FormData {
   // Gym data
   gymName: string;
-  gymSlug: string;
   contactEmail: string;
   contactPhone: string;
   city: string;
@@ -32,7 +31,6 @@ export default function Signup() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     gymName: "",
-    gymSlug: "",
     contactEmail: "",
     contactPhone: "",
     city: "",
@@ -68,7 +66,7 @@ export default function Signup() {
 
   const handleNext = () => {
     if (step === 1) {
-      if (!formData.gymName || !formData.gymSlug || !formData.contactEmail) {
+      if (!formData.gymName || !formData.contactEmail) {
         toast.error("Preencha todos os campos obrigatórios");
         return;
       }
@@ -88,8 +86,8 @@ export default function Signup() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
 
-    // Generate slug from name if empty
-    const slug = formData.gymSlug || formData.gymName.toLowerCase()
+    // Generate slug automatically from gym name
+    const slug = formData.gymName.toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]/g, "-")
@@ -121,22 +119,6 @@ export default function Signup() {
                 value={formData.gymName}
                 onChange={(e) => setFormData({ ...formData, gymName: e.target.value })}
               />
-            </div>
-            <div>
-              <Label htmlFor="gymSlug">URL Personalizada *</Label>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">app.sysfit.com.br/</span>
-                <Input
-                  id="gymSlug"
-                  placeholder="minhaacademia"
-                  value={formData.gymSlug}
-                  onChange={(e) => setFormData({ ...formData, gymSlug: e.target.value.toLowerCase() })}
-                  className="flex-1"
-                />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Esta será a URL de acesso dos seus alunos
-              </p>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
