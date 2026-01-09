@@ -1,6 +1,7 @@
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
+import * as schema from "../drizzle/schema";
 import {
   gyms, InsertGym,
   gymPayments, InsertGymPayment,
@@ -27,6 +28,7 @@ import {
   pixWebhooks, InsertPixWebhook,
   passwordResetTokens, InsertPasswordResetToken,
   bankAccounts, InsertBankAccount,
+  landingPageScreenshots, InsertLandingPageScreenshot,
 } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
