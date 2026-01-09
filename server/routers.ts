@@ -247,25 +247,14 @@ export const appRouter = router({
           const expirationDate = new Date();
           expirationDate.setDate(expirationDate.getDate() + 3); // 3 days to pay
 
-          const pixCharge = await pixService.createCharge({
-            valor: (billingCycle.amountCents / 100).toFixed(2),
-            calendario: {
-              expiracao: 259200, // 3 days in seconds
-            },
-            devedor: {
+          const pixCharge = await pixService.createImmediateCharge({
+            valor: billingCycle.amountCents, // Already in cents
+            pagador: {
+              documento: gym.cnpj?.replace(/\D/g, '') || '00000000000',
               nome: gym.name,
-              cpf: gym.cnpj?.replace(/\D/g, '') || undefined,
             },
-            infoAdicionais: [
-              {
-                nome: "Mensalidade",
-                valor: billingCycle.referenceMonth,
-              },
-              {
-                nome: "Academia",
-                valor: gym.name,
-              },
-            ],
+            infoAdicionais: `Mensalidade ${billingCycle.referenceMonth} - ${gym.name}`,
+            expiracao: 259200, // 3 days in seconds
           });
 
           // Update gym payment with PIX info
