@@ -74,13 +74,14 @@ async function copyPixCredentials() {
     const mappedPixKeyType = pixKeyTypeMap[account.pix_tipo_chave] || 'random';
     console.log(`🔄 Mapeando tipo de chave: "${account.pix_tipo_chave}" → "${mappedPixKeyType}"\n`);
 
-    // Copiar credenciais PIX para Super Admin
+    // Copiar credenciais PIX para Super Admin (incluindo chave privada para mTLS)
     console.log('📋 Copiando credenciais PIX para Super Admin...');
     await connection.query(`
       UPDATE superAdminSettings SET
         pixClientId = ?,
         pixClientSecret = ?,
         pixCertificate = ?,
+        pixPrivateKey = ?,
         pixKey = ?,
         pixKeyType = ?,
         pixApiUrl = ?,
@@ -90,6 +91,7 @@ async function copyPixCredentials() {
       account.pix_client_id,
       account.pix_client_secret,
       account.pix_certificado,
+      account.pix_chave_privada,
       account.pix_chave,
       mappedPixKeyType,
       account.pix_url_base || 'https://api.sicoob.com.br/pix/api/v2',
