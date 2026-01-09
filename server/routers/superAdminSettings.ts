@@ -44,6 +44,8 @@ export const superAdminSettingsRouter = router({
         bankName: z.string().optional(),
         bankAccount: z.string().optional(),
         bankAgency: z.string().optional(),
+        trialEnabled: z.boolean().optional(),
+        trialDays: z.number().optional(),
       })
     )
     .mutation(async ({ input }) => {

@@ -75,6 +75,8 @@ interface PaymentSettings {
   bankName: string;
   bankAccount: string;
   bankAgency: string;
+  trialEnabled: boolean;
+  trialDays: number;
 }
 
 export default function SuperAdminSettings() {
@@ -131,6 +133,8 @@ export default function SuperAdminSettings() {
     bankName: "",
     bankAccount: "",
     bankAgency: "",
+    trialEnabled: true,
+    trialDays: 14,
   });
 
   const { data: settingsData, isLoading } = trpc.settings.get.useQuery();
@@ -854,6 +858,55 @@ MIIxxxxxxxxxxxxxxx...
                     />
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações de Período de Teste</CardTitle>
+                <p className="text-sm text-gray-600">
+                  Configure o período de teste grátis para novas academias
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="trialEnabled"
+                    checked={paymentSettings.trialEnabled}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, trialEnabled: e.target.checked })}
+                    className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <Label htmlFor="trialEnabled" className="text-base font-semibold cursor-pointer">
+                    Habilitar período de teste grátis
+                  </Label>
+                </div>
+
+                {paymentSettings.trialEnabled && (
+                  <div>
+                    <Label htmlFor="trialDays">Duração do teste (dias)</Label>
+                    <Input
+                      id="trialDays"
+                      type="number"
+                      min="1"
+                      max="90"
+                      value={paymentSettings.trialDays}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, trialDays: parseInt(e.target.value) || 14 })}
+                      className="max-w-xs"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Academias terão acesso completo por {paymentSettings.trialDays} dias antes da primeira cobrança
+                    </p>
+                  </div>
+                )}
+
+                {!paymentSettings.trialEnabled && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Atenção:</strong> Sem período de teste, novas academias precisarão pagar imediatamente para ativar o sistema.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

@@ -144,6 +144,10 @@ export const superAdminSettings = mysqlTable("superAdminSettings", {
   bankAccount: varchar("bankAccount", { length: 50 }),
   bankAgency: varchar("bankAgency", { length: 20 }),
 
+  // Trial period configuration
+  trialEnabled: boolean("trialEnabled").default(true).notNull(), // Se o período de teste está ativo
+  trialDays: int("trialDays").default(14).notNull(), // Quantos dias de teste grátis
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
