@@ -47,6 +47,7 @@ import SuperAdminGyms from "./pages/super-admin/SuperAdminGyms";
 import SuperAdminPlans from "./pages/super-admin/SuperAdminPlans";
 import SuperAdminUsers from "./pages/super-admin/SuperAdminUsers";
 import SuperAdminSettings from "./pages/super-admin/SuperAdminSettings";
+import SuperAdminReports from "./pages/super-admin/SuperAdminReports";
 import LandingPage from "./pages/LandingPage";
 import Pricing from "./pages/Pricing";
 import Signup from "./pages/Signup";
@@ -88,6 +89,7 @@ function Router() {
       <Route path={"/super-admin/gyms"} component={SuperAdminGyms} />
       <Route path={"/super-admin/plans"} component={SuperAdminPlans} />
       <Route path={"/super-admin/users"} component={SuperAdminUsers} />
+      <Route path={"/super-admin/reports"} component={SuperAdminReports} />
       <Route path={"/super-admin/settings"} component={SuperAdminSettings} />
 
       {/* Admin Routes (direct access only) */}

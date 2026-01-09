@@ -14,6 +14,7 @@ import {
   Dumbbell,
   Users,
   Package,
+  FileText,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -22,6 +23,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/super-admin/dashboard" },
   { icon: Building2, label: "Academias", path: "/super-admin/gyms" },
   { icon: Package, label: "Planos SaaS", path: "/super-admin/plans" },
+  { icon: FileText, label: "Relatórios", path: "/super-admin/reports" },
   { icon: Users, label: "Usuários", path: "/super-admin/users" },
   { icon: Settings, label: "Configurações", path: "/super-admin/settings" },
 ];
