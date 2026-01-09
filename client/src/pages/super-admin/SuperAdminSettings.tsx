@@ -261,14 +261,18 @@ export default function SuperAdminSettings() {
         smtpFromName: paymentData.smtpFromName || "SysFit Pro",
         smtpUseTls: paymentData.smtpUseTls ?? true,
         smtpUseSsl: paymentData.smtpUseSsl ?? false,
-        // Billing settings
-        billingEnabled: paymentData.billingEnabled ?? true,
-        billingDueDay: paymentData.billingDueDay || 10,
+        // Billing settings - converter tipos do banco para frontend
+        billingEnabled: paymentData.billingEnabled === 'Y' || paymentData.billingEnabled === true,
+        billingDueDay: paymentData.billingDueDay || 15,
         billingAdvanceDays: paymentData.billingAdvanceDays || 10,
         billingGracePeriodDays: paymentData.billingGracePeriodDays || 5,
-        billingLateFeePercentage: paymentData.billingLateFeePercentage || 2.0,
+        billingLateFeePercentage: typeof paymentData.billingLateFeePercentage === 'string'
+          ? parseFloat(paymentData.billingLateFeePercentage)
+          : (paymentData.billingLateFeePercentage || 2.0),
         billingLateFeeFixedCents: paymentData.billingLateFeeFixedCents || 0,
-        billingInterestRatePerDay: paymentData.billingInterestRatePerDay || 0.03,
+        billingInterestRatePerDay: typeof paymentData.billingInterestRatePerDay === 'string'
+          ? parseFloat(paymentData.billingInterestRatePerDay)
+          : (paymentData.billingInterestRatePerDay || 0.03),
         billingLateFeeType: paymentData.billingLateFeeType || "percentage",
       });
     }
@@ -302,12 +306,26 @@ export default function SuperAdminSettings() {
   };
 
   const handleSavePayments = async () => {
-    // Converter strings vazias em undefined para não sobrescrever valores existentes
+    // Converter strings vazias em undefined e tipos para corresponder ao banco
     const cleanedSettings = Object.fromEntries(
-      Object.entries(paymentSettings).map(([key, value]) => [
-        key,
-        typeof value === 'string' && value === '' ? undefined : value
-      ])
+      Object.entries(paymentSettings).map(([key, value]) => {
+        // Converter strings vazias em undefined
+        if (typeof value === 'string' && value === '') {
+          return [key, undefined];
+        }
+
+        // Converter boolean para "Y"/"N" para billingEnabled
+        if (key === 'billingEnabled' && typeof value === 'boolean') {
+          return [key, value ? 'Y' : 'N'];
+        }
+
+        // Converter number para string para percentuais
+        if ((key === 'billingLateFeePercentage' || key === 'billingInterestRatePerDay') && typeof value === 'number') {
+          return [key, value.toString()];
+        }
+
+        return [key, value];
+      })
     ) as PaymentSettings;
 
     updatePaymentMutation.mutate(cleanedSettings);
