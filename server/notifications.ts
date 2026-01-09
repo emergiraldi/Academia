@@ -954,13 +954,13 @@ export async function pollGymPixPayments() {
 
         console.log(`[CRON] Checking payment ${payment.id} (TxID: ${payment.pixTxId})...`);
 
-        // Check payment status with Efí Pay
-        const charge = await pixService.getChargeDetails(payment.pixTxId);
+        // Check payment status with Efí Pay/Sicoob
+        const paymentStatus = await pixService.checkPaymentStatus(payment.pixTxId);
 
-        console.log(`[CRON] Payment ${payment.id} status: ${charge.status}`);
+        console.log(`[CRON] Payment ${payment.id} status: ${paymentStatus.status}`);
 
         // If payment is confirmed, process it via webhook function
-        if (charge.status === "CONCLUIDA" || charge.status === "ATIVA") {
+        if (paymentStatus.status === "CONCLUIDA") {
           console.log(`[CRON] ✅ Payment ${payment.id} is confirmed! Processing...`);
 
           const { processPixWebhook } = await import("./pixWebhook");
@@ -969,9 +969,9 @@ export async function pollGymPixPayments() {
           const webhookPayload = {
             pix: [{
               txid: payment.pixTxId,
-              endToEndId: charge.endToEndId || `E${Date.now()}`,
+              endToEndId: `E${Date.now()}`,
               valor: (payment.amountInCents / 100).toFixed(2),
-              horario: charge.paidAt || new Date().toISOString()
+              horario: paymentStatus.paidAt?.toISOString() || new Date().toISOString()
             }]
           };
 
