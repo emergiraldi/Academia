@@ -23,36 +23,74 @@ async function copyGymPixToSuperAdmin() {
   try {
     console.log('📋 Copiando dados PIX da academia para o Super Admin...\n');
 
-    // Buscar conta bancária da primeira academia (onde estão os dados PIX completos)
-    const [bankAccounts] = await connection.query(`
-      SELECT
-        ba.id,
-        ba.gymId,
-        ba.titularNome,
-        ba.banco,
-        ba.agenciaNumero,
-        ba.contaNumero,
-        ba.contaDv,
-        ba.pixChave,
-        ba.pixTipoChave,
-        ba.pixClientId,
-        ba.pixClientSecret,
-        ba.pixCertificado,
-        ba.pixChavePrivada,
-        ba.pixUrlBase,
-        ba.pixUrlToken,
-        g.name as gymName
-      FROM bankAccounts ba
-      INNER JOIN gyms g ON ba.gymId = g.id
-      WHERE ba.pixChave IS NOT NULL
-      ORDER BY ba.id ASC
-      LIMIT 1
-    `);
+    // Tentar buscar de bankAccounts primeiro (se existir)
+    let bankAccounts = [];
+    try {
+      [bankAccounts] = await connection.query(`
+        SELECT
+          ba.id,
+          ba.gymId,
+          ba.titularNome,
+          ba.banco,
+          ba.agenciaNumero,
+          ba.contaNumero,
+          ba.contaDv,
+          ba.pixChave,
+          ba.pixTipoChave,
+          ba.pixClientId,
+          ba.pixClientSecret,
+          ba.pixCertificado,
+          ba.pixChavePrivada,
+          ba.pixUrlBase,
+          ba.pixUrlToken,
+          g.name as gymName
+        FROM bankAccounts ba
+        INNER JOIN gyms g ON ba.gymId = g.id
+        WHERE ba.pixChave IS NOT NULL
+        ORDER BY ba.id ASC
+        LIMIT 1
+      `);
+    } catch (err) {
+      if (err.code !== 'ER_NO_SUCH_TABLE') throw err;
+      console.log('ℹ️  Tabela bankAccounts não existe. Buscando dados da tabela gyms...\n');
+    }
 
+    // Se não encontrou em bankAccounts, buscar da tabela gyms
     if (bankAccounts.length === 0) {
-      console.log('⚠️  Nenhuma conta bancária com PIX configurado encontrada.');
-      console.log('💡 Configure os dados PIX em Admin > Configurações > Contas Bancárias primeiro.\n');
-      return;
+      const [gyms] = await connection.query(`
+        SELECT
+          id as gymId,
+          name as gymName,
+          pixClientId,
+          pixClientSecret,
+          pixCertificate as pixCertificado,
+          pixKey as pixChave,
+          pixKeyType as pixTipoChave,
+          merchantName as titularNome,
+          merchantCity,
+          null as pixChavePrivada,
+          null as pixUrlBase,
+          null as pixUrlToken,
+          null as banco,
+          null as agenciaNumero,
+          null as contaNumero,
+          null as contaDv
+        FROM gyms
+        WHERE pixKey IS NOT NULL
+        ORDER BY id ASC
+        LIMIT 1
+      `);
+
+      if (gyms.length === 0) {
+        console.log('⚠️  Nenhuma academia com PIX configurado encontrada.');
+        console.log('💡 Configure os dados PIX em Admin > Configurações primeiro.\n');
+        return;
+      }
+
+      bankAccounts = gyms;
+      console.log('✅ Usando dados PIX da tabela gyms (dados básicos)');
+    } else {
+      console.log('✅ Usando dados PIX da tabela bankAccounts (dados completos)');
     }
 
     const bankData = bankAccounts[0];
