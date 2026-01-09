@@ -383,3 +383,49 @@ export async function getPixServiceFromBankAccount(gymId: number): Promise<PixSe
 
   return new PixService(credentials, sandbox);
 }
+
+/**
+ * Create PIX service instance from Super Admin configuration
+ * Used for gym subscription payments (not student payments)
+ */
+export async function getPixServiceFromSuperAdmin(): Promise<PixService> {
+  const db = await import("./db");
+
+  console.log("🔍 [PIX] Buscando configuração PIX do Super Admin...");
+  const settings = await db.getSuperAdminSettings();
+
+  if (!settings) {
+    throw new Error("Configurações do Super Admin não encontradas");
+  }
+
+  if (!settings.pixClientId || !settings.pixKey) {
+    throw new Error("Credenciais PIX do Super Admin não configuradas. Configure em Configurações > Pagamentos PIX");
+  }
+
+  console.log("✅ [PIX] Configuração do Super Admin encontrada:");
+  console.log("  - Provedor:", settings.pixProvider || "sicoob");
+  console.log("  - Client ID:", settings.pixClientId ? "***" + settings.pixClientId.slice(-4) : "VAZIO");
+  console.log("  - Client Secret:", settings.pixClientSecret ? "***" + settings.pixClientSecret.slice(-4) : "VAZIO");
+  console.log("  - PIX Chave:", settings.pixKey || "VAZIO");
+  console.log("  - URL Base:", settings.pixApiUrl || "VAZIO");
+  console.log("  - URL Token:", settings.pixTokenUrl || "VAZIO");
+  console.log("  - Certificado:", settings.pixCertificate ? `${settings.pixCertificate.length} bytes` : "VAZIO");
+  console.log("  - Chave Privada:", settings.pixPrivateKey ? `${settings.pixPrivateKey.length} bytes` : "VAZIO");
+
+  const credentials: PixCredentials = {
+    clientId: settings.pixClientId,
+    clientSecret: settings.pixClientSecret || "",
+    pixKey: settings.pixKey,
+    certificate: settings.pixCertificate || undefined,
+    privateKey: settings.pixPrivateKey || undefined,
+    baseUrl: settings.pixApiUrl || undefined,
+    tokenUrl: settings.pixTokenUrl || undefined,
+  };
+
+  console.log("🔧 [PIX] Criando PixService do Super Admin com URLs:");
+  console.log("  - Base URL:", credentials.baseUrl || "(padrão Efí Pay)");
+  console.log("  - Token URL:", credentials.tokenUrl || "(padrão Efí Pay)");
+
+  // Super Admin always uses production (not sandbox)
+  return new PixService(credentials, false);
+}

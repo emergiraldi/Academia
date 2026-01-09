@@ -163,27 +163,34 @@ export const gymsRouter = router({
       console.log(`💰 [CREATE GYM] Gerando PIX de assinatura automático para plano: ${plan}`);
 
       try {
-        // Buscar preços das configurações
-        const [settings] = await db.select().from(siteSettings).limit(1);
+        // Buscar valores dos planos da tabela saasPlans
+        const { listSaasPlans } = await import("../db");
+        const allPlans = await listSaasPlans(false); // Buscar todos os planos
 
-        if (!settings) {
-          throw new Error("Configurações do site não encontradas");
+        // Mapear planos por slug
+        const plansMap: Record<string, any> = {};
+        allPlans.forEach((p: any) => {
+          plansMap[p.slug] = p;
+        });
+
+        const selectedPlan = plansMap[plan];
+        if (!selectedPlan) {
+          throw new Error(`Plano "${plan}" não encontrado. Configure os planos no Super Admin.`);
         }
 
-        const planPrices: Record<string, number> = {
-          basic: settings.basicPrice * 100,
-          professional: settings.professionalPrice * 100,
-          enterprise: settings.enterprisePrice * 100,
-        };
+        const amountInCents = selectedPlan.priceInCents;
 
-        const amountInCents = planPrices[plan];
+        console.log(`💰 [CREATE GYM] Plano selecionado:`);
+        console.log(`  - Nome: ${selectedPlan.name}`);
+        console.log(`  - Slug: ${selectedPlan.slug}`);
+        console.log(`  - Valor: R$ ${(amountInCents / 100).toFixed(2)}`);
 
         // Importar funções PIX
-        const { getPixService } = await import("../pix");
+        const { getPixServiceFromSuperAdmin } = await import("../pix");
         const { createGymPayment } = await import("../db");
 
         // Criar cobrança PIX usando credenciais do Super Admin
-        const pixService = getPixService();
+        const pixService = await getPixServiceFromSuperAdmin();
 
         const pixCharge = await pixService.createImmediateCharge({
           valor: amountInCents,
@@ -204,12 +211,6 @@ export const gymsRouter = router({
         }
 
         // Salvar pagamento no banco
-        const planNames: Record<string, string> = {
-          basic: "Básico",
-          professional: "Professional",
-          enterprise: "Enterprise",
-        };
-
         await createGymPayment({
           gymId,
           amountInCents,
@@ -219,7 +220,7 @@ export const gymsRouter = router({
           pixQrCode: pixCharge.pixCopiaECola,
           pixQrCodeImage: pixCharge.qrcode,
           pixCopyPaste: pixCharge.pixCopiaECola,
-          description: `Assinatura ${planNames[plan]} - ${referenceMonth}`,
+          description: `Assinatura ${selectedPlan.name} - ${referenceMonth}`,
           referenceMonth,
           dueDate,
           createdAt: new Date(),
@@ -645,6 +646,85 @@ export const gymsRouter = router({
       }
     }),
 
+  // Verificar status do pagamento PIX
+  checkPaymentStatus: publicProcedure
+    .input(z.object({
+      gymId: z.number(),
+      paymentId: z.number(),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Buscar o pagamento
+      const { getGymPaymentById } = await import("../db");
+      const payment = await getGymPaymentById(input.paymentId, input.gymId);
+
+      if (!payment) {
+        throw new Error("Pagamento não encontrado");
+      }
+
+      // Se já estiver pago, retornar o status
+      if (payment.status === "paid") {
+        return {
+          status: "paid",
+          paidAt: payment.paidAt,
+          message: "Pagamento confirmado!",
+        };
+      }
+
+      // Se tiver txid, verificar status na API PIX
+      if (payment.pixTxId) {
+        try {
+          const { getPixServiceFromSuperAdmin } = await import("../pix");
+          const pixService = await getPixServiceFromSuperAdmin();
+
+          const pixStatus = await pixService.checkPaymentStatus(payment.pixTxId);
+
+          console.log(`🔍 [CHECK PAYMENT] Status do PIX ${payment.pixTxId}:`, pixStatus.status);
+
+          // Se foi pago, atualizar no banco
+          if (pixStatus.status === "CONCLUIDA") {
+            const { updateGymPayment } = await import("../db");
+            await updateGymPayment(payment.id, input.gymId, {
+              status: "paid",
+              paidAt: pixStatus.paidAt || new Date(),
+            });
+
+            // Ativar a academia
+            await db.update(gyms).set({
+              planStatus: "active",
+              subscriptionStartsAt: new Date(),
+            }).where(eq(gyms.id, input.gymId));
+
+            console.log(`✅ [CHECK PAYMENT] Academia ${input.gymId} ativada!`);
+
+            return {
+              status: "paid",
+              paidAt: pixStatus.paidAt,
+              message: "Pagamento confirmado! Academia ativada.",
+            };
+          }
+
+          return {
+            status: "pending",
+            message: "Aguardando pagamento...",
+          };
+        } catch (error: any) {
+          console.error("❌ [CHECK PAYMENT] Erro ao verificar status:", error);
+          return {
+            status: "error",
+            message: "Erro ao verificar status do pagamento",
+          };
+        }
+      }
+
+      return {
+        status: payment.status,
+        message: "Aguardando pagamento...",
+      };
+    }),
+
   // Gerar pagamento PIX para assinatura da academia
   generateSubscriptionPayment: publicProcedure
     .input(z.object({
@@ -661,8 +741,8 @@ export const gymsRouter = router({
       if (!gym) throw new Error("Academia não encontrada");
 
       // Importar funções
-      const { getPixService } = await import("../pix");
-      const { createGymPayment, getGymPaymentByReferenceMonth } = await import("../db");
+      const { getPixServiceFromSuperAdmin } = await import("../pix");
+      const { createGymPayment, getGymPaymentByReferenceMonth, listSaasPlans } = await import("../db");
 
       // Definir mês de referência (padrão: mês atual)
       const now = new Date();
@@ -675,25 +755,26 @@ export const gymsRouter = router({
         throw new Error("Já existe um pagamento para este mês");
       }
 
-      // Buscar valores dos planos das configurações do site
-      const [settings] = await db.select().from(siteSettings).limit(1);
+      // Buscar valores dos planos da tabela saasPlans
+      const allPlans = await listSaasPlans(false); // Buscar todos os planos
 
-      if (!settings) {
-        throw new Error("Configurações do site não encontradas. Configure os preços no Super Admin.");
+      // Mapear planos por slug
+      const plansMap: Record<string, any> = {};
+      allPlans.forEach((p: any) => {
+        plansMap[p.slug] = p;
+      });
+
+      const selectedPlan = plansMap[input.plan];
+      if (!selectedPlan) {
+        throw new Error(`Plano "${input.plan}" não encontrado. Configure os planos no Super Admin.`);
       }
 
-      const planPrices: Record<string, number> = {
-        basic: settings.basicPrice * 100, // Converter de reais para centavos
-        professional: settings.professionalPrice * 100,
-        enterprise: settings.enterprisePrice * 100,
-      };
+      const amountInCents = selectedPlan.priceInCents;
 
-      const amountInCents = planPrices[input.plan];
-
-      console.log(`💰 [GYM PAYMENT] Preços obtidos do Super Admin:`);
-      console.log(`  - Básico: R$ ${settings.basicPrice}`);
-      console.log(`  - Professional: R$ ${settings.professionalPrice}`);
-      console.log(`  - Enterprise: R$ ${settings.enterprisePrice}`);
+      console.log(`💰 [GYM PAYMENT] Plano selecionado:`);
+      console.log(`  - Nome: ${selectedPlan.name}`);
+      console.log(`  - Slug: ${selectedPlan.slug}`);
+      console.log(`  - Valor: R$ ${(amountInCents / 100).toFixed(2)}`);
 
       // Definir data de vencimento (dia 10 do mês)
       const dueDate = new Date(now.getFullYear(), now.getMonth(), 10);
@@ -710,7 +791,7 @@ export const gymsRouter = router({
 
       try {
         // Criar cobrança PIX usando credenciais do Super Admin
-        const pixService = getPixService();
+        const pixService = await getPixServiceFromSuperAdmin();
 
         const pixCharge = await pixService.createImmediateCharge({
           valor: amountInCents,
@@ -727,12 +808,6 @@ export const gymsRouter = router({
         console.log(`  - QR Code: ${pixCharge.pixCopiaECola.substring(0, 50)}...`);
 
         // Salvar pagamento no banco
-        const planNames: Record<string, string> = {
-          basic: "Básico",
-          professional: "Professional",
-          enterprise: "Enterprise",
-        };
-
         const payment = await createGymPayment({
           gymId: input.gymId,
           amountInCents,
@@ -742,7 +817,7 @@ export const gymsRouter = router({
           pixQrCode: pixCharge.pixCopiaECola,
           pixQrCodeImage: pixCharge.qrcode,
           pixCopyPaste: pixCharge.pixCopiaECola,
-          description: `Assinatura ${planNames[input.plan]} - ${referenceMonth}`,
+          description: `Assinatura ${selectedPlan.name} - ${referenceMonth}`,
           referenceMonth,
           dueDate,
           createdAt: new Date(),
