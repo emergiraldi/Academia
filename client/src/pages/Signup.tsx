@@ -62,19 +62,23 @@ export default function Signup() {
 
     // Se temos os planos carregados, buscar o preço correto
     if (saasPlans && saasPlans.length > 0) {
-      const selectedPlan = saasPlans.find(p => p.slug === planSlug);
+      let selectedPlan = saasPlans.find(p => p.slug === planSlug);
       console.log("[Signup] selectedPlan:", selectedPlan);
+
+      // Se não encontrou o plano solicitado, usar o primeiro disponível
+      if (!selectedPlan) {
+        console.warn("[Signup] Plano não encontrado:", planSlug, "- Usando primeiro plano disponível");
+        selectedPlan = saasPlans[0];
+      }
 
       if (selectedPlan) {
         const priceInReais = selectedPlan.priceInCents / 100;
         console.log("[Signup] Atualizando preço para:", priceInReais);
         setFormData((prev) => ({
           ...prev,
-          plan: planSlug,
+          plan: selectedPlan.slug,
           price: priceInReais
         }));
-      } else {
-        console.warn("[Signup] Plano não encontrado:", planSlug);
       }
     }
   }, [saasPlans]);
