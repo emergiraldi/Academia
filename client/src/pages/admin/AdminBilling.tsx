@@ -106,7 +106,16 @@ export default function AdminBilling() {
 
   const formatDate = (date: Date | string | null) => {
     if (!date) return "-";
-    const d = typeof date === "string" ? new Date(date) : date;
+
+    let d: Date;
+    if (typeof date === "string") {
+      // Parse date string as local timezone to avoid UTC conversion issues
+      const [year, month, day] = date.split(/[-T]/);
+      d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    } else {
+      d = date;
+    }
+
     if (isNaN(d.getTime())) return "-";
     return d.toLocaleDateString("pt-BR", {
       day: "2-digit",
