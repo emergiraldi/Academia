@@ -14,6 +14,8 @@ import {
   Mail,
   Phone,
   MessageCircle,
+  Menu,
+  X,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
@@ -117,6 +119,7 @@ const screenshots = [
 export default function LandingPage() {
   const [, setLocation] = useLocation();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Buscar configurações do site
   const { data: settings } = trpc.settings.get.useQuery();
@@ -137,6 +140,7 @@ export default function LandingPage() {
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     element?.scrollIntoView({ behavior: "smooth" });
+    setMobileMenuOpen(false); // Fecha o menu ao clicar
   };
 
   return (
@@ -154,6 +158,7 @@ export default function LandingPage() {
               </span>
             </div>
 
+            {/* Desktop Nav */}
             <nav className="hidden md:flex items-center space-x-8">
               <button onClick={() => scrollToSection("features")} className="text-gray-700 hover:text-indigo-600 transition">
                 Funcionalidades
@@ -171,7 +176,53 @@ export default function LandingPage() {
                 Começar Agora
               </Button>
             </nav>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition"
+              aria-label="Menu"
+            >
+              {mobileMenuOpen ? (
+                <X className="w-6 h-6 text-gray-700" />
+              ) : (
+                <Menu className="w-6 h-6 text-gray-700" />
+              )}
+            </button>
           </div>
+
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="md:hidden mt-4 pb-4 border-t border-gray-200 pt-4 space-y-4">
+              <button
+                onClick={() => scrollToSection("features")}
+                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              >
+                Funcionalidades
+              </button>
+              <button
+                onClick={() => scrollToSection("benefits")}
+                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              >
+                Benefícios
+              </button>
+              <button
+                onClick={() => scrollToSection("pricing")}
+                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              >
+                Planos
+              </button>
+              <Button
+                onClick={() => {
+                  setLocation("/pricing");
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+              >
+                Começar Agora
+              </Button>
+            </div>
+          )}
         </div>
       </header>
 
