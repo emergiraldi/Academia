@@ -239,6 +239,7 @@ export default function SuperAdminDashboard() {
 
             <Card
               className="border-l-4 border-l-purple-500 shadow-md hover:shadow-lg transition-shadow cursor-pointer group"
+              onClick={() => setLocation('/super-admin/reports')}
             >
               <CardContent className="p-6">
                 <div className="flex items-center space-x-4">
