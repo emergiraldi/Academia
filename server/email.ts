@@ -723,11 +723,9 @@ export async function sendGymAdminCredentials(
                       </p>
                     </div>
 
-                    ${pixQrCode ? `
                     <div style="text-align: center; margin: 20px 0;">
-                      <img src="${pixQrCode}" alt="QR Code PIX" style="max-width: 200px; border: 2px solid #0284c7; border-radius: 8px;" />
+                      <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(pixCopyPaste)}" alt="QR Code PIX" style="max-width: 250px; border: 3px solid #0284c7; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" />
                     </div>
-                    ` : ''}
 
                     <p style="margin: 15px 0 10px 0; font-size: 14px; color: #0369a1; font-weight: 600;">
                       Código Pix Copia e Cola:
@@ -920,11 +918,9 @@ export async function sendTrialExpiredEmail(
                   <div style="background-color: #f0f9ff; border: 2px solid #0284c7; padding: 20px; margin: 20px 0; border-radius: 8px;">
                     <h3 style="margin: 0 0 15px 0; color: #0369a1; font-size: 18px;">💳 Pagamento via PIX</h3>
 
-                    ${pixQrCode ? `
                     <div style="text-align: center; margin: 20px 0;">
-                      <img src="${pixQrCode}" alt="QR Code PIX" style="max-width: 200px; border: 2px solid #0284c7; border-radius: 8px;" />
+                      <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(pixCopyPaste)}" alt="QR Code PIX" style="max-width: 250px; border: 3px solid #0284c7; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" />
                     </div>
-                    ` : ''}
 
                     <p style="margin: 10px 0; font-size: 14px; color: #0369a1;">
                       <strong>Código Pix Copia e Cola:</strong>
