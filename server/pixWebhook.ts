@@ -75,12 +75,14 @@ export async function processPixWebhook(payload: any) {
           await db.updateGym(gym.id, {
             tempAdminPassword: null,
             tempAdminEmail: null,
-            planStatus: "active",
+            status: "active",              // ✅ Desbloquear academia
+            planStatus: "active",          // ✅ Ativar plano
+            blockedReason: null,           // ✅ Limpar motivo do bloqueio
             subscriptionStartsAt: paidAt,
             nextBillingDate: new Date(paidAt.getFullYear(), paidAt.getMonth() + 1, 10),
           });
 
-          console.log(`[PIX Webhook] ✅ Gym ${gym.id} plan activated - subscription starts!`);
+          console.log(`[PIX Webhook] ✅ Gym ${gym.id} plan activated and unblocked - subscription starts!`);
         } else {
           console.log(`[PIX Webhook] ℹ️ No temp credentials found - this is a recurring payment`);
 

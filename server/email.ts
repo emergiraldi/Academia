@@ -651,7 +651,9 @@ export async function sendGymAdminCredentials(
               <tr>
                 <td style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px 20px; text-align: center;">
                   <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px;">🎉 Bem-vindo ao SysFit Pro!</h1>
-                  <p style="color: #e0e7ff; margin: 0; font-size: 16px;">Sua academia está pronta para testar</p>
+                  <p style="color: #e0e7ff; margin: 0; font-size: 16px;">
+                    ${pixCopyPaste ? 'Sua academia foi cadastrada com sucesso!' : 'Sua academia está pronta para testar'}
+                  </p>
                 </td>
               </tr>
 
@@ -659,12 +661,21 @@ export async function sendGymAdminCredentials(
               <tr>
                 <td style="padding: 40px 30px;">
                   <h2 style="color: #333; margin: 0 0 20px 0; font-size: 24px;">Olá, ${gymName}! 👋</h2>
+                  ${pixCopyPaste ? `
+                  <p style="margin: 0 0 20px 0; font-size: 16px; color: #666; line-height: 1.6;">
+                    Sua academia foi cadastrada com sucesso! Para ativar o acesso ao sistema, realize o pagamento do plano <strong style="color: #6366f1;">${planNames[plan] || plan}</strong> via PIX.
+                  </p>
+                  <p style="margin: 0 0 20px 0; font-size: 16px; color: #666; line-height: 1.6;">
+                    Após a confirmação do pagamento, você receberá as credenciais abaixo por email e poderá fazer login:
+                  </p>
+                  ` : `
                   <p style="margin: 0 0 20px 0; font-size: 16px; color: #666; line-height: 1.6;">
                     Sua academia foi cadastrada com sucesso! Você está no <strong>período de teste gratuito</strong> e já pode começar a explorar todas as funcionalidades.
                   </p>
                   <p style="margin: 0 0 20px 0; font-size: 16px; color: #666; line-height: 1.6;">
                     Plano <strong style="color: #6366f1;">${planNames[plan] || plan}</strong> - Use as credenciais abaixo para fazer login:
                   </p>
+                  `}
                 </td>
               </tr>
 

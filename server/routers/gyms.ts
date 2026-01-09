@@ -160,6 +160,14 @@ export const gymsRouter = router({
       const plan = finalGymData.plan;
       const now = new Date();
 
+      // ⚠️ Se trial está DESABILITADO, academia começa BLOQUEADA até pagar
+      if (!superAdminSettings?.trialEnabled) {
+        console.log(`🔒 [CREATE GYM] Trial desabilitado - Academia será criada BLOQUEADA até confirmação de pagamento`);
+        finalGymData.status = "suspended";
+        finalGymData.planStatus = "suspended";
+        finalGymData.blockedReason = "Aguardando confirmação de pagamento PIX";
+      }
+
       // Preparar senha hash ANTES da transação
       const hashedPassword = await bcrypt.hash(tempPassword, 10);
       const name = adminName || `Admin ${input.name}`;
@@ -196,6 +204,7 @@ export const gymsRouter = router({
           await tx.update(gyms).set({
             trialEndsAt,
             planStatus: "trial",
+            status: "active",
             subscriptionStartsAt: now,
           }).where(eq(gyms.id, gymId));
 
