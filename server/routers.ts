@@ -158,6 +158,126 @@ export const appRouter = router({
   saasPlans: saasPlansRouter,
   superAdminSettings: superAdminSettingsRouter,
 
+  // ============ GYM BILLING CYCLES ============
+  gymBillingCycles: router({
+    // List all billing cycles for a gym (admin view)
+    list: gymAdminProcedure
+      .query(async ({ ctx }) => {
+        if (!ctx.user.gymId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        }
+        return await db.getBillingCyclesByGym(ctx.user.gymId);
+      }),
+
+    // Get a specific billing cycle by ID
+    getById: gymAdminProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        }
+        const cycle = await db.getBillingCycleById(input.id);
+        if (!cycle || cycle.gymId !== ctx.user.gymId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Mensalidade não encontrada" });
+        }
+        return cycle;
+      }),
+
+    // Generate PIX payment for a billing cycle
+    generatePixPayment: gymAdminProcedure
+      .input(z.object({ billingCycleId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        }
+
+        // Get billing cycle
+        const billingCycle = await db.getBillingCycleById(input.billingCycleId);
+        if (!billingCycle || billingCycle.gymId !== ctx.user.gymId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Mensalidade não encontrada" });
+        }
+
+        // Check if already paid
+        if (billingCycle.status === "paid") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Mensalidade já paga" });
+        }
+
+        // Get gym data
+        const gym = await db.getGymById(ctx.user.gymId);
+        if (!gym) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Academia não encontrada" });
+        }
+
+        // Create PIX charge using super admin credentials
+        const pixService = await getPixService();
+        if (!pixService) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Serviço PIX não disponível" });
+        }
+
+        // Create gym payment record first
+        const gymPaymentResult = await db.createGymPayment({
+          gymId: ctx.user.gymId,
+          referenceMonth: billingCycle.referenceMonth,
+          amountCents: billingCycle.amountCents,
+          status: "pending",
+          dueDate: billingCycle.dueDate,
+        });
+
+        // Link billing cycle to payment
+        await db.updateBillingCycle(billingCycle.id, {
+          paymentId: gymPaymentResult.insertId,
+        });
+
+        // Create PIX charge
+        try {
+          const expirationDate = new Date();
+          expirationDate.setDate(expirationDate.getDate() + 3); // 3 days to pay
+
+          const pixCharge = await pixService.createCharge({
+            valor: (billingCycle.amountCents / 100).toFixed(2),
+            calendario: {
+              expiracao: 259200, // 3 days in seconds
+            },
+            devedor: {
+              nome: gym.name,
+              cpf: gym.cnpj?.replace(/\D/g, '') || undefined,
+            },
+            infoAdicionais: [
+              {
+                nome: "Mensalidade",
+                valor: billingCycle.referenceMonth,
+              },
+              {
+                nome: "Academia",
+                valor: gym.name,
+              },
+            ],
+          });
+
+          // Update gym payment with PIX info
+          await db.updateGymPayment(gymPaymentResult.insertId, ctx.user.gymId, {
+            pixTxId: pixCharge.txid,
+            pixQrCode: pixCharge.pixCopiaECola,
+            pixQrCodeImage: pixCharge.imagemQrcode || null,
+          });
+
+          return {
+            success: true,
+            paymentId: gymPaymentResult.insertId,
+            pixQrCode: pixCharge.pixCopiaECola,
+            pixQrCodeImage: pixCharge.imagemQrcode,
+            txid: pixCharge.txid,
+          };
+        } catch (error: any) {
+          console.error("[Billing] Error creating PIX charge:", error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Erro ao gerar cobrança PIX: ${error.message}`,
+          });
+        }
+      }),
+  }),
+
   auth: router({
     me: publicProcedure.query(async ({ ctx }) => {
       if (!ctx.user) return null;

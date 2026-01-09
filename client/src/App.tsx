@@ -15,6 +15,7 @@ import StudentWorkoutDetail from "./pages/StudentWorkoutDetailNew";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminPayments from "./pages/admin/AdminPayments";
+import AdminBilling from "./pages/admin/AdminBilling";
 import AdminFinancialDashboard from "./pages/admin/AdminFinancialDashboard";
 import AdminDefaulters from "./pages/admin/AdminDefaulters";
 import AdminPlans from "./pages/admin/AdminPlans";
@@ -94,6 +95,7 @@ function Router() {
       <Route path={"/admin/login"} component={AdminLogin} />
       <Route path={"/admin/dashboard"} component={AdminDashboard} />
       <Route path={"/admin/payments"} component={AdminPayments} />
+      <Route path={"/admin/billing"} component={AdminBilling} />
       <Route path={"/admin/financial"} component={AdminFinancialDashboard} />
       <Route path="/admin/defaulters" component={AdminDefaulters} />
       <Route path="/admin/plans" component={AdminPlans} />

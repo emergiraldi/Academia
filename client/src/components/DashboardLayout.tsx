@@ -46,6 +46,7 @@ const menuItems = [
   { icon: GraduationCap, label: "Professores", path: "/admin/professors" },
   { icon: UserCog, label: "Funcionários", path: "/admin/staff" },
   { icon: DollarSign, label: "Pagamentos", path: "/admin/payments" },
+  { icon: Calendar, label: "Mensalidades", path: "/admin/billing" },
   { icon: Receipt, label: "Contas a Pagar", path: "/admin/accounts-payable" },
   { icon: Tag, label: "Categorias", path: "/admin/categories" },
   { icon: Building2, label: "Fornecedores", path: "/admin/suppliers" },
