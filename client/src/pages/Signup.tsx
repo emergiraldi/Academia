@@ -11,6 +11,7 @@ import { toast } from "sonner";
 interface FormData {
   // Gym data
   gymName: string;
+  cnpj: string;
   contactEmail: string;
   contactPhone: string;
   city: string;
@@ -31,6 +32,7 @@ export default function Signup() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     gymName: "",
+    cnpj: "",
     contactEmail: "",
     contactPhone: "",
     city: "",
@@ -103,7 +105,7 @@ export default function Signup() {
 
   const handleNext = () => {
     if (step === 1) {
-      if (!formData.gymName || !formData.contactEmail) {
+      if (!formData.gymName || !formData.cnpj || !formData.contactEmail) {
         toast.error("Preencha todos os campos obrigatórios");
         return;
       }
@@ -134,6 +136,7 @@ export default function Signup() {
     await createGymMutation.mutateAsync({
       name: formData.gymName,
       slug,
+      cnpj: formData.cnpj,
       contactEmail: formData.contactEmail,
       contactPhone: formData.contactPhone,
       city: formData.city,
@@ -156,6 +159,18 @@ export default function Signup() {
                 value={formData.gymName}
                 onChange={(e) => setFormData({ ...formData, gymName: e.target.value })}
               />
+            </div>
+            <div>
+              <Label htmlFor="cnpj">CNPJ *</Label>
+              <Input
+                id="cnpj"
+                placeholder="00.000.000/0000-00"
+                value={formData.cnpj}
+                onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Necessário para emissão do PIX
+              </p>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div>

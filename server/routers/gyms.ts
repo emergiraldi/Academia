@@ -264,7 +264,7 @@ export const gymsRouter = router({
             const pixCharge = await pixService.createImmediateCharge({
               valor: amountInCents,
               pagador: {
-                documento: finalGymData.cnpj?.replace(/\D/g, "") || "23538490000181", // CNPJ da Academia FitLife como fallback
+                documento: finalGymData.cnpj?.replace(/\D/g, "") || "11222333000181", // CNPJ genérico válido como fallback
                 nome: finalGymData.name,
               },
               infoAdicionais: `Assinatura ${selectedPlan.name} - ${finalGymData.name}`,
