@@ -777,6 +777,107 @@ export async function sendGymAdminCredentials(
 }
 
 /**
+ * Enviar email de confirmação de pagamento e ativação da academia
+ */
+export async function sendGymPaymentConfirmedEmail(
+  email: string,
+  gymName: string,
+  gymSlug: string,
+  plan: string
+): Promise<boolean> {
+  const loginUrl = `https://www.sysfitpro.com.br/admin/login?gym=${gymSlug}`;
+  const planNames: Record<string, string> = {
+    basic: "Básico",
+    professional: "Professional",
+    enterprise: "Enterprise"
+  };
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Pagamento Confirmado - Acesso Liberado!</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 20px; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px;">✅ Pagamento Confirmado!</h1>
+                  <p style="color: #d1fae5; margin: 0; font-size: 16px;">Sua versão paga foi ativada com sucesso</p>
+                </td>
+              </tr>
+
+              <!-- Mensagem -->
+              <tr>
+                <td style="padding: 40px 30px;">
+                  <h2 style="color: #333; margin: 0 0 20px 0; font-size: 24px;">🎉 Parabéns, ${gymName}!</h2>
+                  <p style="margin: 0 0 20px 0; font-size: 16px; color: #666; line-height: 1.6;">
+                    Seu pagamento foi confirmado e sua <strong style="color: #10b981;">versão paga</strong> foi liberada!
+                  </p>
+                  <p style="margin: 0 0 30px 0; font-size: 16px; color: #666; line-height: 1.6;">
+                    Agora você tem acesso completo a todos os recursos do plano <strong style="color: #6366f1;">${planNames[plan] || plan}</strong>.
+                  </p>
+
+                  <!-- Botão de Login -->
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+                      Acessar Sistema
+                    </a>
+                  </div>
+
+                  <!-- Recursos -->
+                  <div style="background-color: #f9fafb; border-left: 4px solid #10b981; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                    <h3 style="color: #10b981; margin: 0 0 15px 0; font-size: 18px;">✨ O que você pode fazer agora:</h3>
+                    <ul style="margin: 0; padding-left: 20px; color: #666;">
+                      <li style="margin-bottom: 10px;">Cadastrar alunos e professores sem limite</li>
+                      <li style="margin-bottom: 10px;">Gerenciar pagamentos e mensalidades</li>
+                      <li style="margin-bottom: 10px;">Controlar acesso com integração biométrica</li>
+                      <li style="margin-bottom: 10px;">Emitir relatórios completos</li>
+                      <li style="margin-bottom: 10px;">E muito mais!</li>
+                    </ul>
+                  </div>
+
+                  <p style="margin: 30px 0 0 0; font-size: 14px; color: #999; line-height: 1.6;">
+                    Sua assinatura está ativa. Caso tenha dúvidas, nossa equipe está pronta para ajudar!
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                  <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">
+                    <strong>SysFit Pro</strong> - Sistema de Gestão para Academias
+                  </p>
+                  <p style="margin: 0; font-size: 12px; color: #999;">
+                    © ${new Date().getFullYear()} SysFit Pro. Todos os direitos reservados.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return await sendEmailFromSuperAdmin({
+    to: email,
+    subject: `✅ ${gymName} - Pagamento Confirmado! Acesso Liberado`,
+    html,
+  });
+}
+
+/**
  * Enviar email de aviso de trial expirando
  */
 export async function sendTrialWarningEmail(

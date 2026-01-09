@@ -1,5 +1,5 @@
 import * as db from "./db";
-import { sendPaymentConfirmationEmail } from "./email";
+import { sendPaymentConfirmationEmail, sendGymPaymentConfirmedEmail } from "./email";
 import { generateReceiptHTML, generateReceiptFilename } from "./receipt";
 import { storagePut } from "./storage";
 
@@ -58,11 +58,14 @@ export async function processPixWebhook(payload: any) {
       // Send admin credentials if this is the first payment (onboarding)
       try {
         if (gym.tempAdminPassword && gym.tempAdminEmail) {
-          console.log(`[PIX Webhook] 📧 Sending admin credentials to ${gym.tempAdminEmail}...`);
+          // Salvar email antes de limpar
+          const adminEmail = gym.tempAdminEmail;
+
+          console.log(`[PIX Webhook] 📧 Sending admin credentials to ${adminEmail}...`);
 
           const { sendGymAdminCredentials } = await import("./email");
           await sendGymAdminCredentials(
-            gym.tempAdminEmail,
+            adminEmail,
             gym.tempAdminPassword,
             gym.name,
             gym.slug,
@@ -83,6 +86,16 @@ export async function processPixWebhook(payload: any) {
           });
 
           console.log(`[PIX Webhook] ✅ Gym ${gym.id} plan activated and unblocked - subscription starts!`);
+
+          // Enviar email de confirmação de pagamento e ativação
+          console.log(`[PIX Webhook] 📧 Sending payment confirmation email to ${adminEmail}...`);
+          await sendGymPaymentConfirmedEmail(
+            adminEmail,
+            gym.name,
+            gym.slug,
+            gym.plan
+          );
+          console.log(`[PIX Webhook] ✅ Payment confirmation email sent!`);
         } else {
           console.log(`[PIX Webhook] ℹ️ No temp credentials found - this is a recurring payment`);
 
