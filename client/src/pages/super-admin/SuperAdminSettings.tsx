@@ -762,6 +762,29 @@ export default function SuperAdminSettings() {
 
                 <div>
                   <Label htmlFor="pixCertificate">Certificado (PEM) *</Label>
+                  <div className="flex gap-2 mb-2">
+                    <Input
+                      type="file"
+                      accept=".pem,.crt,.cer,.txt"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const text = await file.text();
+                          setPaymentSettings({ ...paymentSettings, pixCertificate: text });
+                          toast.success(`Certificado carregado: ${file.name}`);
+                        }
+                      }}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPaymentSettings({ ...paymentSettings, pixCertificate: "" })}
+                    >
+                      Limpar
+                    </Button>
+                  </div>
                   <Textarea
                     id="pixCertificate"
                     rows={4}
@@ -772,12 +795,35 @@ MIIxxxxxxxxxxxxxxx...
 -----END CERTIFICATE-----"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Cole o conteúdo completo do certificado em formato PEM
+                    📤 Faça upload do arquivo .pem ou cole o conteúdo manualmente
                   </p>
                 </div>
 
                 <div>
                   <Label htmlFor="pixPrivateKey">Chave Privada (PEM) *</Label>
+                  <div className="flex gap-2 mb-2">
+                    <Input
+                      type="file"
+                      accept=".pem,.key,.txt"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const text = await file.text();
+                          setPaymentSettings({ ...paymentSettings, pixPrivateKey: text });
+                          toast.success(`Chave privada carregada: ${file.name}`);
+                        }
+                      }}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPaymentSettings({ ...paymentSettings, pixPrivateKey: "" })}
+                    >
+                      Limpar
+                    </Button>
+                  </div>
                   <Textarea
                     id="pixPrivateKey"
                     rows={4}
@@ -788,7 +834,7 @@ MIIxxxxxxxxxxxxxxx...
 -----END PRIVATE KEY-----"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Cole o conteúdo completo da chave privada em formato PEM
+                    📤 Faça upload do arquivo .pem/.key ou cole o conteúdo manualmente
                   </p>
                 </div>
 
