@@ -35,26 +35,19 @@ async function createTestBillingCycle() {
     const gym = gymResult[0];
     console.log(`✅ Academia encontrada: ${gym.name} (Plano: ${gym.plan})`);
 
-    // 2. Buscar o preço do plano enterprise
-    const [planResult] = await connection.query(
-      "SELECT priceInCents FROM saasPlans WHERE slug = 'enterprise'"
-    );
+    // 2. Usar preço fixo para teste (R$ 297,00 para plano professional)
+    const planPrices = {
+      'basic': 9700,      // R$ 97,00
+      'professional': 29700,  // R$ 297,00
+      'enterprise': 49700     // R$ 497,00
+    };
 
-    if (planResult.length === 0) {
-      console.error('❌ Plano enterprise não encontrado');
-      return;
-    }
+    const planPrice = planPrices[gym.plan] || 29700; // Default: R$ 297,00
+    console.log(`✅ Preço do plano ${gym.plan}: R$ ${(planPrice / 100).toFixed(2)}`);
 
-    const planPrice = planResult[0].priceInCents;
-    console.log(`✅ Preço do plano: R$ ${(planPrice / 100).toFixed(2)}`);
-
-    // 3. Buscar configurações de billing
-    const [settingsResult] = await connection.query(
-      'SELECT billingDueDay FROM superAdminSettings LIMIT 1'
-    );
-
-    const dueDay = settingsResult[0]?.billingDueDay || 15;
-    console.log(`✅ Dia de vencimento configurado: dia ${dueDay}`);
+    // 3. Usar dia de vencimento padrão (dia 15)
+    const dueDay = 15;
+    console.log(`✅ Dia de vencimento: dia ${dueDay}`);
 
     // 4. Calcular data de vencimento (dia 15 do mês atual)
     const now = new Date();
