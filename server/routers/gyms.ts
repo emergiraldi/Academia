@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb, createGymSettings } from "../db";
-import { gyms, students, users, siteSettings } from "../../drizzle/schema";
+import { gyms, students, users, siteSettings, gymPayments } from "../../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { TRPCError } from "@trpc/server";
@@ -153,69 +153,79 @@ export const gymsRouter = router({
 
       console.log("🟢 [CREATE GYM] Dados para inserir (finalGymData):", JSON.stringify(finalGymData, null, 2));
 
-      const [result] = await db.insert(gyms).values(finalGymData);
-      const gymId = Number(result.insertId);
-
-      console.log("🟢 [CREATE GYM] Academia criada com ID:", gymId);
-
-      // Criar usuário admin para a academia
-      const hashedPassword = await bcrypt.hash(tempPassword, 10);
-      const name = adminName || `Admin ${input.name}`;
-      const openId = `gym-admin-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-      await db.insert(users).values({
-        gymId,
-        openId,
-        email: adminEmailToUse,
-        password: hashedPassword,
-        name,
-        role: "gym_admin",
-        phone: input.contactPhone || null,
-      });
-
-      console.log(`🟢 [CREATE GYM] Admin criado com email: ${adminEmailToUse}`);
-
-      // Buscar configurações do Super Admin para verificar trial
+      // Buscar configurações do Super Admin para verificar trial ANTES da transação
       const { getSuperAdminSettings } = await import("../db");
       const superAdminSettings = await getSuperAdminSettings();
 
       const plan = finalGymData.plan;
       const now = new Date();
 
-      // Verificar se período de teste está habilitado
-      if (superAdminSettings?.trialEnabled) {
-        console.log(`🎁 [CREATE GYM] Trial habilitado! Dando ${superAdminSettings.trialDays} dias de acesso grátis`);
+      // Preparar senha hash ANTES da transação
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+      const name = adminName || `Admin ${input.name}`;
+      const openId = `gym-admin-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
-        // Calcular data de fim do trial
+      // 🔒 INICIAR TRANSAÇÃO - Todas operações de banco devem acontecer juntas ou nenhuma
+      let gymId: number;
+
+      await db.transaction(async (tx) => {
+        // 1. Criar academia
+        const [result] = await tx.insert(gyms).values(finalGymData);
+        gymId = Number(result.insertId);
+        console.log("🟢 [CREATE GYM] Academia criada com ID:", gymId);
+
+        // 2. Criar usuário admin para a academia
+        await tx.insert(users).values({
+          gymId,
+          openId,
+          email: adminEmailToUse,
+          password: hashedPassword,
+          name,
+          role: "gym_admin",
+          phone: input.contactPhone || null,
+        });
+        console.log(`🟢 [CREATE GYM] Admin criado com email: ${adminEmailToUse}`);
+
+        // 3. Configurar trial se habilitado
+        if (superAdminSettings?.trialEnabled) {
+          console.log(`🎁 [CREATE GYM] Trial habilitado! Dando ${superAdminSettings.trialDays} dias de acesso grátis`);
+
+          const trialEndsAt = new Date(now);
+          trialEndsAt.setDate(trialEndsAt.getDate() + superAdminSettings.trialDays);
+
+          await tx.update(gyms).set({
+            trialEndsAt,
+            planStatus: "trial",
+            subscriptionStartsAt: now,
+          }).where(eq(gyms.id, gymId));
+
+          console.log(`✅ [CREATE GYM] Trial configurado até: ${trialEndsAt.toISOString()}`);
+        }
+      });
+
+      // 🔒 TRANSAÇÃO CONCLUÍDA COM SUCESSO - Academia e admin foram criados
+
+      // ✉️ Enviar email de boas-vindas (FORA da transação - se falhar não desfaz o cadastro)
+      try {
+        const { sendGymAdminCredentials } = await import("../email");
+        await sendGymAdminCredentials(
+          adminEmailToUse,
+          tempPassword,
+          finalGymData.name,
+          finalGymData.slug,
+          plan
+        );
+        console.log(`✅ [CREATE GYM] Email de boas-vindas enviado para ${adminEmailToUse}`);
+      } catch (emailError) {
+        console.error("❌ [CREATE GYM] Erro ao enviar email:", emailError);
+        // Continuar mesmo se email falhar - academia já foi criada com sucesso
+      }
+
+      // Retornar resposta baseada no tipo de configuração (trial ou pix)
+      if (superAdminSettings?.trialEnabled) {
         const trialEndsAt = new Date(now);
         trialEndsAt.setDate(trialEndsAt.getDate() + superAdminSettings.trialDays);
 
-        // Atualizar academia com dados do trial
-        await db.update(gyms).set({
-          trialEndsAt,
-          planStatus: "trial",
-          subscriptionStartsAt: now, // Começa trial agora
-        }).where(eq(gyms.id, gymId));
-
-        console.log(`✅ [CREATE GYM] Trial configurado até: ${trialEndsAt.toISOString()}`);
-
-        // Enviar email de boas-vindas com informações do trial
-        try {
-          const { sendGymAdminCredentials } = await import("../email");
-          await sendGymAdminCredentials(
-            adminEmailToUse,
-            tempPassword,
-            finalGymData.name,
-            finalGymData.slug,
-            plan
-          );
-          console.log(`✅ [CREATE GYM] Email de boas-vindas enviado para ${adminEmailToUse}`);
-        } catch (emailError) {
-          console.error("❌ [CREATE GYM] Erro ao enviar email:", emailError);
-          // Continuar mesmo se email falhar
-        }
-
-        // Retornar sucesso com informações do trial
         return {
           gymId,
           gymSlug: input.slug,
@@ -233,107 +243,20 @@ export const gymsRouter = router({
         };
       }
 
-      // Se trial NÃO está habilitado, gerar PIX imediatamente
-      console.log(`💰 [CREATE GYM] Trial desabilitado - Gerando PIX de assinatura para plano: ${plan}`);
-
-      const referenceMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-      try {
-        // Buscar valores dos planos da tabela saasPlans
-        const { listSaasPlans } = await import("../db");
-        const allPlans = await listSaasPlans(false); // Buscar todos os planos
-
-        // Mapear planos por slug
-        const plansMap: Record<string, any> = {};
-        allPlans.forEach((p: any) => {
-          plansMap[p.slug] = p;
-        });
-
-        const selectedPlan = plansMap[plan];
-        if (!selectedPlan) {
-          throw new Error(`Plano "${plan}" não encontrado. Configure os planos no Super Admin.`);
-        }
-
-        const amountInCents = selectedPlan.priceInCents;
-
-        console.log(`💰 [CREATE GYM] Plano selecionado:`);
-        console.log(`  - Nome: ${selectedPlan.name}`);
-        console.log(`  - Slug: ${selectedPlan.slug}`);
-        console.log(`  - Valor: R$ ${(amountInCents / 100).toFixed(2)}`);
-
-        // Importar funções PIX
-        const { getPixServiceFromSuperAdmin } = await import("../pix");
-        const { createGymPayment } = await import("../db");
-
-        // Criar cobrança PIX usando credenciais do Super Admin
-        const pixService = await getPixServiceFromSuperAdmin();
-
-        const pixCharge = await pixService.createImmediateCharge({
-          valor: amountInCents,
-          pagador: {
-            cpf: finalGymData.cnpj?.replace(/\D/g, "") || "00000000000",
-            nome: finalGymData.name,
-          },
-          infoAdicionais: `Assinatura ${plan} - ${finalGymData.name}`,
-          expiracao: 86400, // 24 horas
-        });
-
-        console.log(`✅ [CREATE GYM] PIX gerado! TXID: ${pixCharge.txid}`);
-
-        // Definir data de vencimento (dia 10 do mês)
-        const dueDate = new Date(now.getFullYear(), now.getMonth(), 10);
-        if (now.getDate() > 10) {
-          dueDate.setMonth(dueDate.getMonth() + 1);
-        }
-
-        // Salvar pagamento no banco
-        await createGymPayment({
-          gymId,
-          amountInCents,
-          status: "pending",
-          paymentMethod: "pix",
-          pixTxId: pixCharge.txid,
-          pixQrCode: pixCharge.pixCopiaECola,
-          pixQrCodeImage: pixCharge.qrcode,
-          pixCopyPaste: pixCharge.pixCopiaECola,
-          description: `Assinatura ${selectedPlan.name} - ${referenceMonth}`,
-          referenceMonth,
-          dueDate,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-
-        console.log(`✅ [CREATE GYM] Pagamento PIX salvo no banco`);
-
-        // Retornar dados incluindo PIX
-        return {
-          gymId,
-          gymSlug: input.slug,
-          plan,
-          trial: {
-            enabled: false,
-          },
-          pixPayment: {
-            txid: pixCharge.txid,
-            qrCode: pixCharge.pixCopiaECola,
-            qrCodeImage: pixCharge.qrcode,
-            amount: amountInCents,
-            amountFormatted: `R$ ${(amountInCents / 100).toFixed(2).replace('.', ',')}`,
-            dueDate: dueDate.toISOString(),
-          },
-          message: "Academia cadastrada! Pague o PIX para ativar o sistema.",
-        };
-
-      } catch (pixError: any) {
-        console.error("❌ [CREATE GYM] Erro ao gerar PIX:", pixError);
-        // Se falhar o PIX, ainda assim academia foi criada
-        return {
-          gymId,
-          gymSlug: input.slug,
-          error: `Academia criada, mas erro ao gerar PIX: ${pixError.message}`,
-          message: "Academia cadastrada! Entre em contato para finalizar o pagamento.",
-        };
-      }
+      // Se trial NÃO está habilitado, retornar sem PIX (PIX não é mais gerado no cadastro)
+      return {
+        gymId,
+        gymSlug: input.slug,
+        plan,
+        trial: {
+          enabled: false,
+        },
+        credentials: {
+          email: adminEmailToUse,
+          password: tempPassword,
+        },
+        message: "Academia cadastrada com sucesso!",
+      };
     }),
 
   // Auto-cadastro de academia (público)
@@ -373,47 +296,60 @@ export const gymsRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Este email já está cadastrado." });
       }
 
-      // Criar a academia
-      const [result] = await db.insert(gyms).values({
-        name: input.gymName,
-        slug: input.gymSlug,
-        cnpj: input.cnpj || null,
-        email: input.email,
-        phone: input.phone || null,
-        address: input.address || null,
-        city: input.city || null,
-        state: input.state || null,
-        zipCode: input.zipCode || null,
-        plan: "basic",
-        planStatus: "trial",
-        status: "active",
-      });
-
-      const gymId = Number(result.insertId);
-
-      // Criar configurações padrão para a academia
-      await createGymSettings(gymId);
-
-      // Criar usuário administrador
+      // Preparar senha hash ANTES da transação
       const hashedPassword = await bcrypt.hash(input.adminPassword, 10);
       const openId = `gym-admin-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
-      await db.insert(users).values({
-        gymId,
-        openId,
-        email: input.adminEmail,
-        password: hashedPassword,
-        name: input.adminName,
-        role: "gym_admin",
-        phone: input.phone || null,
+      // 🔒 INICIAR TRANSAÇÃO - Todas operações de banco devem acontecer juntas ou nenhuma
+      let gymId: number;
+
+      await db.transaction(async (tx) => {
+        // 1. Criar academia
+        const [result] = await tx.insert(gyms).values({
+          name: input.gymName,
+          slug: input.gymSlug,
+          cnpj: input.cnpj || null,
+          email: input.email,
+          phone: input.phone || null,
+          address: input.address || null,
+          city: input.city || null,
+          state: input.state || null,
+          zipCode: input.zipCode || null,
+          plan: "basic",
+          planStatus: "trial",
+          status: "active",
+        });
+
+        gymId = Number(result.insertId);
+
+        // 2. Criar usuário administrador
+        await tx.insert(users).values({
+          gymId,
+          openId,
+          email: input.adminEmail,
+          password: hashedPassword,
+          name: input.adminName,
+          role: "gym_admin",
+          phone: input.phone || null,
+        });
       });
+
+      // 🔒 TRANSAÇÃO CONCLUÍDA - Academia e admin criados com sucesso
+
+      // Criar configurações padrão para a academia (DEPOIS da transação)
+      try {
+        await createGymSettings(gymId);
+      } catch (settingsError) {
+        console.error("❌ Erro ao criar configurações:", settingsError);
+        // Continuar mesmo se falhar - configurações podem ser criadas depois
+      }
 
       // Retornar informações importantes
       return {
         success: true,
         gymId,
         gymSlug: input.gymSlug,
-        agentId: `academia-${gymId}`, // ID para configurar no agent local
+        agentId: `academia-${gymId}`,
         message: "Academia cadastrada com sucesso!",
       };
     }),
