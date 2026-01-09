@@ -27,7 +27,7 @@ async function copyPixCredentials() {
     const [accounts] = await connection.query(`
       SELECT ba.*, g.name as gym_name, g.id as gym_id
       FROM bank_accounts ba
-      INNER JOIN gyms g ON ba.gym_id = g.id
+      INNER JOIN gyms g ON ba.gymId = g.id
       WHERE ba.pix_ativo = 'S'
         AND ba.pix_client_id IS NOT NULL
         AND ba.pix_client_id != ''
