@@ -648,8 +648,8 @@ export async function sendGymAdminCredentials(
               <!-- Header -->
               <tr>
                 <td style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px 20px; text-align: center;">
-                  <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px;">🎉 Pagamento Confirmado!</h1>
-                  <p style="color: #e0e7ff; margin: 0; font-size: 16px;">Sua academia está pronta para usar</p>
+                  <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px;">🎉 Bem-vindo ao SysFit Pro!</h1>
+                  <p style="color: #e0e7ff; margin: 0; font-size: 16px;">Sua academia está pronta para testar</p>
                 </td>
               </tr>
 
@@ -658,10 +658,10 @@ export async function sendGymAdminCredentials(
                 <td style="padding: 40px 30px;">
                   <h2 style="color: #333; margin: 0 0 20px 0; font-size: 24px;">Olá, ${gymName}! 👋</h2>
                   <p style="margin: 0 0 20px 0; font-size: 16px; color: #666; line-height: 1.6;">
-                    Seu pagamento foi confirmado e sua academia já está <strong>100% operacional</strong>!
+                    Sua academia foi cadastrada com sucesso! Você está no <strong>período de teste gratuito</strong> e já pode começar a explorar todas as funcionalidades.
                   </p>
                   <p style="margin: 0 0 20px 0; font-size: 16px; color: #666; line-height: 1.6;">
-                    Plano <strong style="color: #6366f1;">${planNames[plan] || plan}</strong> ativado com sucesso!
+                    Plano <strong style="color: #6366f1;">${planNames[plan] || plan}</strong> - Use as credenciais abaixo para fazer login:
                   </p>
                 </td>
               </tr>
