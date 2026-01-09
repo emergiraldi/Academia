@@ -75,11 +75,14 @@ async function createTestBillingCycle() {
     }
 
     // 6. Criar a mensalidade
+    // Converter dueDate para formato MySQL YYYY-MM-DD HH:MM:SS
+    const dueDateString = dueDate.toISOString().slice(0, 19).replace('T', ' ');
+
     const [insertResult] = await connection.query(
       `INSERT INTO gym_billing_cycles
         (gym_id, reference_month, due_date, amount_cents, status, created_at)
        VALUES (?, ?, ?, ?, ?, NOW())`,
-      [gym.id, referenceMonth, dueDate, planPrice, 'pending']
+      [gym.id, referenceMonth, dueDateString, planPrice, 'pending']
     );
 
     const billingId = insertResult.insertId;

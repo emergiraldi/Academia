@@ -13,7 +13,7 @@ import * as bcrypt from "bcrypt";
 import { sendPasswordResetEmail, sendPaymentConfirmationEmail, sendNewWorkoutEmail } from "./email";
 import { TRPCError } from "@trpc/server";
 import { storagePut } from "./storage";
-import { getPixService, getPixServiceFromBankAccount } from "./pix";
+import { getPixService, getPixServiceFromBankAccount, getPixServiceFromSuperAdmin } from "./pix";
 import { generateReceiptHTML, generateReceiptFilename, generateExpenseReceiptHTML } from "./receipt";
 
 const SALT_ROUNDS = 10;
@@ -209,7 +209,7 @@ export const appRouter = router({
         }
 
         // Create PIX charge using super admin credentials
-        const pixService = await getPixService();
+        const pixService = await getPixServiceFromSuperAdmin();
         if (!pixService) {
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Serviço PIX não disponível" });
         }
