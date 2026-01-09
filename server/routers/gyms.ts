@@ -227,13 +227,18 @@ export const gymsRouter = router({
           const { getPixServiceFromSuperAdmin } = await import("../pix");
           const { createGymPayment, listSaasPlans } = await import("../db");
 
+          console.log(`📋 [CREATE GYM] Buscando planos SaaS...`);
           const allPlans = await listSaasPlans(false);
+          console.log(`📋 [CREATE GYM] ${allPlans.length} planos encontrados`);
+
           const plansMap: Record<string, any> = {};
           allPlans.forEach((p: any) => {
             plansMap[p.slug] = p;
           });
 
           const selectedPlan = plansMap[plan];
+          console.log(`📋 [CREATE GYM] Plano selecionado: ${plan}, encontrado: ${!!selectedPlan}`);
+
           if (selectedPlan) {
             const amountInCents = selectedPlan.priceInCents;
             const dueDate = new Date();
@@ -241,7 +246,12 @@ export const gymsRouter = router({
 
             const referenceMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
+            console.log(`💰 [CREATE GYM] Valor: R$ ${amountInCents / 100} (${amountInCents} centavos)`);
+            console.log(`🔌 [CREATE GYM] Obtendo serviço PIX do Super Admin...`);
+
             const pixService = await getPixServiceFromSuperAdmin();
+            console.log(`🔌 [CREATE GYM] Serviço PIX obtido, criando cobrança...`);
+
             const pixCharge = await pixService.createImmediateCharge({
               valor: amountInCents,
               pagador: {
@@ -252,6 +262,7 @@ export const gymsRouter = router({
               expiracao: 86400 * 10, // 10 days
             });
 
+            console.log(`💾 [CREATE GYM] Salvando pagamento no banco...`);
             // Save payment
             await createGymPayment({
               gymId: gymId!,
@@ -273,9 +284,12 @@ export const gymsRouter = router({
             pixCopyPaste = pixCharge.pixCopiaECola;
 
             console.log(`✅ [CREATE GYM] PIX gerado - TXID: ${pixCharge.txid}`);
+          } else {
+            console.error(`❌ [CREATE GYM] Plano "${plan}" não encontrado na lista de planos SaaS!`);
           }
         } catch (pixError) {
-          console.error("❌ [CREATE GYM] Erro ao gerar PIX:", pixError);
+          console.error("❌ [CREATE GYM] Erro ao gerar PIX:");
+          console.error(pixError);
           // Continuar mesmo se PIX falhar
         }
       }
