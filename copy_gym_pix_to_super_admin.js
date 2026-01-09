@@ -1,6 +1,6 @@
 /**
- * Copia dados PIX de uma academia para as configurações do Super Admin
- * Execute: node copy_gym_pix_to_super_admin.js
+ * Copia credenciais PIX de uma academia para o Super Admin
+ * Execute: node copy_pix_to_super_admin.js
  */
 
 import mysql from 'mysql2/promise';
@@ -8,7 +8,7 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-async function copyGymPixToSuperAdmin() {
+async function copyPixCredentials() {
   const dbUrl = process.env.DATABASE_URL || 'mysql://root@localhost:3306/academia_db';
   const url = new URL(dbUrl);
 
@@ -21,194 +21,86 @@ async function copyGymPixToSuperAdmin() {
   });
 
   try {
-    console.log('📋 Copiando dados PIX da academia para o Super Admin...\n');
+    console.log('🔍 Procurando conta bancária com PIX configurado...\n');
 
-    // Tentar buscar de bankAccounts primeiro (se existir)
-    let bankAccounts = [];
-    try {
-      [bankAccounts] = await connection.query(`
-        SELECT
-          ba.id,
-          ba.gymId,
-          ba.titularNome,
-          ba.banco,
-          ba.agenciaNumero,
-          ba.contaNumero,
-          ba.contaDv,
-          ba.pixChave,
-          ba.pixTipoChave,
-          ba.pixClientId,
-          ba.pixClientSecret,
-          ba.pixCertificado,
-          ba.pixChavePrivada,
-          ba.pixUrlBase,
-          ba.pixUrlToken,
-          g.name as gymName
-        FROM bankAccounts ba
-        INNER JOIN gyms g ON ba.gymId = g.id
-        WHERE ba.pixChave IS NOT NULL
-        ORDER BY ba.id ASC
-        LIMIT 1
-      `);
-    } catch (err) {
-      if (err.code !== 'ER_NO_SUCH_TABLE') throw err;
-      console.log('ℹ️  Tabela bankAccounts não existe. Buscando dados da tabela gyms...\n');
+    // Buscar conta bancária com credenciais PIX da tabela bank_accounts
+    const [accounts] = await connection.query(`
+      SELECT ba.*, g.name as gym_name, g.id as gym_id
+      FROM bank_accounts ba
+      INNER JOIN gyms g ON ba.gym_id = g.id
+      WHERE ba.pix_ativo = 'S'
+        AND ba.pix_client_id IS NOT NULL
+        AND ba.pix_client_id != ''
+      LIMIT 1
+    `);
+
+    if (accounts.length === 0) {
+      console.log('❌ Nenhuma conta bancária com PIX configurado encontrada!');
+      console.log('\n💡 Configure o PIX em uma conta bancária primeiro, depois execute este script.');
+      return;
     }
 
-    // Se não encontrou em bankAccounts, buscar da tabela gyms
-    if (bankAccounts.length === 0) {
-      const [gyms] = await connection.query(`
-        SELECT
-          id as gymId,
-          name as gymName,
-          pixClientId,
-          pixClientSecret,
-          pixCertificate as pixCertificado,
-          pixKey as pixChave,
-          pixKeyType as pixTipoChave,
-          merchantName as titularNome,
-          merchantCity,
-          null as pixChavePrivada,
-          null as pixUrlBase,
-          null as pixUrlToken,
-          null as banco,
-          null as agenciaNumero,
-          null as contaNumero,
-          null as contaDv
-        FROM gyms
-        WHERE pixKey IS NOT NULL
-        ORDER BY id ASC
-        LIMIT 1
-      `);
-
-      if (gyms.length === 0) {
-        console.log('⚠️  Nenhuma academia com PIX configurado encontrada.');
-        console.log('💡 Configure os dados PIX em Admin > Configurações primeiro.\n');
-        return;
-      }
-
-      bankAccounts = gyms;
-      console.log('✅ Usando dados PIX da tabela gyms (dados básicos)');
-    } else {
-      console.log('✅ Usando dados PIX da tabela bankAccounts (dados completos)');
-    }
-
-    const bankData = bankAccounts[0];
-    console.log(`✅ Usando dados da conta bancária da academia: ${bankData.gymName} (ID: ${bankData.gymId})`);
-    console.log('');
-    console.log('📋 Dados que serão copiados:');
-    console.log(`   - Titular: ${bankData.titularNome || 'não configurado'}`);
-    console.log(`   - Banco: ${bankData.banco || 'não configurado'}`);
-    console.log(`   - Agência: ${bankData.agenciaNumero || 'não configurada'}`);
-    console.log(`   - Conta: ${bankData.contaNumero}${bankData.contaDv ? '-' + bankData.contaDv : ''}`);
-    console.log(`   - Chave PIX: ${bankData.pixChave || 'não configurada'}`);
-    console.log(`   - Tipo: ${bankData.pixTipoChave || 'não configurado'}`);
-    console.log(`   - Client ID: ${bankData.pixClientId ? '***configurado***' : 'não configurado'}`);
-    console.log(`   - Client Secret: ${bankData.pixClientSecret ? '***configurado***' : 'não configurado'}`);
-    console.log(`   - Certificado: ${bankData.pixCertificado ? `***${Buffer.byteLength(bankData.pixCertificado, 'utf8')} bytes***` : 'não configurado'}`);
-    console.log(`   - Chave Privada: ${bankData.pixChavePrivada ? `***${Buffer.byteLength(bankData.pixChavePrivada, 'utf8')} bytes***` : 'não configurada'}`);
-    console.log(`   - URL API: ${bankData.pixUrlBase || 'não configurada'}`);
-    console.log(`   - URL Token: ${bankData.pixUrlToken || 'não configurada'}`);
+    const account = accounts[0];
+    console.log(`✅ Conta bancária encontrada: ${account.gym_name} (Banco: ${account.banco})`);
+    console.log(`   - Client ID: ${account.pix_client_id ? account.pix_client_id.substring(0, 20) + '...' : 'N/A'}`);
+    console.log(`   - PIX Key: ${account.pix_chave || 'N/A'}`);
+    console.log(`   - PIX Key Type: ${account.pix_tipo_chave || 'N/A'}`);
+    console.log(`   - URL Base: ${account.pix_url_base || 'N/A'}`);
     console.log('');
 
-    // Verificar se já existe configuração no Super Admin
-    const [existing] = await connection.query('SELECT id FROM superAdminSettings LIMIT 1');
+    // Verificar se tabela superAdminSettings existe
+    console.log('🔍 Verificando tabela superAdminSettings...');
+    const [tables] = await connection.query(`
+      SHOW TABLES LIKE 'superAdminSettings'
+    `);
 
-    // Determinar o provider baseado na URL da API
-    const pixProvider = bankData.pixUrlBase?.includes('sicoob') ? 'sicoob' :
-                       bankData.pixUrlBase?.includes('gerencianet') || bankData.pixUrlBase?.includes('efi') ? 'efi' :
-                       'other';
-
-    if (existing.length > 0) {
-      // Atualizar registro existente
-      console.log('📝 Atualizando configurações existentes do Super Admin...');
-
-      await connection.query(`
-        UPDATE superAdminSettings
-        SET
-          pixProvider = ?,
-          pixClientId = ?,
-          pixClientSecret = ?,
-          pixCertificate = ?,
-          pixPrivateKey = ?,
-          pixKey = ?,
-          pixKeyType = ?,
-          merchantName = ?,
-          merchantCity = ?,
-          pixApiUrl = ?,
-          pixTokenUrl = ?,
-          bankCode = ?,
-          bankName = ?,
-          bankAccount = ?,
-          bankAgency = ?
-        WHERE id = ?
-      `, [
-        pixProvider,
-        bankData.pixClientId,
-        bankData.pixClientSecret,
-        bankData.pixCertificado,
-        bankData.pixChavePrivada,
-        bankData.pixChave,
-        bankData.pixTipoChave || 'random',
-        bankData.titularNome,
-        null, // merchantCity - não temos no bankAccounts
-        bankData.pixUrlBase,
-        bankData.pixUrlToken,
-        bankData.banco?.toString(),
-        null, // bankName - podemos adicionar depois
-        bankData.contaNumero ? `${bankData.contaNumero}${bankData.contaDv ? '-' + bankData.contaDv : ''}` : null,
-        bankData.agenciaNumero,
-        existing[0].id
-      ]);
-
-      console.log('✅ Configurações do Super Admin atualizadas com sucesso!');
-    } else {
-      // Criar novo registro
-      console.log('📝 Criando configurações do Super Admin...');
-
-      await connection.query(`
-        INSERT INTO superAdminSettings (
-          pixProvider,
-          pixClientId,
-          pixClientSecret,
-          pixCertificate,
-          pixPrivateKey,
-          pixKey,
-          pixKeyType,
-          merchantName,
-          merchantCity,
-          pixApiUrl,
-          pixTokenUrl,
-          bankCode,
-          bankName,
-          bankAccount,
-          bankAgency
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        pixProvider,
-        bankData.pixClientId,
-        bankData.pixClientSecret,
-        bankData.pixCertificado,
-        bankData.pixChavePrivada,
-        bankData.pixChave,
-        bankData.pixTipoChave || 'random',
-        bankData.titularNome,
-        null, // merchantCity
-        bankData.pixUrlBase,
-        bankData.pixUrlToken,
-        bankData.banco?.toString(),
-        null, // bankName
-        bankData.contaNumero ? `${bankData.contaNumero}${bankData.contaDv ? '-' + bankData.contaDv : ''}` : null,
-        bankData.agenciaNumero
-      ]);
-
-      console.log('✅ Configurações do Super Admin criadas com sucesso!');
+    if (tables.length === 0) {
+      console.log('❌ Tabela superAdminSettings não existe!');
+      console.log('💡 Execute o script de criação da tabela primeiro.');
+      return;
     }
 
-    console.log('\n📋 Próximos passos:');
-    console.log('   1. Acesse Super Admin > Configurações > Pagamentos PIX');
-    console.log('   2. Verifique se os dados foram copiados corretamente');
-    console.log('   3. Academias usarão estes dados para pagamento de assinatura\n');
+    console.log('✅ Tabela encontrada\n');
+
+    // Copiar credenciais PIX para Super Admin
+    console.log('📋 Copiando credenciais PIX para Super Admin...');
+    await connection.query(`
+      UPDATE superAdminSettings SET
+        pixClientId = ?,
+        pixClientSecret = ?,
+        pixCertificate = ?,
+        pixKey = ?,
+        pixKeyType = ?,
+        pixApiUrl = ?,
+        pixTokenUrl = ?
+      WHERE id = 1
+    `, [
+      account.pix_client_id,
+      account.pix_client_secret,
+      account.pix_certificado,
+      account.pix_chave,
+      account.pix_tipo_chave,
+      account.pix_url_base || 'https://api.sicoob.com.br/pix/api/v2',
+      account.pix_url_token || 'https://api.sicoob.com.br/pix/oauth/token'
+    ]);
+
+    console.log('✅ Credenciais PIX copiadas com sucesso!');
+    console.log('\n📊 Verificando...');
+
+    // Verificar se foi copiado
+    const [settings] = await connection.query(`
+      SELECT pixClientId, pixKey, pixKeyType FROM superAdminSettings WHERE id = 1
+    `);
+
+    if (settings[0] && settings[0].pixClientId) {
+      console.log('✅ SUCESSO! Credenciais PIX do Super Admin configuradas:');
+      console.log(`   - Client ID: ${settings[0].pixClientId.substring(0, 20)}...`);
+      console.log(`   - PIX Key: ${settings[0].pixKey}`);
+      console.log(`   - PIX Key Type: ${settings[0].pixKeyType}`);
+      console.log('\n🚀 Agora você pode criar academias com geração automática de PIX!');
+    } else {
+      console.log('❌ Erro: Credenciais não foram copiadas corretamente');
+    }
 
   } catch (error) {
     console.error('❌ Erro:', error.message);
@@ -218,4 +110,4 @@ async function copyGymPixToSuperAdmin() {
   }
 }
 
-copyGymPixToSuperAdmin().catch(console.error);
+copyPixCredentials().catch(console.error);
