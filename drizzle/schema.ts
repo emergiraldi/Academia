@@ -886,3 +886,20 @@ export const paymentMethods = mysqlTable("payment_methods", {
 
 export type PaymentMethod = typeof paymentMethods.$inferSelect;
 export type InsertPaymentMethod = typeof paymentMethods.$inferInsert;
+
+/**
+ * Landing Page Screenshots - Imagens do carrossel da landing page
+ */
+export const landingPageScreenshots = mysqlTable("landing_page_screenshots", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  imageUrl: text("image_url").notNull(),
+  displayOrder: int("display_order").default(0).notNull(),
+  active: varchar("active", { length: 1 }).default("Y").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LandingPageScreenshot = typeof landingPageScreenshots.$inferSelect;
+export type InsertLandingPageScreenshot = typeof landingPageScreenshots.$inferInsert;

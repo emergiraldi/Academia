@@ -3576,3 +3576,96 @@ export async function getStudentProfile(studentId: number, gymId: number) {
     lastAccessDate,
   };
 }
+
+// ============ LANDING PAGE SCREENSHOTS ============
+
+/**
+ * List all active landing page screenshots
+ */
+export async function listLandingPageScreenshots(activeOnly: boolean = true) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db
+    .select()
+    .from(schema.landingPageScreenshots)
+    .orderBy(asc(schema.landingPageScreenshots.displayOrder));
+
+  if (activeOnly) {
+    query = query.where(eq(schema.landingPageScreenshots.active, "Y")) as any;
+  }
+
+  return await query;
+}
+
+/**
+ * Get landing page screenshot by ID
+ */
+export async function getLandingPageScreenshotById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const results = await db
+    .select()
+    .from(schema.landingPageScreenshots)
+    .where(eq(schema.landingPageScreenshots.id, id))
+    .limit(1);
+
+  return results[0] || null;
+}
+
+/**
+ * Create landing page screenshot
+ */
+export async function createLandingPageScreenshot(data: {
+  title: string;
+  description?: string | null;
+  imageUrl: string;
+  displayOrder?: number;
+  active?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  return await db.insert(schema.landingPageScreenshots).values({
+    title: data.title,
+    description: data.description || null,
+    imageUrl: data.imageUrl,
+    displayOrder: data.displayOrder || 0,
+    active: data.active || "Y",
+  });
+}
+
+/**
+ * Update landing page screenshot
+ */
+export async function updateLandingPageScreenshot(
+  id: number,
+  data: {
+    title?: string;
+    description?: string | null;
+    imageUrl?: string;
+    displayOrder?: number;
+    active?: string;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  return await db
+    .update(schema.landingPageScreenshots)
+    .set(data)
+    .where(eq(schema.landingPageScreenshots.id, id));
+}
+
+/**
+ * Delete landing page screenshot
+ */
+export async function deleteLandingPageScreenshot(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  return await db
+    .delete(schema.landingPageScreenshots)
+    .where(eq(schema.landingPageScreenshots.id, id));
+}

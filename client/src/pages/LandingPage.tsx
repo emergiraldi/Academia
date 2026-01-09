@@ -110,12 +110,6 @@ const benefits = [
   "Relatórios em tempo real para decisões baseadas em dados",
 ];
 
-const screenshots = [
-  { title: "Dashboard Principal", description: "Visão geral com métricas importantes" },
-  { title: "Gestão de Alunos", description: "Controle completo de cadastros" },
-  { title: "Controle Financeiro", description: "Acompanhe pagamentos em tempo real" },
-];
-
 export default function LandingPage() {
   const [, setLocation] = useLocation();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -129,6 +123,20 @@ export default function LandingPage() {
 
   // Buscar configurações de trial do Super Admin
   const { data: superAdminSettings } = trpc.superAdminSettings.get.useQuery();
+
+  // Buscar screenshots do banco de dados
+  const { data: screenshotsData } = trpc.landingPageScreenshots.listActive.useQuery();
+
+  // Screenshots padrão caso não haja no banco
+  const defaultScreenshots = [
+    { title: "Dashboard Principal", description: "Visão geral com métricas importantes", imageUrl: "" },
+    { title: "Gestão de Alunos", description: "Controle completo de cadastros", imageUrl: "" },
+    { title: "Controle Financeiro", description: "Acompanhe pagamentos em tempo real", imageUrl: "" },
+  ];
+
+  const screenshots = screenshotsData && screenshotsData.length > 0
+    ? screenshotsData.map(s => ({ title: s.title, description: s.description || "", imageUrl: s.imageUrl }))
+    : defaultScreenshots;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -284,12 +292,24 @@ export default function LandingPage() {
 
             <div className="relative">
               <div className="bg-white rounded-2xl shadow-2xl p-2">
-                <div className="aspect-video bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center">
-                  <div className="text-center">
-                    <Dumbbell className="w-20 h-20 text-indigo-600 mx-auto mb-4" />
-                    <p className="text-gray-600">{screenshots[currentSlide].title}</p>
-                    <p className="text-sm text-gray-500">{screenshots[currentSlide].description}</p>
-                  </div>
+                <div className="aspect-video bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center overflow-hidden">
+                  {screenshots[currentSlide].imageUrl ? (
+                    <img
+                      src={screenshots[currentSlide].imageUrl}
+                      alt={screenshots[currentSlide].title}
+                      className="w-full h-full object-cover rounded-xl"
+                      onError={(e) => {
+                        // Se a imagem falhar ao carregar, mostrar o fallback
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <div className="text-center">
+                      <Dumbbell className="w-20 h-20 text-indigo-600 mx-auto mb-4" />
+                      <p className="text-gray-600">{screenshots[currentSlide].title}</p>
+                      <p className="text-sm text-gray-500">{screenshots[currentSlide].description}</p>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex justify-center mt-4 space-x-2">

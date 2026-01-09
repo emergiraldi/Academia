@@ -6,6 +6,7 @@ import { settingsRouter } from "./routers/settings";
 import { usersRouter } from "./routers/users";
 import { saasPlansRouter } from "./routers/saasPlans";
 import { superAdminSettingsRouter } from "./routers/superAdminSettings";
+import { landingPageScreenshotsRouter } from "./routers/landingPageScreenshots";
 import { publicProcedure, protectedProcedure, router, gymAdminProcedure, professorProcedure, studentProcedure } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
@@ -157,6 +158,7 @@ export const appRouter = router({
   users: usersRouter,
   saasPlans: saasPlansRouter,
   superAdminSettings: superAdminSettingsRouter,
+  landingPageScreenshots: landingPageScreenshotsRouter,
 
   // ============ GYM BILLING CYCLES ============
   gymBillingCycles: router({
