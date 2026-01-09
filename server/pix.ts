@@ -14,7 +14,7 @@ interface PixCredentials {
 interface CreateImmediateChargeParams {
   valor: number; // Value in cents
   pagador: {
-    cpf: string;
+    documento: string; // CPF (11 dígitos) ou CNPJ (14 dígitos)
     nome: string;
   };
   infoAdicionais?: string;
@@ -131,7 +131,18 @@ export class PixService {
 
     try {
       // Step 1: Create the charge
-      const chargePayload = {
+      // Detectar se é CPF (11 dígitos) ou CNPJ (14 dígitos)
+      const documentoLimpo = params.pagador.documento.replace(/\D/g, "");
+      const isCpf = documentoLimpo.length === 11;
+      const isCnpj = documentoLimpo.length === 14;
+
+      if (!isCpf && !isCnpj) {
+        throw new Error(`Documento inválido: deve ter 11 dígitos (CPF) ou 14 dígitos (CNPJ). Recebido: ${documentoLimpo.length} dígitos`);
+      }
+
+      console.log(`📄 [PIX] Tipo de documento: ${isCpf ? 'CPF' : 'CNPJ'} (${documentoLimpo.length} dígitos)`);
+
+      const chargePayload: any = {
         calendario: {
           expiracao: params.expiracao || 3600, // 1 hour default
         },
@@ -141,7 +152,7 @@ export class PixService {
         chave: this.credentials.pixKey,
         solicitacaoPagador: params.infoAdicionais || "Pagamento de mensalidade",
         devedor: {
-          cpf: params.pagador.cpf.replace(/\D/g, ""),
+          [isCpf ? 'cpf' : 'cnpj']: documentoLimpo,
           nome: params.pagador.nome,
         },
       };
