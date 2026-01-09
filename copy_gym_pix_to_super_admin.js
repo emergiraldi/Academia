@@ -23,9 +23,23 @@ async function copyGymPixToSuperAdmin() {
   try {
     console.log('📋 Copiando dados PIX da academia para o Super Admin...\n');
 
-    // Buscar dados PIX da primeira academia (ou academia específica)
+    // Listar todas as academias
+    const [allGyms] = await connection.query('SELECT id, name, pixKey, pixClientId FROM gyms');
+
+    console.log('📋 Academias cadastradas:');
+    allGyms.forEach((gym, index) => {
+      const hasPixKey = gym.pixKey ? '✅' : '❌';
+      const hasClientId = gym.pixClientId ? '✅' : '❌';
+      console.log(`   ${index + 1}. ${gym.name} (ID: ${gym.id})`);
+      console.log(`      Chave PIX: ${hasPixKey} | Client ID: ${hasClientId}`);
+    });
+    console.log('');
+
+    // Buscar dados PIX da primeira academia que tiver QUALQUER dado configurado
     const [gyms] = await connection.query(`
       SELECT
+        id,
+        name,
         pixClientId,
         pixClientSecret,
         pixCertificate,
@@ -34,18 +48,19 @@ async function copyGymPixToSuperAdmin() {
         merchantName,
         merchantCity
       FROM gyms
-      WHERE pixClientId IS NOT NULL
+      ORDER BY id ASC
       LIMIT 1
     `);
 
     if (gyms.length === 0) {
-      console.log('⚠️  Nenhuma academia com dados PIX configurados encontrada.');
-      console.log('   Configure os dados PIX em pelo menos uma academia primeiro.\n');
+      console.log('⚠️  Nenhuma academia cadastrada.');
       return;
     }
 
     const gymData = gyms[0];
-    console.log('✅ Dados PIX encontrados na academia:');
+    console.log(`✅ Usando dados da academia: ${gymData.name} (ID: ${gymData.id})`);
+    console.log('');
+    console.log('📋 Dados que serão copiados:');
     console.log(`   - Chave PIX: ${gymData.pixKey || 'não configurada'}`);
     console.log(`   - Tipo: ${gymData.pixKeyType || 'não configurado'}`);
     console.log(`   - Beneficiário: ${gymData.merchantName || 'não configurado'}`);
