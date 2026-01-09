@@ -920,3 +920,79 @@ export async function checkTrialExpirations() {
     console.error("[CRON] ❌ Error in trial expiration check:", error);
   }
 }
+
+/**
+ * Poll pending PIX payments for gym subscriptions
+ * Checks payment status with Sicoob/Efí Pay and processes confirmed payments
+ * Runs every minute as a fallback when webhook is not configured
+ */
+export async function pollGymPixPayments() {
+  try {
+    console.log("[CRON] 🔍 Polling pending PIX payments for gyms...");
+
+    // Get all pending gym payments
+    const { getPendingGymPayments } = await import("./db");
+    const pendingPayments = await getPendingGymPayments();
+
+    if (!pendingPayments || pendingPayments.length === 0) {
+      console.log("[CRON] ℹ️  No pending PIX payments found");
+      return;
+    }
+
+    console.log(`[CRON] Found ${pendingPayments.length} pending payment(s) to check`);
+
+    // Check each payment with Efí Pay
+    const { getPixServiceFromSuperAdmin } = await import("./pix");
+    const pixService = await getPixServiceFromSuperAdmin();
+
+    for (const payment of pendingPayments) {
+      try {
+        if (!payment.pixTxId) {
+          console.log(`[CRON] ⚠️  Payment ${payment.id} has no TxID, skipping`);
+          continue;
+        }
+
+        console.log(`[CRON] Checking payment ${payment.id} (TxID: ${payment.pixTxId})...`);
+
+        // Check payment status with Efí Pay
+        const charge = await pixService.getChargeDetails(payment.pixTxId);
+
+        console.log(`[CRON] Payment ${payment.id} status: ${charge.status}`);
+
+        // If payment is confirmed, process it via webhook function
+        if (charge.status === "CONCLUIDA" || charge.status === "ATIVA") {
+          console.log(`[CRON] ✅ Payment ${payment.id} is confirmed! Processing...`);
+
+          const { processPixWebhook } = await import("./pixWebhook");
+
+          // Simulate webhook payload
+          const webhookPayload = {
+            pix: [{
+              txid: payment.pixTxId,
+              endToEndId: charge.endToEndId || `E${Date.now()}`,
+              valor: (payment.amountInCents / 100).toFixed(2),
+              horario: charge.paidAt || new Date().toISOString()
+            }]
+          };
+
+          await processPixWebhook(webhookPayload);
+
+          console.log(`[CRON] ✅ Payment ${payment.id} processed successfully via polling`);
+        }
+
+      } catch (paymentError: any) {
+        // Ignore 404 errors (charge not found) - it might not have been created yet in Efí Pay
+        if (paymentError.message?.includes("404") || paymentError.message?.includes("not found")) {
+          console.log(`[CRON] ℹ️  Payment ${payment.id} not found in Efí Pay yet, will check again later`);
+        } else {
+          console.error(`[CRON] ❌ Error checking payment ${payment.id}:`, paymentError);
+        }
+      }
+    }
+
+    console.log("[CRON] ✅ PIX payment polling completed");
+
+  } catch (error) {
+    console.error("[CRON] ❌ Error in PIX payment polling:", error);
+  }
+}

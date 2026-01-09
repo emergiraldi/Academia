@@ -166,6 +166,15 @@ export async function getGymPaymentByReferenceMonth(gymId: number, referenceMont
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getPendingGymPayments() {
+  const db = await getDb();
+  if (!db) return [];
+  const result = await db.select().from(gymPayments)
+    .where(eq(gymPayments.status, "pending"))
+    .orderBy(asc(gymPayments.createdAt));
+  return result;
+}
+
 // ============ SAAS PLANS ============
 
 export async function listSaasPlans(activeOnly = false) {

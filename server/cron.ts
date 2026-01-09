@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { sendDailyPaymentReminders, sendDailyMedicalExamReminders, checkAndBlockDefaulters, syncAccessLogsFromControlId, checkTrialExpirations } from "./notifications";
+import { sendDailyPaymentReminders, sendDailyMedicalExamReminders, checkAndBlockDefaulters, syncAccessLogsFromControlId, checkTrialExpirations, pollGymPixPayments } from "./notifications";
 
 /**
  * Cron job scheduler for automated notifications
@@ -58,10 +58,21 @@ export function startCronJobs() {
     }
   });
 
+  // Run every minute - Poll pending PIX payments for gyms
+  cron.schedule("* * * * *", async () => {
+    console.log("Running gym PIX payment polling job...");
+    try {
+      await pollGymPixPayments();
+    } catch (error) {
+      console.error("Error in gym PIX payment polling cron job:", error);
+    }
+  });
+
   console.log("✅ Cron jobs started successfully");
   console.log("  - Defaulter blocking: Daily at 6:00 AM");
   console.log("  - Trial expiration check: Daily at 8:00 AM");
   console.log("  - Payment reminders: Daily at 9:00 AM");
   console.log("  - Medical exam reminders: Daily at 10:00 AM");
   console.log("  - Access logs sync: Every 30 seconds");
+  console.log("  - Gym PIX payment polling: Every minute");
 }
