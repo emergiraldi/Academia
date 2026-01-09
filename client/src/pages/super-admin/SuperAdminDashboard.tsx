@@ -11,9 +11,20 @@ export default function SuperAdminDashboard() {
   // Buscar lista de academias
   const { data: gyms, isLoading } = trpc.gyms.list.useQuery();
 
+  // Buscar dados financeiros de mensalidades
+  const { data: billingStats, isLoading: isLoadingBilling } = trpc.gymBillingCycles.getBillingStats.useQuery();
+
   // Calcular estatísticas
   const totalGyms = gyms?.length || 0;
   const activeGyms = gyms?.filter(g => g.status === "active")?.length || 0;
+
+  // Formatar valores em centavos para reais
+  const formatCurrency = (cents: number) => {
+    return (cents / 100).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  };
 
   return (
     <SuperAdminLayout>
@@ -92,11 +103,15 @@ export default function SuperAdminDashboard() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-sm text-gray-600 mb-2">Receita Total</p>
+                  <p className="text-sm text-gray-600 mb-2">Receita Pendente</p>
                   <p className="text-3xl font-bold text-gray-900 mb-1">
-                    -
+                    {isLoadingBilling ? "-" : formatCurrency(billingStats?.totalPending || 0)}
                   </p>
-                  <p className="text-xs text-gray-500">Mês atual</p>
+                  <p className="text-xs text-gray-500">
+                    {billingStats && billingStats.pendingCount + billingStats.overdueCount > 0
+                      ? `${billingStats.pendingCount + billingStats.overdueCount} mensalidade(s)`
+                      : "Nenhuma mensalidade pendente"}
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
                   <DollarSign className="w-6 h-6 text-orange-600" />
@@ -105,6 +120,84 @@ export default function SuperAdminDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Billing Summary */}
+        {billingStats && billingStats.gyms && billingStats.gyms.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumo Financeiro</h3>
+            <div className="grid md:grid-cols-3 gap-4 mb-6">
+              <Card className="shadow-md">
+                <CardContent className="p-4">
+                  <p className="text-sm text-gray-600 mb-1">Total Pendente</p>
+                  <p className="text-2xl font-bold text-orange-600">{formatCurrency(billingStats.totalPending)}</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md">
+                <CardContent className="p-4">
+                  <p className="text-sm text-gray-600 mb-1">Total Pago</p>
+                  <p className="text-2xl font-bold text-green-600">{formatCurrency(billingStats.totalPaid)}</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md">
+                <CardContent className="p-4">
+                  <p className="text-sm text-gray-600 mb-1">Mensalidades Vencidas</p>
+                  <p className="text-2xl font-bold text-red-600">{billingStats.overdueCount}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>Mensalidades por Academia</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {billingStats.gyms.map((gym) => (
+                    <div
+                      key={gym.gymId}
+                      className="border-l-4 border-l-blue-500 bg-gray-50 p-4 rounded hover:bg-gray-100 transition"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{gym.gymName}</h4>
+                          <p className="text-sm text-gray-600">@{gym.gymSlug} • Plano: {gym.gymPlan}</p>
+                        </div>
+                        <div className="text-right">
+                          {gym.overdueCount > 0 && (
+                            <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                              {gym.overdueCount} vencida(s)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 mt-3">
+                        <div>
+                          <p className="text-xs text-gray-600">Pendente</p>
+                          <p className="text-sm font-semibold text-orange-600">
+                            {formatCurrency(gym.totalPending)}
+                          </p>
+                          <p className="text-xs text-gray-500">{gym.pendingCount} mensalidade(s)</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600">Pago</p>
+                          <p className="text-sm font-semibold text-green-600">
+                            {formatCurrency(gym.totalPaid)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600">Total de Cobranças</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {gym.billings.length}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div>

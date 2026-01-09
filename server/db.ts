@@ -244,6 +244,35 @@ export async function getBillingCyclesByStatus(status: "pending" | "paid" | "ove
     .orderBy(asc(gymBillingCycles.dueDate));
 }
 
+export async function getAllBillingCyclesWithGym() {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Join billing cycles with gym information
+  const result = await db
+    .select({
+      id: gymBillingCycles.id,
+      gymId: gymBillingCycles.gymId,
+      gymName: gyms.name,
+      gymSlug: gyms.slug,
+      gymPlan: gyms.plan,
+      gymStatus: gyms.status,
+      referenceMonth: gymBillingCycles.referenceMonth,
+      dueDate: gymBillingCycles.dueDate,
+      amountCents: gymBillingCycles.amountCents,
+      status: gymBillingCycles.status,
+      paidAt: gymBillingCycles.paidAt,
+      paymentId: gymBillingCycles.paymentId,
+      blockedAt: gymBillingCycles.blockedAt,
+      createdAt: gymBillingCycles.createdAt,
+    })
+    .from(gymBillingCycles)
+    .innerJoin(gyms, eq(gymBillingCycles.gymId, gyms.id))
+    .orderBy(desc(gymBillingCycles.createdAt));
+
+  return result;
+}
+
 export async function getBillingCyclesByPaymentId(paymentId: number) {
   const db = await getDb();
   if (!db) return undefined;

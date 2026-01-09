@@ -279,6 +279,66 @@ export const appRouter = router({
           });
         }
       }),
+
+    // Super Admin: Get billing statistics for all gyms
+    getBillingStats: superAdminProcedure
+      .query(async () => {
+        const allBillings = await db.getAllBillingCyclesWithGym();
+
+        // Calculate statistics
+        const totalPending = allBillings
+          .filter(b => b.status === 'pending' || b.status === 'overdue')
+          .reduce((sum, b) => sum + b.amountCents, 0);
+
+        const totalPaid = allBillings
+          .filter(b => b.status === 'paid')
+          .reduce((sum, b) => sum + b.amountCents, 0);
+
+        const overdueCount = allBillings.filter(b => b.status === 'overdue').length;
+        const pendingCount = allBillings.filter(b => b.status === 'pending').length;
+
+        // Group by gym
+        const gymStats = allBillings.reduce((acc, billing) => {
+          if (!acc[billing.gymId]) {
+            acc[billing.gymId] = {
+              gymId: billing.gymId,
+              gymName: billing.gymName,
+              gymSlug: billing.gymSlug,
+              gymPlan: billing.gymPlan,
+              gymStatus: billing.gymStatus,
+              totalPending: 0,
+              totalPaid: 0,
+              overdueCount: 0,
+              pendingCount: 0,
+              billings: [],
+            };
+          }
+
+          if (billing.status === 'pending' || billing.status === 'overdue') {
+            acc[billing.gymId].totalPending += billing.amountCents;
+          }
+          if (billing.status === 'paid') {
+            acc[billing.gymId].totalPaid += billing.amountCents;
+          }
+          if (billing.status === 'overdue') {
+            acc[billing.gymId].overdueCount++;
+          }
+          if (billing.status === 'pending') {
+            acc[billing.gymId].pendingCount++;
+          }
+
+          acc[billing.gymId].billings.push(billing);
+          return acc;
+        }, {} as Record<number, any>);
+
+        return {
+          totalPending,
+          totalPaid,
+          overdueCount,
+          pendingCount,
+          gyms: Object.values(gymStats),
+        };
+      }),
   }),
 
   auth: router({
