@@ -54,6 +54,12 @@ export default function Signup() {
     console.log("[Signup] planSlug:", planSlug);
     console.log("[Signup] saasPlans:", saasPlans);
 
+    // Log detalhado dos slugs dos planos
+    if (saasPlans && saasPlans.length > 0) {
+      console.log("[Signup] Slugs disponíveis:", saasPlans.map(p => p.slug));
+      console.log("[Signup] Planos completos:", saasPlans);
+    }
+
     // Se temos os planos carregados, buscar o preço correto
     if (saasPlans && saasPlans.length > 0) {
       const selectedPlan = saasPlans.find(p => p.slug === planSlug);
