@@ -73,7 +73,27 @@ export const gymsRouter = router({
       console.log("🟢 [CREATE GYM] Input recebido:", JSON.stringify(input, null, 2));
 
       const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Verificar se slug já existe
+      const [existingSlug] = await db.select().from(gyms).where(eq(gyms.slug, input.slug));
+      if (existingSlug) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Já existe uma academia com este nome. Por favor, escolha outro nome."
+        });
+      }
+
+      // Verificar se email do admin já existe (se fornecido)
+      if (input.adminEmail) {
+        const [existingEmail] = await db.select().from(users).where(eq(users.email, input.adminEmail));
+        if (existingEmail) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Este email já está cadastrado no sistema. Por favor, use outro email."
+          });
+        }
+      }
 
       // Criar a academia
       const { adminEmail, adminName, ...gymData } = input;
