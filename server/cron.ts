@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { sendDailyPaymentReminders, sendDailyMedicalExamReminders, checkAndBlockDefaulters, syncAccessLogsFromControlId, checkTrialExpirations, pollGymPixPayments } from "./notifications";
+import { sendDailyPaymentReminders, sendDailyMedicalExamReminders, checkAndBlockDefaulters, syncAccessLogsFromControlId, checkTrialExpirations, pollGymPixPayments, generateMonthlyBillingCycles, sendBillingNotifications, blockOverdueGyms } from "./notifications";
 
 /**
  * Cron job scheduler for automated notifications
@@ -68,10 +68,43 @@ export function startCronJobs() {
     }
   });
 
+  // Run on 1st of each month at 00:00 - Generate monthly billing cycles
+  cron.schedule("0 0 1 * *", async () => {
+    console.log("Running monthly billing generation job...");
+    try {
+      await generateMonthlyBillingCycles();
+    } catch (error) {
+      console.error("Error in monthly billing generation cron job:", error);
+    }
+  });
+
+  // Run daily at 5:00 AM - Block overdue gyms
+  cron.schedule("0 5 * * *", async () => {
+    console.log("Running overdue gym blocking job...");
+    try {
+      await blockOverdueGyms();
+    } catch (error) {
+      console.error("Error in overdue gym blocking cron job:", error);
+    }
+  });
+
+  // Run daily at 9:30 AM - Send billing notifications
+  cron.schedule("30 9 * * *", async () => {
+    console.log("Running billing notifications job...");
+    try {
+      await sendBillingNotifications();
+    } catch (error) {
+      console.error("Error in billing notifications cron job:", error);
+    }
+  });
+
   console.log("✅ Cron jobs started successfully");
+  console.log("  - Monthly billing generation: 1st of month at 00:00");
+  console.log("  - Overdue gym blocking: Daily at 5:00 AM");
   console.log("  - Defaulter blocking: Daily at 6:00 AM");
   console.log("  - Trial expiration check: Daily at 8:00 AM");
   console.log("  - Payment reminders: Daily at 9:00 AM");
+  console.log("  - Billing notifications: Daily at 9:30 AM");
   console.log("  - Medical exam reminders: Daily at 10:00 AM");
   console.log("  - Access logs sync: Every 30 seconds");
   console.log("  - Gym PIX payment polling: Every minute");

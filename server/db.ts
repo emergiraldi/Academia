@@ -4,6 +4,7 @@ import mysql from "mysql2/promise";
 import {
   gyms, InsertGym,
   gymPayments, InsertGymPayment,
+  gymBillingCycles, InsertGymBillingCycle,
   saasPlans, InsertSaasPlan,
   superAdminSettings, InsertSuperAdminSettings,
   users, InsertUser,
@@ -173,6 +174,83 @@ export async function getPendingGymPayments() {
     .where(eq(gymPayments.status, "pending"))
     .orderBy(asc(gymPayments.createdAt));
   return result;
+}
+
+// ============ GYM BILLING CYCLES ============
+
+export async function createBillingCycle(cycle: InsertGymBillingCycle) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(gymBillingCycles).values(cycle);
+  return { insertId: Number(result[0].insertId) };
+}
+
+export async function getBillingCyclesByGym(gymId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(gymBillingCycles)
+    .where(eq(gymBillingCycles.gymId, gymId))
+    .orderBy(desc(gymBillingCycles.dueDate));
+}
+
+export async function getBillingCycleById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(gymBillingCycles)
+    .where(eq(gymBillingCycles.id, id))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getBillingCycleByGymAndMonth(gymId: number, referenceMonth: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(gymBillingCycles)
+    .where(and(
+      eq(gymBillingCycles.gymId, gymId),
+      eq(gymBillingCycles.referenceMonth, referenceMonth)
+    ))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateBillingCycle(id: number, data: Partial<InsertGymBillingCycle>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(gymBillingCycles).set(data).where(eq(gymBillingCycles.id, id));
+}
+
+export async function getPendingBillingCycles() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(gymBillingCycles)
+    .where(eq(gymBillingCycles.status, "pending"))
+    .orderBy(asc(gymBillingCycles.dueDate));
+}
+
+export async function getOverdueBillingCycles() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(gymBillingCycles)
+    .where(eq(gymBillingCycles.status, "overdue"))
+    .orderBy(asc(gymBillingCycles.dueDate));
+}
+
+export async function getBillingCyclesByStatus(status: "pending" | "paid" | "overdue" | "canceled") {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(gymBillingCycles)
+    .where(eq(gymBillingCycles.status, status))
+    .orderBy(asc(gymBillingCycles.dueDate));
+}
+
+export async function getBillingCyclesByPaymentId(paymentId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(gymBillingCycles)
+    .where(eq(gymBillingCycles.paymentId, paymentId))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
 }
 
 // ============ SAAS PLANS ============

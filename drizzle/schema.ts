@@ -168,6 +168,28 @@ export type SuperAdminSettings = typeof superAdminSettings.$inferSelect;
 export type InsertSuperAdminSettings = typeof superAdminSettings.$inferInsert;
 
 /**
+ * Gym Billing Cycles - Recurring monthly billing for gyms
+ * Tracks subscription payments on a monthly basis
+ */
+export const gymBillingCycles = mysqlTable("gym_billing_cycles", {
+  id: int("id").autoincrement().primaryKey(),
+  gymId: int("gym_id").notNull(),
+  referenceMonth: varchar("reference_month", { length: 7 }).notNull(), // 'YYYY-MM' format
+  dueDate: timestamp("due_date").notNull(),
+  amountCents: int("amount_cents").notNull(),
+  status: mysqlEnum("status", ["pending", "paid", "overdue", "canceled"]).default("pending").notNull(),
+  paymentId: int("payment_id"), // FK to gymPayments when PIX QR code is generated
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  paidAt: timestamp("paid_at"),
+  notifiedAt: timestamp("notified_at"), // When billing notification email was sent
+  blockedAt: timestamp("blocked_at"), // When gym was blocked for non-payment
+  notes: text("notes"),
+});
+
+export type GymBillingCycle = typeof gymBillingCycles.$inferSelect;
+export type InsertGymBillingCycle = typeof gymBillingCycles.$inferInsert;
+
+/**
  * Core user table backing auth flow.
  * Extended with roles for multi-tenant system
  */

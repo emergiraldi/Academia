@@ -996,3 +996,362 @@ export async function pollGymPixPayments() {
     console.error("[CRON] ❌ Error in PIX payment polling:", error);
   }
 }
+
+/**
+ * Generate monthly billing cycles for all active gyms
+ * Runs on the 1st of each month at 00:00
+ */
+export async function generateMonthlyBillingCycles() {
+  try {
+    console.log("[CRON] 💰 Generating monthly billing cycles...");
+
+    // Get Super Admin settings for billing configuration
+    const { getSuperAdminSettings, listGyms, listSaasPlans, createBillingCycle, getBillingCycleByGymAndMonth } = await import("./db");
+    const settings = await getSuperAdminSettings();
+
+    if (!settings || settings.billingEnabled !== 'Y') {
+      console.log("[CRON] ⏭️  Billing disabled, skipping generation");
+      return;
+    }
+
+    const dueDay = settings.billingDueDay || 10; // Default to day 10
+    const now = new Date();
+    const referenceMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    console.log(`[CRON] Configuration:`);
+    console.log(`  - Due day: ${dueDay}`);
+    console.log(`  - Reference month: ${referenceMonth}`);
+
+    // Get all active gyms
+    const allGyms = await listGyms();
+    const activeGyms = allGyms.filter(g => g.status === 'active' && g.planStatus === 'active');
+
+    if (activeGyms.length === 0) {
+      console.log("[CRON] ℹ️  No active gyms found");
+      return;
+    }
+
+    console.log(`[CRON] Found ${activeGyms.length} active gym(s)`);
+
+    // Get SaaS plans for pricing
+    const allPlans = await listSaasPlans(false);
+    const plansMap: Record<string, any> = {};
+    allPlans.forEach((p: any) => {
+      plansMap[p.slug] = p;
+    });
+
+    for (const gym of activeGyms) {
+      try {
+        // Check if billing already exists for this month
+        const existingBilling = await getBillingCycleByGymAndMonth(gym.id, referenceMonth);
+
+        if (existingBilling) {
+          console.log(`[CRON] ℹ️  Billing cycle already exists for gym ${gym.id} (${gym.name})`);
+          continue;
+        }
+
+        // Get plan pricing
+        const selectedPlan = plansMap[gym.plan];
+        if (!selectedPlan) {
+          console.log(`[CRON] ⚠️  No plan found for gym ${gym.id} (plan: ${gym.plan})`);
+          continue;
+        }
+
+        // Calculate due date
+        const dueDate = new Date(now.getFullYear(), now.getMonth(), dueDay);
+
+        // Create billing cycle
+        await createBillingCycle({
+          gymId: gym.id,
+          referenceMonth,
+          dueDate,
+          amountCents: selectedPlan.priceInCents,
+          status: 'pending',
+          createdAt: new Date(),
+        });
+
+        console.log(`[CRON] ✅ Created billing cycle for gym ${gym.id} (${gym.name}) - R$ ${(selectedPlan.priceInCents / 100).toFixed(2)}`);
+
+      } catch (gymError) {
+        console.error(`[CRON] ❌ Error creating billing for gym ${gym.id}:`, gymError);
+      }
+    }
+
+    console.log("[CRON] ✅ Monthly billing generation completed");
+
+  } catch (error) {
+    console.error("[CRON] ❌ Error in monthly billing generation:", error);
+  }
+}
+
+/**
+ * Send billing notifications X days before due date
+ * Runs daily at 09:00
+ */
+export async function sendBillingNotifications() {
+  try {
+    console.log("[CRON] 📧 Sending billing notifications...");
+
+    // Get Super Admin settings
+    const { getSuperAdminSettings, getPendingBillingCycles, getGymById, updateBillingCycle } = await import("./db");
+    const { sendEmail } = await import("./email");
+    const settings = await getSuperAdminSettings();
+
+    if (!settings || settings.billingEnabled !== 'Y') {
+      console.log("[CRON] ⏭️  Billing disabled, skipping notifications");
+      return;
+    }
+
+    const advanceDays = settings.billingAdvanceDays || 10;
+    console.log(`[CRON] Sending notifications ${advanceDays} days before due date`);
+
+    // Get all pending billing cycles
+    const pendingBillings = await getPendingBillingCycles();
+
+    if (!pendingBillings || pendingBillings.length === 0) {
+      console.log("[CRON] ℹ️  No pending billing cycles found");
+      return;
+    }
+
+    const now = Date.now();
+
+    for (const billing of pendingBillings) {
+      try {
+        // Skip if already notified
+        if (billing.notifiedAt) {
+          continue;
+        }
+
+        const dueDate = new Date(billing.dueDate).getTime();
+        const daysUntilDue = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+
+        // Send notification if within advance days window
+        if (daysUntilDue <= advanceDays && daysUntilDue >= 0) {
+          const gym = await getGymById(billing.gymId);
+          if (!gym) {
+            console.log(`[CRON] ⚠️  Gym ${billing.gymId} not found`);
+            continue;
+          }
+
+          const adminEmail = gym.tempAdminEmail || gym.email;
+          const formattedAmount = (billing.amountCents / 100).toFixed(2);
+          const formattedDate = new Date(billing.dueDate).toLocaleDateString('pt-BR');
+
+          // Send email
+          const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+                .amount { font-size: 24px; font-weight: bold; color: #667eea; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>💰 Mensalidade SysFit Pro</h1>
+                </div>
+                <div class="content">
+                  <p>Olá <strong>${gym.name}</strong>,</p>
+
+                  <p>Sua mensalidade do SysFit Pro vence em breve.</p>
+
+                  <p><strong>Valor:</strong> <span class="amount">R$ ${formattedAmount}</span></p>
+                  <p><strong>Vencimento:</strong> ${formattedDate}</p>
+                  <p><strong>Referência:</strong> ${billing.referenceMonth}</p>
+
+                  <p>Acesse o painel administrativo para visualizar o QR Code PIX e realizar o pagamento.</p>
+
+                  <p><a href="https://www.sysfitpro.com.br/admin/billing" class="button">Ver Mensalidade</a></p>
+
+                  <p style="margin-top: 30px;">Atenciosamente,<br><strong>Equipe SysFit Pro</strong></p>
+                </div>
+                <div class="footer">
+                  <p>Este é um email automático. Por favor, não responda.</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `;
+
+          await sendEmail({
+            to: adminEmail,
+            subject: `💰 Mensalidade SysFit Pro - Vence em ${daysUntilDue} dias`,
+            html,
+          });
+
+          // Mark as notified
+          await updateBillingCycle(billing.id, {
+            notifiedAt: new Date(),
+          });
+
+          console.log(`[CRON] ✅ Billing notification sent to ${adminEmail} (gym: ${gym.name})`);
+        }
+
+      } catch (billingError) {
+        console.error(`[CRON] ❌ Error sending notification for billing ${billing.id}:`, billingError);
+      }
+    }
+
+    console.log("[CRON] ✅ Billing notifications completed");
+
+  } catch (error) {
+    console.error("[CRON] ❌ Error in billing notifications:", error);
+  }
+}
+
+/**
+ * Block gyms with overdue billing after grace period
+ * Runs daily at 06:00
+ */
+export async function blockOverdueGyms() {
+  try {
+    console.log("[CRON] 🚫 Checking for overdue gyms to block...");
+
+    // Get Super Admin settings
+    const { getSuperAdminSettings, getOverdueBillingCycles, getGymById, updateGym, updateBillingCycle } = await import("./db");
+    const { sendEmail } = await import("./email");
+    const settings = await getSuperAdminSettings();
+
+    if (!settings || settings.billingEnabled !== 'Y') {
+      console.log("[CRON] ⏭️  Billing disabled, skipping blocking");
+      return;
+    }
+
+    const gracePeriodDays = settings.billingGracePeriodDays || 5;
+    console.log(`[CRON] Grace period: ${gracePeriodDays} days`);
+
+    // Get all overdue billing cycles
+    const overdueBillings = await getOverdueBillingCycles();
+
+    if (!overdueBillings || overdueBillings.length === 0) {
+      console.log("[CRON] ℹ️  No overdue billing cycles found");
+      return;
+    }
+
+    const now = Date.now();
+    const blockThreshold = gracePeriodDays * 24 * 60 * 60 * 1000;
+
+    for (const billing of overdueBillings) {
+      try {
+        // Skip if already blocked
+        if (billing.blockedAt) {
+          continue;
+        }
+
+        const dueDate = new Date(billing.dueDate).getTime();
+        const daysSinceDue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
+
+        // Block if past grace period
+        if (daysSinceDue > gracePeriodDays) {
+          const gym = await getGymById(billing.gymId);
+          if (!gym) {
+            console.log(`[CRON] ⚠️  Gym ${billing.gymId} not found`);
+            continue;
+          }
+
+          // Skip if already suspended
+          if (gym.status === 'suspended') {
+            console.log(`[CRON] ℹ️  Gym ${gym.id} (${gym.name}) already suspended`);
+            await updateBillingCycle(billing.id, { blockedAt: new Date() });
+            continue;
+          }
+
+          console.log(`[CRON] 🚫 Blocking gym ${gym.id} (${gym.name}) - ${daysSinceDue} days overdue`);
+
+          // Block gym
+          await updateGym(gym.id, {
+            status: 'suspended',
+            planStatus: 'suspended',
+            blockedReason: `Mensalidade em atraso há ${daysSinceDue} dias. Regularize o pagamento para reativar o acesso.`,
+          });
+
+          // Mark billing as blocked
+          await updateBillingCycle(billing.id, {
+            blockedAt: new Date(),
+          });
+
+          // Send blocking notification email
+          const adminEmail = gym.tempAdminEmail || gym.email;
+          const formattedAmount = (billing.amountCents / 100).toFixed(2);
+
+          const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                .alert { background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px; }
+                .amount { font-size: 24px; font-weight: bold; color: #ef4444; }
+                .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+                .button { display: inline-block; padding: 12px 30px; background: #ef4444; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>🚫 Acesso Bloqueado</h1>
+                </div>
+                <div class="content">
+                  <p>Olá <strong>${gym.name}</strong>,</p>
+
+                  <div class="alert">
+                    <p><strong>⚠️ Seu acesso ao SysFit Pro foi bloqueado devido à inadimplência.</strong></p>
+                  </div>
+
+                  <p>Identificamos que sua mensalidade está em atraso há <strong>${daysSinceDue} dias</strong>.</p>
+
+                  <p><strong>Valor em atraso:</strong> <span class="amount">R$ ${formattedAmount}</span></p>
+                  <p><strong>Referência:</strong> ${billing.referenceMonth}</p>
+
+                  <p>Para reativar seu acesso, realize o pagamento da mensalidade pendente o mais rápido possível.</p>
+
+                  <p><a href="https://www.sysfitpro.com.br/admin/billing" class="button">Pagar Agora</a></p>
+
+                  <p><strong>Como regularizar:</strong></p>
+                  <ul>
+                    <li>Acesse o painel e pague via PIX</li>
+                    <li>Entre em contato conosco: suporte@sysfitpro.com.br</li>
+                  </ul>
+
+                  <p>Após a confirmação do pagamento, seu acesso será reativado automaticamente.</p>
+
+                  <p style="margin-top: 30px;">Atenciosamente,<br><strong>Equipe SysFit Pro</strong></p>
+                </div>
+                <div class="footer">
+                  <p>Este é um email automático. Por favor, não responda.</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `;
+
+          await sendEmail({
+            to: adminEmail,
+            subject: `🚫 Acesso Bloqueado - SysFit Pro`,
+            html,
+          });
+
+          console.log(`[CRON] ✅ Gym ${gym.id} (${gym.name}) blocked and notified`);
+        }
+
+      } catch (billingError) {
+        console.error(`[CRON] ❌ Error blocking gym for billing ${billing.id}:`, billingError);
+      }
+    }
+
+    console.log("[CRON] ✅ Overdue gym blocking completed");
+
+  } catch (error) {
+    console.error("[CRON] ❌ Error in overdue gym blocking:", error);
+  }
+}
