@@ -120,8 +120,93 @@ export async function processPixWebhook(payload: any) {
       };
     }
 
-    // ========== STEP 2: CHECK IF IT'S A STUDENT PAYMENT ==========
-    console.log(`[PIX Webhook] Not a gym payment, checking for student payment...`);
+    // ========== STEP 2: CHECK IF IT'S A BILLING CYCLE PAYMENT ==========
+    console.log(`[PIX Webhook] Not a gym subscription, checking for billing cycle payment...`);
+
+    // Try to find a billing cycle linked to a gym payment with this txid
+    const allGymsForBilling = await db.listGyms();
+
+    for (const gym of allGymsForBilling) {
+      // First, try to find the gym payment with this txid
+      const gymPaymentForBilling = await db.getGymPaymentByPixTxId(txid);
+
+      if (gymPaymentForBilling) {
+        // Now check if this payment is linked to a billing cycle
+        const billingCycles = await db.getBillingCyclesByPaymentId(gymPaymentForBilling.id);
+
+        if (billingCycles && billingCycles.length > 0) {
+          const billingCycle = billingCycles[0];
+          console.log(`[PIX Webhook] 💰 Detected BILLING CYCLE payment - Cycle ID: ${billingCycle.id}, Gym ID: ${billingCycle.gymId}`);
+
+          // Check if already processed
+          if (billingCycle.status === "paid") {
+            console.log(`[PIX Webhook] Billing cycle ${billingCycle.id} already processed`);
+            return { success: true, message: "Already processed" };
+          }
+
+          // Update billing cycle status
+          await db.updateBillingCycle(billingCycle.id, {
+            status: "paid",
+            paidAt,
+          });
+
+          console.log(`[PIX Webhook] ✅ Billing cycle ${billingCycle.id} marked as paid`);
+
+          // Get gym to unblock if needed
+          const gymForBilling = await db.getGymById(billingCycle.gymId);
+          if (!gymForBilling) {
+            console.error("[PIX Webhook] Gym not found for billing cycle");
+            return { success: false, error: "Gym not found" };
+          }
+
+          // Unblock gym if it was suspended due to non-payment
+          if (gymForBilling.status === "suspended" || gymForBilling.planStatus === "suspended") {
+            await db.updateGym(gymForBilling.id, {
+              status: "active",
+              planStatus: "active",
+              blockedReason: null,
+            });
+
+            console.log(`[PIX Webhook] ✅ Gym ${gymForBilling.id} (${gymForBilling.name}) unblocked after billing payment`);
+          }
+
+          // Send confirmation email to gym admin
+          try {
+            // Get gym admin user
+            const admins = await db.listUsers(gymForBilling.id);
+            const adminUser = admins.find(u => u.role === "admin");
+
+            if (adminUser?.email) {
+              console.log(`[PIX Webhook] 📧 Sending billing confirmation email to ${adminUser.email}...`);
+
+              const { sendGymBillingConfirmedEmail } = await import("./email");
+              await sendGymBillingConfirmedEmail(
+                adminUser.email,
+                gymForBilling.name,
+                billingCycle.referenceMonth,
+                amountInCents,
+                paidAt
+              );
+
+              console.log(`[PIX Webhook] ✅ Billing confirmation email sent!`);
+            }
+          } catch (emailError) {
+            console.error("[PIX Webhook] Failed to send billing confirmation email:", emailError);
+            // Don't fail the webhook if email fails
+          }
+
+          return {
+            success: true,
+            billingCycleId: billingCycle.id,
+            gymId: gymForBilling.id,
+            message: "Billing cycle payment confirmed and gym unblocked"
+          };
+        }
+      }
+    }
+
+    // ========== STEP 3: CHECK IF IT'S A STUDENT PAYMENT ==========
+    console.log(`[PIX Webhook] Not a billing cycle payment, checking for student payment...`);
 
     // Try to find payment by txid in all gyms
     // (we need to search across gyms since webhook doesn't include gymId)

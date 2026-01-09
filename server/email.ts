@@ -878,6 +878,127 @@ export async function sendGymPaymentConfirmedEmail(
 }
 
 /**
+ * Enviar email de confirmação de pagamento de mensalidade
+ */
+export async function sendGymBillingConfirmedEmail(
+  email: string,
+  gymName: string,
+  referenceMonth: string,
+  amountCents: number,
+  paidAt: Date
+): Promise<boolean> {
+  const loginUrl = `https://www.sysfitpro.com.br/admin/login`;
+  const amount = (amountCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const paymentDate = paidAt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  // Convert reference month from "YYYY-MM" to "Mês/YYYY"
+  const [year, month] = referenceMonth.split('-');
+  const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  const monthName = monthNames[parseInt(month) - 1];
+  const displayMonth = `${monthName}/${year}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Mensalidade Paga - Acesso Desbloqueado</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 20px; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px;">💰 Pagamento Confirmado!</h1>
+                  <p style="color: #d1fae5; margin: 0; font-size: 16px;">Sua mensalidade foi quitada com sucesso</p>
+                </td>
+              </tr>
+
+              <!-- Mensagem -->
+              <tr>
+                <td style="padding: 40px 30px;">
+                  <h2 style="color: #333; margin: 0 0 20px 0; font-size: 24px;">Olá, ${gymName}!</h2>
+                  <p style="margin: 0 0 20px 0; font-size: 16px; color: #666; line-height: 1.6;">
+                    Recebemos o pagamento da sua mensalidade referente a <strong style="color: #10b981;">${displayMonth}</strong>.
+                  </p>
+
+                  <!-- Detalhes do Pagamento -->
+                  <div style="background-color: #f9fafb; border-radius: 8px; padding: 25px; margin: 30px 0;">
+                    <h3 style="color: #333; margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">📋 Detalhes do Pagamento</h3>
+                    <table width="100%" cellpadding="8" cellspacing="0">
+                      <tr>
+                        <td style="color: #666; font-size: 14px; padding: 8px 0;">Período:</td>
+                        <td style="color: #333; font-size: 14px; font-weight: bold; text-align: right; padding: 8px 0;">${displayMonth}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #666; font-size: 14px; padding: 8px 0;">Valor Pago:</td>
+                        <td style="color: #10b981; font-size: 18px; font-weight: bold; text-align: right; padding: 8px 0;">${amount}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #666; font-size: 14px; padding: 8px 0;">Data do Pagamento:</td>
+                        <td style="color: #333; font-size: 14px; font-weight: bold; text-align: right; padding: 8px 0;">${paymentDate}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #666; font-size: 14px; padding: 8px 0;">Status:</td>
+                        <td style="color: #10b981; font-size: 14px; font-weight: bold; text-align: right; padding: 8px 0;">✅ PAGO</td>
+                      </tr>
+                    </table>
+                  </div>
+
+                  <!-- Sistema Desbloqueado -->
+                  <div style="background-color: #d1fae5; border-left: 4px solid #10b981; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                    <h3 style="color: #059669; margin: 0 0 10px 0; font-size: 18px;">🎉 Sistema Desbloqueado</h3>
+                    <p style="color: #065f46; margin: 0; font-size: 15px; line-height: 1.5;">
+                      Seu acesso ao sistema foi <strong>restabelecido automaticamente</strong>. Você já pode continuar utilizando todas as funcionalidades!
+                    </p>
+                  </div>
+
+                  <!-- Botão de Login -->
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+                      Acessar Sistema
+                    </a>
+                  </div>
+
+                  <p style="margin: 30px 0 0 0; font-size: 14px; color: #999; line-height: 1.6;">
+                    Obrigado por manter sua conta em dia! Caso tenha dúvidas, nossa equipe está pronta para ajudar.
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                  <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">
+                    <strong>SysFit Pro</strong> - Sistema de Gestão para Academias
+                  </p>
+                  <p style="margin: 0; font-size: 12px; color: #999;">
+                    © ${new Date().getFullYear()} SysFit Pro. Todos os direitos reservados.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return await sendEmailFromSuperAdmin({
+    to: email,
+    subject: `💰 ${gymName} - Mensalidade de ${displayMonth} Confirmada!`,
+    html,
+  });
+}
+
+/**
  * Enviar email de aviso de trial expirando
  */
 export async function sendTrialWarningEmail(
