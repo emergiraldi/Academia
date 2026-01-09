@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Settings,
   Palette,
-  DollarSign,
   Image,
   Save,
   Upload,
@@ -56,7 +55,6 @@ interface SiteSettings {
 const tabs = [
   { id: "branding", label: "Branding", icon: Palette },
   { id: "content", label: "Conteúdo", icon: Settings },
-  { id: "pricing", label: "Preços", icon: DollarSign },
   { id: "media", label: "Mídias", icon: Image },
   { id: "payments", label: "Pagamentos PIX", icon: CreditCard },
 ];
@@ -498,60 +496,6 @@ export default function SuperAdminSettings() {
                     onChange={(e) => setSettings({ ...settings, banner2Description: e.target.value })}
                   />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        );
-
-      case "pricing":
-        return (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Preços dos Planos SaaS</CardTitle>
-                <p className="text-sm text-gray-600">
-                  Estes são os preços exibidos na landing page. Para gerenciar planos completos, vá em "Planos SaaS"
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="basicPrice">Plano Básico (R$/mês)</Label>
-                    <Input
-                      id="basicPrice"
-                      type="number"
-                      value={settings.basicPrice}
-                      onChange={(e) => setSettings({ ...settings, basicPrice: parseFloat(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="professionalPrice">Plano Professional (R$/mês)</Label>
-                    <Input
-                      id="professionalPrice"
-                      type="number"
-                      value={settings.professionalPrice}
-                      onChange={(e) => setSettings({ ...settings, professionalPrice: parseFloat(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="enterprisePrice">Plano Enterprise (R$/mês)</Label>
-                    <Input
-                      id="enterprisePrice"
-                      type="number"
-                      value={settings.enterprisePrice}
-                      onChange={(e) => setSettings({ ...settings, enterprisePrice: parseFloat(e.target.value) })}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="p-6">
-                <p className="text-sm text-blue-900">
-                  💡 <strong>Dica:</strong> Os preços aqui são apenas para exibição no site. Para configurar
-                  os planos completos com funcionalidades e limites, acesse a página "Planos SaaS" no menu.
-                </p>
               </CardContent>
             </Card>
           </div>
