@@ -57,6 +57,15 @@ export const superAdminSettingsRouter = router({
         smtpFromName: z.string().optional(),
         smtpUseTls: z.boolean().optional(),
         smtpUseSsl: z.boolean().optional(),
+        // Billing settings
+        billingEnabled: z.boolean().optional(),
+        billingDueDay: z.number().optional(),
+        billingAdvanceDays: z.number().optional(),
+        billingGracePeriodDays: z.number().optional(),
+        billingLateFeePercentage: z.number().optional(),
+        billingLateFeeFixedCents: z.number().optional(),
+        billingInterestRatePerDay: z.number().optional(),
+        billingLateFeeType: z.enum(["percentage", "fixed", "both"]).optional(),
       })
     )
     .mutation(async ({ input }) => {
