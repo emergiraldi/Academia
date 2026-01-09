@@ -121,6 +121,9 @@ export default function LandingPage() {
   // Buscar configurações do site
   const { data: settings } = trpc.settings.get.useQuery();
 
+  // Buscar planos SaaS dinâmicos
+  const { data: saasPlans, isLoading: plansLoading } = trpc.saasPlans.listActive.useQuery();
+
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % screenshots.length);
@@ -457,146 +460,113 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto">
-            {/* Plano Básico */}
-            <Card className="border-2 border-gray-200 hover:shadow-xl transition-all">
-              <CardContent className="p-8">
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Básico</h3>
-                  <p className="text-gray-600 mb-4">Perfeito para academias iniciantes</p>
-                  <div className="mb-4">
-                    <span className="text-4xl font-bold text-gray-900">R$ {settings?.basicPrice || 149}</span>
-                    <span className="text-gray-600">/mês</span>
-                  </div>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Até 100 alunos ativos</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Gestão de alunos e pagamentos</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">PIX com QR Code automático</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Controle de exames médicos</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">CRM para leads</span>
-                  </li>
-                </ul>
-                <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                  onClick={() => setLocation("/signup")}
-                >
-                  Começar Grátis
-                </Button>
-              </CardContent>
-            </Card>
+          {plansLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+            </div>
+          ) : saasPlans && saasPlans.length > 0 ? (
+            <div
+              className={`grid gap-8 max-w-7xl mx-auto ${
+                saasPlans.length === 1 ? 'md:grid-cols-1 max-w-md' :
+                saasPlans.length === 2 ? 'md:grid-cols-2' :
+                'md:grid-cols-3'
+              }`}
+            >
+              {saasPlans
+                .sort((a, b) => a.displayOrder - b.displayOrder)
+                .map((plan) => {
+                  const features = plan.features ? JSON.parse(plan.features) : [];
+                  const priceInReais = (plan.priceInCents / 100).toFixed(2);
 
-            {/* Plano Professional */}
-            <Card className="border-2 border-indigo-500 hover:shadow-2xl transition-all relative">
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <span className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                  MAIS POPULAR
-                </span>
-              </div>
-              <CardContent className="p-8">
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Professional</h3>
-                  <p className="text-gray-600 mb-4">Ideal para academias em crescimento</p>
-                  <div className="mb-4">
-                    <span className="text-4xl font-bold text-indigo-600">R$ {settings?.professionalPrice || 299}</span>
-                    <span className="text-gray-600">/mês</span>
-                  </div>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Até 500 alunos ativos</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700 font-semibold">Tudo do Básico +</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">App mobile para alunos</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Control ID - Reconhecimento facial</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Treinos personalizados</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Gestão de professores</span>
-                  </li>
-                </ul>
-                <Button
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
-                  onClick={() => setLocation("/signup")}
-                >
-                  Começar Grátis
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Plano Enterprise */}
-            <Card className="border-2 border-gray-200 hover:shadow-xl transition-all">
-              <CardContent className="p-8">
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Enterprise</h3>
-                  <p className="text-gray-600 mb-4">Para grandes redes de academias</p>
-                  <div className="mb-4">
-                    <span className="text-4xl font-bold text-purple-600">R$ {settings?.enterprisePrice || 599}</span>
-                    <span className="text-gray-600">/mês</span>
-                  </div>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Alunos ilimitados</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700 font-semibold">Tudo do Professional +</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Integração Wellhub (Gympass)</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">App mobile whitelabel</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Múltiplas unidades/filiais</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Suporte 24/7</span>
-                  </li>
-                </ul>
-                <Button
-                  className="w-full bg-purple-600 hover:bg-purple-700"
-                  onClick={() => setLocation("/signup")}
-                >
-                  Começar Grátis
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+                  return (
+                    <Card
+                      key={plan.id}
+                      className={`${
+                        plan.featured
+                          ? 'border-2 border-indigo-500 hover:shadow-2xl relative'
+                          : 'border-2 border-gray-200 hover:shadow-xl'
+                      } transition-all`}
+                    >
+                      {plan.featured && (
+                        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                          <span className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                            MAIS POPULAR
+                          </span>
+                        </div>
+                      )}
+                      <CardContent className="p-8">
+                        <div className="text-center mb-6">
+                          <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                          {plan.description && (
+                            <p className="text-gray-600 mb-4">{plan.description}</p>
+                          )}
+                          <div className="mb-4">
+                            <span className={`text-4xl font-bold ${
+                              plan.featured ? 'text-indigo-600' : 'text-gray-900'
+                            }`}>
+                              R$ {priceInReais.replace('.', ',')}
+                            </span>
+                            <span className="text-gray-600">/mês</span>
+                          </div>
+                        </div>
+                        <ul className="space-y-3 mb-8">
+                          {features.map((feature: string, idx: number) => (
+                            <li key={idx} className="flex items-start">
+                              <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
+                              <span className="text-gray-700">{feature}</span>
+                            </li>
+                          ))}
+                          {plan.hasControlId && (
+                            <li className="flex items-start">
+                              <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
+                              <span className="text-gray-700">Control ID - Reconhecimento facial</span>
+                            </li>
+                          )}
+                          {plan.hasWellhub && (
+                            <li className="flex items-start">
+                              <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
+                              <span className="text-gray-700">Integração Wellhub (Gympass)</span>
+                            </li>
+                          )}
+                          {plan.hasWhatsappIntegration && (
+                            <li className="flex items-start">
+                              <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
+                              <span className="text-gray-700">Integração WhatsApp</span>
+                            </li>
+                          )}
+                          {plan.hasAdvancedReports && (
+                            <li className="flex items-start">
+                              <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
+                              <span className="text-gray-700">Relatórios Avançados</span>
+                            </li>
+                          )}
+                          {plan.hasPrioritySupport && (
+                            <li className="flex items-start">
+                              <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
+                              <span className="text-gray-700">Suporte Prioritário</span>
+                            </li>
+                          )}
+                        </ul>
+                        <Button
+                          className={`w-full ${
+                            plan.featured
+                              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'
+                              : 'bg-blue-600 hover:bg-blue-700'
+                          }`}
+                          onClick={() => setLocation(`/signup?plan=${plan.slug}`)}
+                        >
+                          Começar Grátis
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-600">Nenhum plano disponível no momento.</p>
+            </div>
+          )}
 
           <div className="text-center mt-12">
             <Button
