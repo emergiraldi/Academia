@@ -1,52 +1,59 @@
-import pg from 'pg';
+import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const { Pool } = pg;
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+// Parse DATABASE_URL for MySQL connection
+const dbUrl = new URL(process.env.DATABASE_URL);
+const pool = mysql.createPool({
+  host: dbUrl.hostname,
+  port: parseInt(dbUrl.port) || 3306,
+  user: dbUrl.username,
+  password: dbUrl.password,
+  database: dbUrl.pathname.substring(1),
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
 async function createTestBillingCycle() {
-  const client = await pool.connect();
+  const connection = await pool.getConnection();
 
   try {
     console.log('🏗️  Criando mensalidade de teste para Academia FitLife...\n');
 
     // 1. Buscar a academia
-    const gymResult = await client.query(
+    const [gymResult] = await connection.query(
       'SELECT id, name, plan FROM gyms WHERE id = 1'
     );
 
-    if (gymResult.rows.length === 0) {
+    if (gymResult.length === 0) {
       console.error('❌ Academia não encontrada');
       return;
     }
 
-    const gym = gymResult.rows[0];
+    const gym = gymResult[0];
     console.log(`✅ Academia encontrada: ${gym.name} (Plano: ${gym.plan})`);
 
     // 2. Buscar o preço do plano enterprise
-    const planResult = await client.query(
+    const [planResult] = await connection.query(
       "SELECT priceMonthly FROM saasPlans WHERE id = 'enterprise'"
     );
 
-    if (planResult.rows.length === 0) {
+    if (planResult.length === 0) {
       console.error('❌ Plano enterprise não encontrado');
       return;
     }
 
-    const planPrice = planResult.rows[0].pricemonthly;
+    const planPrice = planResult[0].priceMonthly;
     console.log(`✅ Preço do plano: R$ ${(planPrice / 100).toFixed(2)}`);
 
     // 3. Buscar configurações de billing
-    const settingsResult = await client.query(
+    const [settingsResult] = await connection.query(
       'SELECT billingDueDay FROM superAdminSettings LIMIT 1'
     );
 
-    const dueDay = settingsResult.rows[0]?.billingdueday || 15;
+    const dueDay = settingsResult[0]?.billingDueDay || 15;
     console.log(`✅ Dia de vencimento configurado: dia ${dueDay}`);
 
     // 4. Calcular data de vencimento (dia 15 do mês atual)
@@ -67,29 +74,28 @@ async function createTestBillingCycle() {
     console.log(`✅ Data de vencimento: ${dueDate.toLocaleDateString('pt-BR')}`);
 
     // 5. Verificar se já existe uma mensalidade para este mês
-    const existingResult = await client.query(
-      'SELECT id FROM gym_billing_cycles WHERE gymId = $1 AND referenceMonth = $2',
+    const [existingResult] = await connection.query(
+      'SELECT id FROM gym_billing_cycles WHERE gymId = ? AND referenceMonth = ?',
       [gym.id, referenceMonth]
     );
 
-    if (existingResult.rows.length > 0) {
+    if (existingResult.length > 0) {
       console.log('\n⚠️  Já existe uma mensalidade para este mês. Deletando...');
-      await client.query(
-        'DELETE FROM gym_billing_cycles WHERE gymId = $1 AND referenceMonth = $2',
+      await connection.query(
+        'DELETE FROM gym_billing_cycles WHERE gymId = ? AND referenceMonth = ?',
         [gym.id, referenceMonth]
       );
     }
 
     // 6. Criar a mensalidade
-    const insertResult = await client.query(
+    const [insertResult] = await connection.query(
       `INSERT INTO gym_billing_cycles
         (gymId, referenceMonth, dueDate, amountCents, status, createdAt)
-       VALUES ($1, $2, $3, $4, $5, NOW())
-       RETURNING id`,
+       VALUES (?, ?, ?, ?, ?, NOW())`,
       [gym.id, referenceMonth, dueDate, planPrice, 'pending']
     );
 
-    const billingId = insertResult.rows[0].id;
+    const billingId = insertResult.insertId;
 
     console.log('\n========================================');
     console.log('✅ Mensalidade de teste criada com sucesso!');
@@ -107,7 +113,7 @@ async function createTestBillingCycle() {
   } catch (error) {
     console.error('❌ Erro ao criar mensalidade:', error);
   } finally {
-    client.release();
+    connection.release();
     await pool.end();
   }
 }
