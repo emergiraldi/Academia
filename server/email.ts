@@ -274,24 +274,38 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
  */
 export async function sendEmailFromSuperAdmin(options: EmailOptions): Promise<boolean> {
   try {
+    console.log('[Email] 🔍 DEBUG: Iniciando sendEmailFromSuperAdmin');
+    console.log('[Email] 🔍 DEBUG: nodemailer type:', typeof nodemailer);
+    console.log('[Email] 🔍 DEBUG: nodemailer.createTransporter type:', typeof nodemailer.createTransporter);
+
     const { getSuperAdminSettings } = await import('./db');
     const settings = await getSuperAdminSettings();
 
+    console.log('[Email] 🔍 DEBUG: Settings loaded:', !!settings);
+    console.log('[Email] 🔍 DEBUG: Has SMTP config:', !!(settings?.smtpHost && settings?.smtpUser && settings?.smtpPassword));
+
     if (!settings || !settings.smtpHost || !settings.smtpUser || !settings.smtpPassword) {
       console.error('[Email] ❌ Super Admin SMTP not configured!');
+      console.log('[Email] ⚠️  Settings status:', {
+        hasSettings: !!settings,
+        hasHost: !!settings?.smtpHost,
+        hasUser: !!settings?.smtpUser,
+        hasPassword: !!settings?.smtpPassword,
+      });
       console.log(`[Email] ⚠️  Email would be sent to ${options.to}: ${options.subject}`);
-      console.log(`[Email] ⚠️  Content: ${options.html.substring(0, 200)}...`);
       return false;
     }
 
     const transportOptions: any = {
       host: settings.smtpHost,
       port: settings.smtpPort || 587,
-      secure: settings.smtpUseSsl ?? false, // true for port 465, false for other ports
+      secure: settings.smtpUseSsl ?? false,
       auth: {
         user: settings.smtpUser,
         pass: settings.smtpPassword,
       },
+      debug: true, // Habilitar debug do nodemailer
+      logger: true, // Habilitar logs detalhados
     };
 
     // Se não usar SSL mas usar TLS, habilitar STARTTLS
@@ -299,26 +313,45 @@ export async function sendEmailFromSuperAdmin(options: EmailOptions): Promise<bo
       transportOptions.requireTLS = true;
     }
 
-    console.log(`[Email] 📧 Sending email via Super Admin SMTP (${settings.smtpHost}:${settings.smtpPort})`);
+    console.log(`[Email] 📧 Sending email via Super Admin SMTP`);
+    console.log(`[Email]   Host: ${settings.smtpHost}`);
+    console.log(`[Email]   Port: ${settings.smtpPort}`);
+    console.log(`[Email]   SSL: ${settings.smtpUseSsl}`);
+    console.log(`[Email]   TLS: ${settings.smtpUseTls}`);
     console.log(`[Email]   To: ${options.to}`);
     console.log(`[Email]   Subject: ${options.subject}`);
+    console.log(`[Email]   From: ${settings.smtpFromEmail || settings.smtpUser}`);
 
+    console.log('[Email] 🔍 DEBUG: Creating transporter...');
     const transporter = nodemailer.createTransporter(transportOptions);
+    console.log('[Email] 🔍 DEBUG: Transporter created successfully');
 
-    await transporter.sendMail({
+    const mailOptions = {
       from: settings.smtpFromEmail
         ? `"${settings.smtpFromName || 'SysFit Pro'}" <${settings.smtpFromEmail}>`
         : settings.smtpUser,
       to: options.to,
       subject: options.subject,
       html: options.html,
+    };
+
+    console.log('[Email] 🔍 DEBUG: Sending mail...');
+    const info = await transporter.sendMail(mailOptions);
+    console.log('[Email] 🔍 DEBUG: Mail sent, info:', {
+      messageId: info.messageId,
+      response: info.response,
+      accepted: info.accepted,
+      rejected: info.rejected,
     });
 
     console.log(`[Email] ✅ Email sent successfully to ${options.to}`);
     return true;
   } catch (error: any) {
-    console.error('[Email] ❌ Failed to send email from Super Admin:', error);
-    console.error('[Email] Error details:', error.message);
+    console.error('[Email] ❌ Failed to send email from Super Admin');
+    console.error('[Email] ❌ Error type:', error.constructor.name);
+    console.error('[Email] ❌ Error message:', error.message);
+    console.error('[Email] ❌ Error stack:', error.stack);
+    console.error('[Email] ❌ Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     return false;
   }
 }
