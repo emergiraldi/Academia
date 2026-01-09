@@ -273,7 +273,15 @@ export default function SuperAdminSettings() {
   };
 
   const handleSavePayments = async () => {
-    updatePaymentMutation.mutate(paymentSettings);
+    // Converter strings vazias em undefined para não sobrescrever valores existentes
+    const cleanedSettings = Object.fromEntries(
+      Object.entries(paymentSettings).map(([key, value]) => [
+        key,
+        typeof value === 'string' && value === '' ? undefined : value
+      ])
+    ) as PaymentSettings;
+
+    updatePaymentMutation.mutate(cleanedSettings);
   };
 
   const handleFileUpload = (field: "banner1Image" | "banner2Image") => (event: React.ChangeEvent<HTMLInputElement>) => {
