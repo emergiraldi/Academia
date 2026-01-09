@@ -205,6 +205,69 @@ export const gymsRouter = router({
 
       // 🔒 TRANSAÇÃO CONCLUÍDA COM SUCESSO - Academia e admin foram criados
 
+      // Se trial NÃO está habilitado, gerar PIX automaticamente
+      let pixQrCode: string | undefined;
+      let pixCopyPaste: string | undefined;
+
+      if (!superAdminSettings?.trialEnabled) {
+        console.log(`💳 [CREATE GYM] Trial desabilitado - Gerando PIX para academia ${gymId}`);
+        try {
+          const { getPixServiceFromSuperAdmin } = await import("../pix");
+          const { createGymPayment, listSaasPlans } = await import("../db");
+
+          const allPlans = await listSaasPlans(false);
+          const plansMap: Record<string, any> = {};
+          allPlans.forEach((p: any) => {
+            plansMap[p.slug] = p;
+          });
+
+          const selectedPlan = plansMap[plan];
+          if (selectedPlan) {
+            const amountInCents = selectedPlan.priceInCents;
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 10); // 10 days to pay
+
+            const referenceMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+            const pixService = await getPixServiceFromSuperAdmin();
+            const pixCharge = await pixService.createImmediateCharge({
+              valor: amountInCents,
+              pagador: {
+                cpf: finalGymData.cnpj?.replace(/\D/g, "") || "00000000000",
+                nome: finalGymData.name,
+              },
+              infoAdicionais: `Assinatura ${selectedPlan.name} - ${finalGymData.name}`,
+              expiracao: 86400 * 10, // 10 days
+            });
+
+            // Save payment
+            await createGymPayment({
+              gymId,
+              amountInCents,
+              status: "pending",
+              paymentMethod: "pix",
+              pixTxId: pixCharge.txid,
+              pixQrCode: pixCharge.pixCopiaECola,
+              pixQrCodeImage: pixCharge.qrcode,
+              pixCopyPaste: pixCharge.pixCopiaECola,
+              description: `Assinatura ${selectedPlan.name} - ${referenceMonth}`,
+              referenceMonth,
+              dueDate,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+
+            pixQrCode = pixCharge.qrcode;
+            pixCopyPaste = pixCharge.pixCopiaECola;
+
+            console.log(`✅ [CREATE GYM] PIX gerado - TXID: ${pixCharge.txid}`);
+          }
+        } catch (pixError) {
+          console.error("❌ [CREATE GYM] Erro ao gerar PIX:", pixError);
+          // Continuar mesmo se PIX falhar
+        }
+      }
+
       // ✉️ Enviar email de boas-vindas (FORA da transação - se falhar não desfaz o cadastro)
       try {
         const { sendGymAdminCredentials } = await import("../email");
@@ -213,7 +276,9 @@ export const gymsRouter = router({
           tempPassword,
           finalGymData.name,
           finalGymData.slug,
-          plan
+          plan,
+          pixQrCode,
+          pixCopyPaste
         );
         console.log(`✅ [CREATE GYM] Email de boas-vindas enviado para ${adminEmailToUse}`);
       } catch (emailError) {
@@ -243,7 +308,7 @@ export const gymsRouter = router({
         };
       }
 
-      // Se trial NÃO está habilitado, retornar sem PIX (PIX não é mais gerado no cadastro)
+      // Se trial NÃO está habilitado, retornar com informação do PIX
       return {
         gymId,
         gymSlug: input.slug,
@@ -255,7 +320,8 @@ export const gymsRouter = router({
           email: adminEmailToUse,
           password: tempPassword,
         },
-        message: "Academia cadastrada com sucesso!",
+        pixGenerated: !!pixQrCode,
+        message: "Academia cadastrada! Pague via PIX para ativar o acesso.",
       };
     }),
 

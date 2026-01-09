@@ -622,7 +622,9 @@ export async function sendGymAdminCredentials(
   password: string,
   gymName: string,
   gymSlug: string,
-  plan: string
+  plan: string,
+  pixQrCode?: string,
+  pixCopyPaste?: string
 ): Promise<boolean> {
   const loginUrl = `https://www.sysfitpro.com.br/admin/login?gym=${gymSlug}`;
   const planNames: Record<string, string> = {
@@ -694,6 +696,42 @@ export async function sendGymAdminCredentials(
                   </div>
                 </td>
               </tr>
+
+              ${pixCopyPaste ? `
+              <!-- PIX Payment -->
+              <tr>
+                <td style="padding: 0 30px 30px 30px;">
+                  <div style="background-color: #f0f9ff; border: 2px solid #0284c7; padding: 25px; border-radius: 12px;">
+                    <h3 style="margin: 0 0 20px 0; color: #0369a1; font-size: 20px; text-align: center;">
+                      💳 Pagamento via PIX
+                    </h3>
+
+                    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 15px 0; border-radius: 4px;">
+                      <p style="margin: 0; font-size: 14px; color: #92400e;">
+                        <strong>⚠️ Importante:</strong> Para ativar o acesso ao sistema, realize o pagamento via PIX usando o QR Code abaixo.
+                      </p>
+                    </div>
+
+                    ${pixQrCode ? `
+                    <div style="text-align: center; margin: 20px 0;">
+                      <img src="${pixQrCode}" alt="QR Code PIX" style="max-width: 200px; border: 2px solid #0284c7; border-radius: 8px;" />
+                    </div>
+                    ` : ''}
+
+                    <p style="margin: 15px 0 10px 0; font-size: 14px; color: #0369a1; font-weight: 600;">
+                      Código Pix Copia e Cola:
+                    </p>
+                    <div style="background-color: #ffffff; padding: 15px; border-radius: 6px; border: 1px solid #bae6fd; word-break: break-all; font-family: monospace; font-size: 11px; color: #0369a1; line-height: 1.4;">
+                      ${pixCopyPaste}
+                    </div>
+
+                    <p style="margin: 15px 0 0 0; font-size: 13px; color: #0c4a6e; text-align: center;">
+                      Após o pagamento, o acesso será liberado automaticamente.
+                    </p>
+                  </div>
+                </td>
+              </tr>
+              ` : ''}
 
               <!-- Botão -->
               <tr>
