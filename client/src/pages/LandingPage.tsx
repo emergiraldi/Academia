@@ -165,7 +165,7 @@ export default function LandingPage() {
                 Planos
               </button>
               <Button
-                onClick={() => setLocation("/signup")}
+                onClick={() => setLocation("/pricing")}
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
               >
                 Começar Agora
@@ -200,7 +200,7 @@ export default function LandingPage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   size="lg"
-                  onClick={() => setLocation("/signup")}
+                  onClick={() => setLocation("/pricing")}
                   className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
                 >
                   Experimente Grátis
@@ -560,7 +560,7 @@ export default function LandingPage() {
                               ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'
                               : 'bg-blue-600 hover:bg-blue-700'
                           }`}
-                          onClick={() => setLocation(`/signup?plan=${plan.slug}`)}
+                          onClick={() => setLocation(`/pricing`)}
                         >
                           Começar Grátis
                         </Button>
@@ -600,7 +600,7 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
               size="lg"
-              onClick={() => setLocation("/signup")}
+              onClick={() => setLocation("/pricing")}
               className="bg-white text-indigo-600 hover:bg-gray-100"
             >
               Cadastre-se no {settings?.siteName || "SysFit Pro"}

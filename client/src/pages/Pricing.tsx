@@ -2,88 +2,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CheckCircle2, Dumbbell, X, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
-
-const plans = [
-  {
-    name: "Básico",
-    price: 149,
-    description: "Perfeito para academias iniciantes",
-    features: [
-      "Até 100 alunos ativos",
-      "Gestão de alunos e pagamentos",
-      "PIX com QR Code automático",
-      "Controle de exames médicos",
-      "Carteirinha digital",
-      "CRM para leads",
-      "Relatórios básicos",
-      "Suporte por email",
-      "1 usuário administrador",
-    ],
-    notIncluded: [
-      "App mobile para alunos",
-      "Integração Wellhub/Gympass",
-      "Control ID (biometria facial)",
-      "Treinos personalizados",
-      "Gestão de professores",
-    ],
-    color: "blue",
-    popular: false,
-  },
-  {
-    name: "Professional",
-    price: 299,
-    description: "Ideal para academias em crescimento",
-    features: [
-      "Até 500 alunos ativos",
-      "Tudo do Plano Básico +",
-      "App mobile para alunos",
-      "Treinos personalizados (fotos/vídeos)",
-      "Gestão de professores",
-      "Control ID - Reconhecimento facial",
-      "Bloqueio automático por inadimplência",
-      "Gestão financeira completa",
-      "Relatórios avançados",
-      "Suporte prioritário",
-      "Até 5 usuários",
-    ],
-    notIncluded: [
-      "Integração Wellhub/Gympass",
-      "App whitelabel personalizado",
-      "Suporte 24/7",
-    ],
-    color: "indigo",
-    popular: true,
-  },
-  {
-    name: "Enterprise",
-    price: 599,
-    description: "Para grandes redes de academias",
-    features: [
-      "Alunos ilimitados",
-      "Tudo do Plano Professional +",
-      "Integração Wellhub (Gympass)",
-      "Check-in automático Wellhub",
-      "App mobile whitelabel",
-      "Control ID avançado (múltiplos pontos)",
-      "API para integrações customizadas",
-      "Múltiplas unidades/filiais",
-      "Relatórios customizados",
-      "Suporte 24/7 (WhatsApp + Telefone)",
-      "Usuários ilimitados",
-      "Treinamento e onboarding completo",
-      "Gerente de conta dedicado",
-    ],
-    notIncluded: [],
-    color: "purple",
-    popular: false,
-  },
-];
+import { trpc } from "@/lib/trpc";
 
 export default function Pricing() {
   const [, setLocation] = useLocation();
 
-  const handleSelectPlan = (planName: string, price: number) => {
-    setLocation(`/signup?plan=${planName.toLowerCase()}&price=${price}`);
+  // Buscar planos do banco de dados
+  const { data: saasPlans, isLoading } = trpc.saasPlans.list.useQuery();
+
+  const handleSelectPlan = (planSlug: string, price: number) => {
+    setLocation(`/signup?plan=${planSlug}&price=${price}`);
   };
 
   return (
@@ -124,68 +52,112 @@ export default function Pricing() {
         </div>
 
         {/* Plans Grid */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto mb-16">
-          {plans.map((plan) => (
-            <Card
-              key={plan.name}
-              className={`relative ${
-                plan.popular
-                  ? "border-2 border-indigo-600 shadow-2xl scale-105"
-                  : "border shadow-lg"
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                    Mais Popular
-                  </span>
-                </div>
-              )}
-              <CardHeader className="text-center pb-8 pt-8">
-                <div className={`w-16 h-16 bg-${plan.color}-100 rounded-full flex items-center justify-center mx-auto mb-4`}>
-                  <Dumbbell className={`w-8 h-8 text-${plan.color}-600`} />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  {plan.name}
-                </h3>
-                <p className="text-gray-600 text-sm mb-4">{plan.description}</p>
-                <div className="mb-4">
-                  <span className="text-5xl font-bold text-gray-900">
-                    R${plan.price}
-                  </span>
-                  <span className="text-gray-600">/mês</span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 mb-6">
-                  {plan.features.map((feature, index) => (
-                    <div key={index} className="flex items-start space-x-3">
-                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-700">{feature}</span>
-                    </div>
-                  ))}
-                  {plan.notIncluded.map((feature, index) => (
-                    <div key={index} className="flex items-start space-x-3 opacity-50">
-                      <X className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-500">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-                <Button
-                  onClick={() => handleSelectPlan(plan.name, plan.price)}
-                  className={`w-full ${
-                    plan.popular
-                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
-                      : "bg-gray-900 hover:bg-gray-800"
-                  }`}
-                  size="lg"
-                >
-                  Escolher {plan.name}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">Carregando planos...</p>
+          </div>
+        ) : saasPlans && saasPlans.length > 0 ? (
+          <div className="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto mb-16">
+            {saasPlans
+              .filter(plan => plan.active)
+              .sort((a, b) => a.displayOrder - b.displayOrder)
+              .map((plan) => {
+                const features = plan.features ? JSON.parse(plan.features) : [];
+                const priceInReais = (plan.priceInCents / 100).toFixed(2);
+
+                return (
+                  <Card
+                    key={plan.id}
+                    className={`relative ${
+                      plan.featured
+                        ? "border-2 border-indigo-600 shadow-2xl scale-105"
+                        : "border shadow-lg"
+                    }`}
+                  >
+                    {plan.featured && (
+                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                        <span className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                          Mais Popular
+                        </span>
+                      </div>
+                    )}
+                    <CardHeader className="text-center pb-8 pt-8">
+                      <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Dumbbell className="w-8 h-8 text-indigo-600" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                        {plan.name}
+                      </h3>
+                      {plan.description && (
+                        <p className="text-gray-600 text-sm mb-4">{plan.description}</p>
+                      )}
+                      <div className="mb-4">
+                        <span className="text-5xl font-bold text-gray-900">
+                          R${priceInReais.replace('.', ',')}
+                        </span>
+                        <span className="text-gray-600">/mês</span>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3 mb-6">
+                        {features.map((feature: string, index: number) => (
+                          <div key={index} className="flex items-start space-x-3">
+                            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <span className="text-gray-700">{feature}</span>
+                          </div>
+                        ))}
+                        {plan.hasControlId && (
+                          <div className="flex items-start space-x-3">
+                            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <span className="text-gray-700">Control ID - Reconhecimento facial</span>
+                          </div>
+                        )}
+                        {plan.hasWellhub && (
+                          <div className="flex items-start space-x-3">
+                            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <span className="text-gray-700">Integração Wellhub (Gympass)</span>
+                          </div>
+                        )}
+                        {plan.hasWhatsappIntegration && (
+                          <div className="flex items-start space-x-3">
+                            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <span className="text-gray-700">Integração WhatsApp</span>
+                          </div>
+                        )}
+                        {plan.hasAdvancedReports && (
+                          <div className="flex items-start space-x-3">
+                            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <span className="text-gray-700">Relatórios Avançados</span>
+                          </div>
+                        )}
+                        {plan.hasPrioritySupport && (
+                          <div className="flex items-start space-x-3">
+                            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <span className="text-gray-700">Suporte Prioritário</span>
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        onClick={() => handleSelectPlan(plan.slug, plan.priceInCents)}
+                        className={`w-full ${
+                          plan.featured
+                            ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                            : "bg-gray-900 hover:bg-gray-800"
+                        }`}
+                        size="lg"
+                      >
+                        Escolher {plan.name}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-600">Nenhum plano disponível no momento.</p>
+          </div>
+        )}
 
         {/* FAQ */}
         <div className="max-w-3xl mx-auto">
