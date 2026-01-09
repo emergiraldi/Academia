@@ -43,14 +43,31 @@ export default function Signup() {
 
   const utils = trpc.useUtils();
 
+  // Buscar planos SaaS dinâmicos
+  const { data: saasPlans } = trpc.saasPlans.listActive.useQuery();
+
   useEffect(() => {
     // Get plan from URL params
     const params = new URLSearchParams(window.location.search);
-    const plan = params.get("plan") || "professional";
-    const price = parseInt(params.get("price") || "299");
+    const planSlug = params.get("plan") || "professional";
 
-    setFormData((prev) => ({ ...prev, plan, price }));
-  }, []);
+    // Se temos os planos carregados, buscar o preço correto
+    if (saasPlans && saasPlans.length > 0) {
+      const selectedPlan = saasPlans.find(p => p.slug === planSlug);
+      if (selectedPlan) {
+        const priceInReais = selectedPlan.priceInCents / 100;
+        setFormData((prev) => ({
+          ...prev,
+          plan: planSlug,
+          price: priceInReais
+        }));
+      }
+    } else {
+      // Fallback para preço padrão se não encontrar
+      const price = parseInt(params.get("price") || "299");
+      setFormData((prev) => ({ ...prev, plan: planSlug, price }));
+    }
+  }, [saasPlans]);
 
   const createGymMutation = trpc.gyms.create.useMutation({
     onSuccess: (data) => {
@@ -213,7 +230,9 @@ export default function Signup() {
                 </div>
                 <div className="flex justify-between text-lg border-t pt-2">
                   <span className="font-semibold">Total Mensal:</span>
-                  <span className="font-bold text-indigo-600">R$ {formData.price}/mês</span>
+                  <span className="font-bold text-indigo-600">
+                    R$ {formData.price.toFixed(2).replace('.', ',')}/mês
+                  </span>
                 </div>
               </div>
             </div>
