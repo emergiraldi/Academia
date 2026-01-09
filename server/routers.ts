@@ -231,8 +231,9 @@ export const appRouter = router({
         const gymPaymentResult = await db.createGymPayment({
           gymId: ctx.user.gymId,
           referenceMonth: billingCycle.referenceMonth,
-          amountCents: billingCycle.amountCents,
+          amountInCents: billingCycle.amountCents,
           status: "pending",
+          paymentMethod: "pix",
           dueDate: dueDate,
         });
 
