@@ -160,6 +160,16 @@ export const superAdminSettings = mysqlTable("superAdminSettings", {
   smtpUseTls: boolean("smtpUseTls").default(true), // Usar STARTTLS (porta 587)
   smtpUseSsl: boolean("smtpUseSsl").default(false), // Usar SSL direto (porta 465)
 
+  // Billing configuration for gym subscriptions
+  billingEnabled: mysqlEnum("billingEnabled", ["Y", "N"]).default("Y"), // Sistema de cobrança ativo
+  billingDueDay: int("billingDueDay").default(10), // Dia do mês para vencimento (1-31)
+  billingAdvanceDays: int("billingAdvanceDays").default(10), // Dias antes do vencimento para enviar cobrança
+  billingGracePeriodDays: int("billingGracePeriodDays").default(5), // Dias após vencimento antes de bloquear
+  billingLateFeePercentage: varchar("billingLateFeePercentage", { length: 10 }).default("2.00"), // Multa por atraso em % (ex: 2.00 = 2%)
+  billingLateFeeFixedCents: int("billingLateFeeFixedCents").default(0), // Multa fixa em centavos
+  billingInterestRatePerDay: varchar("billingInterestRatePerDay", { length: 10 }).default("0.03"), // Juros por dia em % (ex: 0.03 = 0.03% ao dia)
+  billingLateFeeType: mysqlEnum("billingLateFeeType", ["percentage", "fixed", "both"]).default("percentage"), // Tipo de multa
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
