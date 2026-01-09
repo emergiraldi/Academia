@@ -11,6 +11,7 @@ import {
   Save,
   Upload,
   CreditCard,
+  Calendar,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -57,6 +58,7 @@ const tabs = [
   { id: "content", label: "Conteúdo", icon: Settings },
   { id: "media", label: "Mídias", icon: Image },
   { id: "payments", label: "Pagamentos PIX", icon: CreditCard },
+  { id: "billing", label: "Cobrança Mensal", icon: Calendar },
 ];
 
 interface PaymentSettings {
@@ -88,6 +90,15 @@ interface PaymentSettings {
   smtpFromName: string;
   smtpUseTls: boolean;
   smtpUseSsl: boolean;
+  // Billing configuration
+  billingEnabled: boolean;
+  billingDueDay: number;
+  billingAdvanceDays: number;
+  billingGracePeriodDays: number;
+  billingLateFeePercentage: number;
+  billingLateFeeFixedCents: number;
+  billingInterestRatePerDay: number;
+  billingLateFeeType: "percentage" | "fixed" | "both";
 }
 
 export default function SuperAdminSettings() {
@@ -157,6 +168,15 @@ export default function SuperAdminSettings() {
     smtpFromName: "SysFit Pro",
     smtpUseTls: true,
     smtpUseSsl: false,
+    // Billing defaults
+    billingEnabled: true,
+    billingDueDay: 10,
+    billingAdvanceDays: 10,
+    billingGracePeriodDays: 5,
+    billingLateFeePercentage: 2.0,
+    billingLateFeeFixedCents: 0,
+    billingInterestRatePerDay: 0.03,
+    billingLateFeeType: "percentage",
   });
 
   const { data: settingsData, isLoading } = trpc.settings.get.useQuery();
@@ -241,6 +261,15 @@ export default function SuperAdminSettings() {
         smtpFromName: paymentData.smtpFromName || "SysFit Pro",
         smtpUseTls: paymentData.smtpUseTls ?? true,
         smtpUseSsl: paymentData.smtpUseSsl ?? false,
+        // Billing settings
+        billingEnabled: paymentData.billingEnabled ?? true,
+        billingDueDay: paymentData.billingDueDay || 10,
+        billingAdvanceDays: paymentData.billingAdvanceDays || 10,
+        billingGracePeriodDays: paymentData.billingGracePeriodDays || 5,
+        billingLateFeePercentage: paymentData.billingLateFeePercentage || 2.0,
+        billingLateFeeFixedCents: paymentData.billingLateFeeFixedCents || 0,
+        billingInterestRatePerDay: paymentData.billingInterestRatePerDay || 0.03,
+        billingLateFeeType: paymentData.billingLateFeeType || "percentage",
       });
     }
   }, [paymentData]);
@@ -1129,6 +1158,192 @@ MIIxxxxxxxxxxxxxxx...
               >
                 <Save className="w-4 h-4 mr-2" />
                 {updatePaymentMutation.isPending ? "Salvando..." : "Salvar Configurações de Pagamento"}
+              </Button>
+            </div>
+          </div>
+        );
+
+      case "billing":
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações de Cobrança Mensal</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    Configure aqui o sistema de mensalidades recorrentes para as academias clientes.
+                  </p>
+                </div>
+
+                {/* Billing Enabled Toggle */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <Label htmlFor="billingEnabled" className="text-base font-semibold">Sistema de Cobrança Ativo</Label>
+                    <p className="text-sm text-gray-600 mt-1">Ativa ou desativa o sistema de mensalidades recorrentes</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="billingEnabled"
+                    checked={paymentSettings.billingEnabled}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, billingEnabled: e.target.checked })}
+                    className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Billing Configuration */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="billingDueDay">Dia do Vencimento</Label>
+                    <Input
+                      id="billingDueDay"
+                      type="number"
+                      min="1"
+                      max="31"
+                      value={paymentSettings.billingDueDay}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, billingDueDay: parseInt(e.target.value) || 10 })}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Dia do mês em que a mensalidade vence (1-31)</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="billingAdvanceDays">Dias de Antecedência para Notificação</Label>
+                    <Input
+                      id="billingAdvanceDays"
+                      type="number"
+                      min="1"
+                      max="30"
+                      value={paymentSettings.billingAdvanceDays}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, billingAdvanceDays: parseInt(e.target.value) || 10 })}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Quantos dias antes do vencimento enviar o email de cobrança</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="billingGracePeriodDays">Período de Tolerância (Grace Period)</Label>
+                    <Input
+                      id="billingGracePeriodDays"
+                      type="number"
+                      min="0"
+                      max="30"
+                      value={paymentSettings.billingGracePeriodDays}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, billingGracePeriodDays: parseInt(e.target.value) || 5 })}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Dias após o vencimento antes de bloquear a academia</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="billingLateFeeType">Tipo de Multa</Label>
+                    <select
+                      id="billingLateFeeType"
+                      value={paymentSettings.billingLateFeeType}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, billingLateFeeType: e.target.value as "percentage" | "fixed" | "both" })}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    >
+                      <option value="percentage">Percentual</option>
+                      <option value="fixed">Valor Fixo</option>
+                      <option value="both">Percentual + Valor Fixo</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Como calcular a multa por atraso</p>
+                  </div>
+                </div>
+
+                {/* Late Fees Section */}
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold mb-4">Multa e Juros por Atraso</h3>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {(paymentSettings.billingLateFeeType === "percentage" || paymentSettings.billingLateFeeType === "both") && (
+                      <div>
+                        <Label htmlFor="billingLateFeePercentage">Multa em Percentual (%)</Label>
+                        <Input
+                          id="billingLateFeePercentage"
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={paymentSettings.billingLateFeePercentage}
+                          onChange={(e) => setPaymentSettings({ ...paymentSettings, billingLateFeePercentage: parseFloat(e.target.value) || 0 })}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Ex: 2.00 = 2% do valor total</p>
+                      </div>
+                    )}
+
+                    {(paymentSettings.billingLateFeeType === "fixed" || paymentSettings.billingLateFeeType === "both") && (
+                      <div>
+                        <Label htmlFor="billingLateFeeFixedCents">Multa Fixa (em centavos)</Label>
+                        <Input
+                          id="billingLateFeeFixedCents"
+                          type="number"
+                          min="0"
+                          value={paymentSettings.billingLateFeeFixedCents}
+                          onChange={(e) => setPaymentSettings({ ...paymentSettings, billingLateFeeFixedCents: parseInt(e.target.value) || 0 })}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Ex: 500 = R$ 5,00 | Valor atual: R$ {(paymentSettings.billingLateFeeFixedCents / 100).toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+
+                    <div>
+                      <Label htmlFor="billingInterestRatePerDay">Juros por Dia (%)</Label>
+                      <Input
+                        id="billingInterestRatePerDay"
+                        type="number"
+                        min="0"
+                        max="1"
+                        step="0.001"
+                        value={paymentSettings.billingInterestRatePerDay}
+                        onChange={(e) => setPaymentSettings({ ...paymentSettings, billingInterestRatePerDay: parseFloat(e.target.value) || 0 })}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Ex: 0.03 = 0,03% ao dia (aproximadamente 1% ao mês)</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Example Calculation */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold mb-2">Exemplo de Cálculo:</h4>
+                  <p className="text-sm text-gray-700">
+                    Mensalidade de <strong>R$ 100,00</strong> vencida há <strong>10 dias</strong>:
+                  </p>
+                  <ul className="text-sm text-gray-600 mt-2 space-y-1 ml-4">
+                    {paymentSettings.billingLateFeeType === "percentage" && (
+                      <li>• Multa ({paymentSettings.billingLateFeePercentage}%): R$ {(100 * paymentSettings.billingLateFeePercentage / 100).toFixed(2)}</li>
+                    )}
+                    {paymentSettings.billingLateFeeType === "fixed" && (
+                      <li>• Multa fixa: R$ {(paymentSettings.billingLateFeeFixedCents / 100).toFixed(2)}</li>
+                    )}
+                    {paymentSettings.billingLateFeeType === "both" && (
+                      <>
+                        <li>• Multa ({paymentSettings.billingLateFeePercentage}%): R$ {(100 * paymentSettings.billingLateFeePercentage / 100).toFixed(2)}</li>
+                        <li>• Multa fixa: R$ {(paymentSettings.billingLateFeeFixedCents / 100).toFixed(2)}</li>
+                      </>
+                    )}
+                    <li>• Juros (10 dias × {paymentSettings.billingInterestRatePerDay}%): R$ {(100 * paymentSettings.billingInterestRatePerDay / 100 * 10).toFixed(2)}</li>
+                    <li className="font-semibold mt-2">
+                      Total a pagar: R$ {(
+                        100 +
+                        (paymentSettings.billingLateFeeType === "percentage" || paymentSettings.billingLateFeeType === "both" ? 100 * paymentSettings.billingLateFeePercentage / 100 : 0) +
+                        (paymentSettings.billingLateFeeType === "fixed" || paymentSettings.billingLateFeeType === "both" ? paymentSettings.billingLateFeeFixedCents / 100 : 0) +
+                        (100 * paymentSettings.billingInterestRatePerDay / 100 * 10)
+                      ).toFixed(2)}
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSavePayments}
+                disabled={updatePaymentMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+                size="lg"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {updatePaymentMutation.isPending ? "Salvando..." : "Salvar Configurações de Cobrança"}
               </Button>
             </div>
           </div>
