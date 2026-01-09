@@ -323,7 +323,20 @@ export async function sendEmailFromSuperAdmin(options: EmailOptions): Promise<bo
     console.log(`[Email]   From: ${settings.smtpFromEmail || settings.smtpUser}`);
 
     console.log('[Email] 🔍 DEBUG: Creating transporter...');
-    const transporter = nodemailer.createTransporter(transportOptions);
+
+    // ⚠️ IMPORTANTE: Dynamic import do nodemailer para funcionar com esbuild
+    const nodemailerModule = await import('nodemailer');
+    const createTransport = nodemailerModule.default?.createTransport || nodemailerModule.createTransport;
+
+    console.log('[Email] 🔍 DEBUG: nodemailerModule keys:', Object.keys(nodemailerModule).slice(0, 10));
+    console.log('[Email] 🔍 DEBUG: has default?', !!nodemailerModule.default);
+    console.log('[Email] 🔍 DEBUG: createTransport type:', typeof createTransport);
+
+    if (!createTransport) {
+      throw new Error('Could not find createTransport function in nodemailer');
+    }
+
+    const transporter = createTransport(transportOptions);
     console.log('[Email] 🔍 DEBUG: Transporter created successfully');
 
     const mailOptions = {
