@@ -166,7 +166,15 @@ export const appRouter = router({
         if (!ctx.user.gymId) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
         }
-        return await db.getBillingCyclesByGym(ctx.user.gymId);
+        const cycles = await db.getBillingCyclesByGym(ctx.user.gymId);
+
+        // Convert date strings to Date objects for proper serialization
+        return cycles.map(cycle => ({
+          ...cycle,
+          dueDate: typeof cycle.dueDate === 'string' ? new Date(cycle.dueDate) : cycle.dueDate,
+          paidAt: cycle.paidAt && typeof cycle.paidAt === 'string' ? new Date(cycle.paidAt) : cycle.paidAt,
+          createdAt: typeof cycle.createdAt === 'string' ? new Date(cycle.createdAt) : cycle.createdAt,
+        }));
       }),
 
     // Get a specific billing cycle by ID
@@ -215,12 +223,17 @@ export const appRouter = router({
         }
 
         // Create gym payment record first
+        // Convert dueDate to Date object if it's a string
+        const dueDate = typeof billingCycle.dueDate === 'string'
+          ? new Date(billingCycle.dueDate)
+          : billingCycle.dueDate;
+
         const gymPaymentResult = await db.createGymPayment({
           gymId: ctx.user.gymId,
           referenceMonth: billingCycle.referenceMonth,
           amountCents: billingCycle.amountCents,
           status: "pending",
-          dueDate: billingCycle.dueDate,
+          dueDate: dueDate,
         });
 
         // Link billing cycle to payment

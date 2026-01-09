@@ -137,7 +137,7 @@ export default function AdminBilling() {
 
   return (
     <DashboardLayout role="admin">
-      <div className="space-y-6">
+      <div className="space-y-6 p-6 md:p-8">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Mensalidades</h1>
