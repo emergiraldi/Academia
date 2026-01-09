@@ -68,8 +68,8 @@ export function startCronJobs() {
     }
   });
 
-  // Run on 1st of each month at 00:00 - Generate monthly billing cycles
-  cron.schedule("0 0 1 * *", async () => {
+  // TESTE: Run every minute - Generate monthly billing cycles
+  cron.schedule("* * * * *", async () => {
     console.log("Running monthly billing generation job...");
     try {
       await generateMonthlyBillingCycles();
@@ -99,7 +99,7 @@ export function startCronJobs() {
   });
 
   console.log("✅ Cron jobs started successfully");
-  console.log("  - Monthly billing generation: 1st of month at 00:00");
+  console.log("  - Monthly billing generation: TESTE - Every minute");
   console.log("  - Overdue gym blocking: Daily at 5:00 AM");
   console.log("  - Defaulter blocking: Daily at 6:00 AM");
   console.log("  - Trial expiration check: Daily at 8:00 AM");
