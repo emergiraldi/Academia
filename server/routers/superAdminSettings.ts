@@ -46,6 +46,15 @@ export const superAdminSettingsRouter = router({
         bankAgency: z.string().optional(),
         trialEnabled: z.boolean().optional(),
         trialDays: z.number().optional(),
+        // SMTP settings
+        smtpHost: z.string().optional(),
+        smtpPort: z.number().optional(),
+        smtpUser: z.string().optional(),
+        smtpPassword: z.string().optional(),
+        smtpFromEmail: z.string().optional(),
+        smtpFromName: z.string().optional(),
+        smtpUseTls: z.boolean().optional(),
+        smtpUseSsl: z.boolean().optional(),
       })
     )
     .mutation(async ({ input }) => {

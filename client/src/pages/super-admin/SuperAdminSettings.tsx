@@ -77,6 +77,15 @@ interface PaymentSettings {
   bankAgency: string;
   trialEnabled: boolean;
   trialDays: number;
+  // SMTP settings
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPassword: string;
+  smtpFromEmail: string;
+  smtpFromName: string;
+  smtpUseTls: boolean;
+  smtpUseSsl: boolean;
 }
 
 export default function SuperAdminSettings() {
@@ -135,6 +144,15 @@ export default function SuperAdminSettings() {
     bankAgency: "",
     trialEnabled: true,
     trialDays: 14,
+    // SMTP defaults
+    smtpHost: "",
+    smtpPort: 587,
+    smtpUser: "",
+    smtpPassword: "",
+    smtpFromEmail: "",
+    smtpFromName: "SysFit Pro",
+    smtpUseTls: true,
+    smtpUseSsl: false,
   });
 
   const { data: settingsData, isLoading } = trpc.settings.get.useQuery();
@@ -206,6 +224,17 @@ export default function SuperAdminSettings() {
         bankName: paymentData.bankName || "",
         bankAccount: paymentData.bankAccount || "",
         bankAgency: paymentData.bankAgency || "",
+        trialEnabled: paymentData.trialEnabled ?? true,
+        trialDays: paymentData.trialDays || 14,
+        // SMTP settings
+        smtpHost: paymentData.smtpHost || "",
+        smtpPort: paymentData.smtpPort || 587,
+        smtpUser: paymentData.smtpUser || "",
+        smtpPassword: paymentData.smtpPassword || "",
+        smtpFromEmail: paymentData.smtpFromEmail || "",
+        smtpFromName: paymentData.smtpFromName || "SysFit Pro",
+        smtpUseTls: paymentData.smtpUseTls ?? true,
+        smtpUseSsl: paymentData.smtpUseSsl ?? false,
       });
     }
   }, [paymentData]);
@@ -904,6 +933,139 @@ MIIxxxxxxxxxxxxxxx...
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <p className="text-sm text-yellow-800">
                       <strong>Atenção:</strong> Sem período de teste, novas academias precisarão pagar imediatamente para ativar o sistema.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações de Email (SMTP)</CardTitle>
+                <p className="text-sm text-gray-600">
+                  Configure o servidor SMTP para enviar emails de credenciais para novas academias
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="smtpHost">Servidor SMTP *</Label>
+                    <Input
+                      id="smtpHost"
+                      placeholder="smtp.gmail.com"
+                      value={paymentSettings.smtpHost}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, smtpHost: e.target.value })}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Exemplos: smtp.gmail.com, smtp.office365.com, smtp.sendgrid.net
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="smtpPort">Porta SMTP *</Label>
+                    <Input
+                      id="smtpPort"
+                      type="number"
+                      placeholder="587"
+                      value={paymentSettings.smtpPort}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, smtpPort: parseInt(e.target.value) || 587 })}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      587 (TLS) ou 465 (SSL)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="smtpUser">Usuário/Email *</Label>
+                    <Input
+                      id="smtpUser"
+                      type="email"
+                      placeholder="seu-email@gmail.com"
+                      value={paymentSettings.smtpUser}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, smtpUser: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="smtpPassword">Senha/App Password *</Label>
+                    <Input
+                      id="smtpPassword"
+                      type="password"
+                      placeholder="••••••••••••••••"
+                      value={paymentSettings.smtpPassword}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, smtpPassword: e.target.value })}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Para Gmail, use "Senhas de app" nas configurações de segurança
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="smtpFromEmail">Email Remetente</Label>
+                    <Input
+                      id="smtpFromEmail"
+                      type="email"
+                      placeholder="noreply@sysfitpro.com.br"
+                      value={paymentSettings.smtpFromEmail}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, smtpFromEmail: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="smtpFromName">Nome do Remetente</Label>
+                    <Input
+                      id="smtpFromName"
+                      placeholder="SysFit Pro"
+                      value={paymentSettings.smtpFromName}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, smtpFromName: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="smtpUseTls"
+                      checked={paymentSettings.smtpUseTls}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, smtpUseTls: e.target.checked, smtpUseSsl: e.target.checked ? false : paymentSettings.smtpUseSsl })}
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <Label htmlFor="smtpUseTls" className="cursor-pointer">
+                      Usar TLS (porta 587)
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="smtpUseSsl"
+                      checked={paymentSettings.smtpUseSsl}
+                      onChange={(e) => setPaymentSettings({ ...paymentSettings, smtpUseSsl: e.target.checked, smtpUseTls: e.target.checked ? false : paymentSettings.smtpUseTls })}
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <Label htmlFor="smtpUseSsl" className="cursor-pointer">
+                      Usar SSL (porta 465)
+                    </Label>
+                  </div>
+                </div>
+
+                {paymentSettings.smtpHost && paymentSettings.smtpUser && paymentSettings.smtpPassword && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-sm text-green-800">
+                      ✅ Configurações SMTP preenchidas! Os emails serão enviados através de <strong>{paymentSettings.smtpHost}</strong>
+                    </p>
+                  </div>
+                )}
+
+                {(!paymentSettings.smtpHost || !paymentSettings.smtpUser || !paymentSettings.smtpPassword) && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Atenção:</strong> Sem configurações SMTP, os emails de credenciais NÃO serão enviados para as novas academias.
                     </p>
                   </div>
                 )}

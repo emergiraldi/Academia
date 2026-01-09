@@ -269,6 +269,61 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 }
 
 /**
+ * Send email using Super Admin SMTP configuration
+ * Used for sending gym admin credentials and other platform-wide emails
+ */
+export async function sendEmailFromSuperAdmin(options: EmailOptions): Promise<boolean> {
+  try {
+    const { getSuperAdminSettings } = await import('./db');
+    const settings = await getSuperAdminSettings();
+
+    if (!settings || !settings.smtpHost || !settings.smtpUser || !settings.smtpPassword) {
+      console.error('[Email] ❌ Super Admin SMTP not configured!');
+      console.log(`[Email] ⚠️  Email would be sent to ${options.to}: ${options.subject}`);
+      console.log(`[Email] ⚠️  Content: ${options.html.substring(0, 200)}...`);
+      return false;
+    }
+
+    const transportOptions: any = {
+      host: settings.smtpHost,
+      port: settings.smtpPort || 587,
+      secure: settings.smtpUseSsl ?? false, // true for port 465, false for other ports
+      auth: {
+        user: settings.smtpUser,
+        pass: settings.smtpPassword,
+      },
+    };
+
+    // Se não usar SSL mas usar TLS, habilitar STARTTLS
+    if (!settings.smtpUseSsl && (settings.smtpUseTls ?? true)) {
+      transportOptions.requireTLS = true;
+    }
+
+    console.log(`[Email] 📧 Sending email via Super Admin SMTP (${settings.smtpHost}:${settings.smtpPort})`);
+    console.log(`[Email]   To: ${options.to}`);
+    console.log(`[Email]   Subject: ${options.subject}`);
+
+    const transporter = nodemailer.createTransporter(transportOptions);
+
+    await transporter.sendMail({
+      from: settings.smtpFromEmail
+        ? `"${settings.smtpFromName || 'SysFit Pro'}" <${settings.smtpFromEmail}>`
+        : settings.smtpUser,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+    });
+
+    console.log(`[Email] ✅ Email sent successfully to ${options.to}`);
+    return true;
+  } catch (error: any) {
+    console.error('[Email] ❌ Failed to send email from Super Admin:', error);
+    console.error('[Email] Error details:', error.message);
+    return false;
+  }
+}
+
+/**
  * Send password reset code email (LEGADO)
  */
 export async function sendPasswordResetEmail(email: string, code: string, name: string): Promise<boolean> {
@@ -621,7 +676,7 @@ export async function sendGymAdminCredentials(
     </html>
   `;
 
-  return await sendEmail({
+  return await sendEmailFromSuperAdmin({
     to: email,
     subject: `🎉 ${gymName} - Suas Credenciais de Acesso`,
     html,

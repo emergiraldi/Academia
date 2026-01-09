@@ -1,3 +1,8 @@
+/**
+ * Adiciona configurações de SMTP ao superAdminSettings
+ * Execute: node add_smtp_settings.js
+ */
+
 import mysql from 'mysql2/promise';
 import * as dotenv from 'dotenv';
 
@@ -16,52 +21,41 @@ async function addSmtpSettings() {
   });
 
   try {
-    console.log('🔧 Adicionando campos SMTP em gym_settings...\n');
+    console.log('🔧 Adicionando campos de configuração SMTP ao superAdminSettings...\n');
 
-    // Verificar se as colunas já existem
+    // Verificar se os campos já existem
     const [columns] = await connection.query(`
-      SHOW COLUMNS FROM gym_settings WHERE Field IN (
-        'smtpHost', 'smtpPort', 'smtpUser', 'smtpPassword',
-        'smtpFromEmail', 'smtpFromName', 'smtpUseTls', 'smtpUseSsl'
-      )
+      SHOW COLUMNS FROM superAdminSettings LIKE 'smtpHost'
     `);
 
     if (columns.length > 0) {
-      console.log('✅ Campos SMTP já existem na tabela gym_settings!');
-      console.log('\n📋 Campos encontrados:');
-      columns.forEach(col => {
-        console.log(`  - ${col.Field}`);
-      });
+      console.log('✅ Campos de SMTP já existem na tabela!');
       return;
     }
 
-    // Adicionar colunas SMTP
+    // Adicionar novos campos
     await connection.query(`
-      ALTER TABLE gym_settings
-      ADD COLUMN smtpHost VARCHAR(255) DEFAULT NULL COMMENT 'Host do servidor SMTP (ex: smtp.gmail.com)',
-      ADD COLUMN smtpPort INT(11) DEFAULT 587 COMMENT 'Porta SMTP (587 para TLS, 465 para SSL)',
-      ADD COLUMN smtpUser VARCHAR(255) DEFAULT NULL COMMENT 'Usuário/email para autenticação SMTP',
-      ADD COLUMN smtpPassword VARCHAR(500) DEFAULT NULL COMMENT 'Senha do servidor SMTP',
-      ADD COLUMN smtpFromEmail VARCHAR(255) DEFAULT NULL COMMENT 'Email remetente',
-      ADD COLUMN smtpFromName VARCHAR(255) DEFAULT 'Academia' COMMENT 'Nome do remetente',
-      ADD COLUMN smtpUseTls TINYINT(1) DEFAULT 1 COMMENT 'Usar TLS (porta 587)',
-      ADD COLUMN smtpUseSsl TINYINT(1) DEFAULT 0 COMMENT 'Usar SSL (porta 465)'
+      ALTER TABLE superAdminSettings
+      ADD COLUMN smtpHost VARCHAR(255) COMMENT 'Servidor SMTP (ex: smtp.gmail.com)',
+      ADD COLUMN smtpPort INT DEFAULT 587 COMMENT 'Porta SMTP (587=TLS, 465=SSL)',
+      ADD COLUMN smtpUser VARCHAR(255) COMMENT 'Usuário SMTP (email)',
+      ADD COLUMN smtpPassword VARCHAR(255) COMMENT 'Senha SMTP ou App Password',
+      ADD COLUMN smtpFromEmail VARCHAR(255) COMMENT 'Email remetente',
+      ADD COLUMN smtpFromName VARCHAR(255) COMMENT 'Nome do remetente',
+      ADD COLUMN smtpUseTls BOOLEAN DEFAULT TRUE COMMENT 'Usar STARTTLS (porta 587)',
+      ADD COLUMN smtpUseSsl BOOLEAN DEFAULT FALSE COMMENT 'Usar SSL direto (porta 465)'
     `);
 
-    console.log('✅ Campos SMTP adicionados com sucesso!\n');
-
-    // Verificar estrutura atualizada
-    const [newColumns] = await connection.query(`
-      SHOW COLUMNS FROM gym_settings WHERE Field LIKE 'smtp%'
-    `);
-
-    console.log('📋 Novos campos adicionados:');
-    newColumns.forEach(col => {
-      console.log(`  ✓ ${col.Field} (${col.Type})`);
-    });
-
-    console.log('\n🎉 Migração concluída!');
-    console.log('\n💡 Agora você pode configurar o SMTP no painel administrativo.');
+    console.log('✅ Campos de SMTP adicionados com sucesso!');
+    console.log('\n📋 Novos campos:');
+    console.log('   - smtpHost: Servidor SMTP (ex: smtp.gmail.com)');
+    console.log('   - smtpPort: Porta SMTP (587 para TLS, 465 para SSL)');
+    console.log('   - smtpUser: Usuário/email SMTP');
+    console.log('   - smtpPassword: Senha ou App Password');
+    console.log('   - smtpFromEmail: Email que aparece como remetente');
+    console.log('   - smtpFromName: Nome que aparece como remetente');
+    console.log('   - smtpUseTls: Usar STARTTLS (padrão: TRUE)');
+    console.log('   - smtpUseSsl: Usar SSL direto (padrão: FALSE)\n');
 
   } catch (error) {
     console.error('❌ Erro:', error.message);

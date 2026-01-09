@@ -148,6 +148,16 @@ export const superAdminSettings = mysqlTable("superAdminSettings", {
   trialEnabled: boolean("trialEnabled").default(true).notNull(), // Se o período de teste está ativo
   trialDays: int("trialDays").default(14).notNull(), // Quantos dias de teste grátis
 
+  // SMTP configuration for sending emails (gym credentials, etc)
+  smtpHost: varchar("smtpHost", { length: 255 }), // smtp.gmail.com, smtp.office365.com, etc
+  smtpPort: int("smtpPort").default(587), // 587 (TLS), 465 (SSL), 25 (não recomendado)
+  smtpUser: varchar("smtpUser", { length: 255 }), // Email ou username
+  smtpPassword: varchar("smtpPassword", { length: 255 }), // Senha ou app password
+  smtpFromEmail: varchar("smtpFromEmail", { length: 255 }), // Email que aparece como remetente
+  smtpFromName: varchar("smtpFromName", { length: 255 }), // Nome que aparece como remetente
+  smtpUseTls: boolean("smtpUseTls").default(true), // Usar STARTTLS (porta 587)
+  smtpUseSsl: boolean("smtpUseSsl").default(false), // Usar SSL direto (porta 465)
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
