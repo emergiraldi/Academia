@@ -62,6 +62,18 @@ async function copyPixCredentials() {
 
     console.log('✅ Tabela encontrada\n');
 
+    // Mapear tipo de chave PIX de português para inglês
+    const pixKeyTypeMap = {
+      'Aleatoria': 'random',
+      'CPF': 'cpf',
+      'CNPJ': 'cnpj',
+      'Email': 'email',
+      'Telefone': 'phone'
+    };
+
+    const mappedPixKeyType = pixKeyTypeMap[account.pix_tipo_chave] || 'random';
+    console.log(`🔄 Mapeando tipo de chave: "${account.pix_tipo_chave}" → "${mappedPixKeyType}"\n`);
+
     // Copiar credenciais PIX para Super Admin
     console.log('📋 Copiando credenciais PIX para Super Admin...');
     await connection.query(`
@@ -79,7 +91,7 @@ async function copyPixCredentials() {
       account.pix_client_secret,
       account.pix_certificado,
       account.pix_chave,
-      account.pix_tipo_chave,
+      mappedPixKeyType,
       account.pix_url_base || 'https://api.sicoob.com.br/pix/api/v2',
       account.pix_url_token || 'https://api.sicoob.com.br/pix/oauth/token'
     ]);
