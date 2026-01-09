@@ -161,11 +161,14 @@ export const gymsRouter = router({
       const now = new Date();
 
       // ⚠️ Se trial está DESABILITADO, academia começa BLOQUEADA até pagar
+      console.log(`🔍 [CREATE GYM] Super Admin Settings - trialEnabled: ${superAdminSettings?.trialEnabled}`);
       if (!superAdminSettings?.trialEnabled) {
         console.log(`🔒 [CREATE GYM] Trial desabilitado - Academia será criada BLOQUEADA até confirmação de pagamento`);
         finalGymData.status = "suspended";
         finalGymData.planStatus = "suspended";
         finalGymData.blockedReason = "Aguardando confirmação de pagamento PIX";
+      } else {
+        console.log(`🎁 [CREATE GYM] Trial HABILITADO - Academia será criada ativa com ${superAdminSettings.trialDays} dias de teste`);
       }
 
       // Preparar senha hash ANTES da transação
@@ -219,7 +222,7 @@ export const gymsRouter = router({
       let pixCopyPaste: string | undefined;
 
       if (!superAdminSettings?.trialEnabled) {
-        console.log(`💳 [CREATE GYM] Trial desabilitado - Gerando PIX para academia ${gymId}`);
+        console.log(`💳 [CREATE GYM] Trial desabilitado - Gerando PIX para academia ${gymId!}`);
         try {
           const { getPixServiceFromSuperAdmin } = await import("../pix");
           const { createGymPayment, listSaasPlans } = await import("../db");
@@ -251,7 +254,7 @@ export const gymsRouter = router({
 
             // Save payment
             await createGymPayment({
-              gymId,
+              gymId: gymId!,
               amountInCents,
               status: "pending",
               paymentMethod: "pix",
@@ -278,6 +281,7 @@ export const gymsRouter = router({
       }
 
       // ✉️ Enviar email de boas-vindas (FORA da transação - se falhar não desfaz o cadastro)
+      console.log(`📧 [CREATE GYM] Enviando email com PIX - pixQrCode: ${pixQrCode ? 'SIM' : 'NÃO'}, pixCopyPaste: ${pixCopyPaste ? 'SIM' : 'NÃO'}`);
       try {
         const { sendGymAdminCredentials } = await import("../email");
         await sendGymAdminCredentials(
@@ -301,7 +305,7 @@ export const gymsRouter = router({
         trialEndsAt.setDate(trialEndsAt.getDate() + superAdminSettings.trialDays);
 
         return {
-          gymId,
+          gymId: gymId!,
           gymSlug: input.slug,
           plan,
           trial: {
@@ -319,7 +323,7 @@ export const gymsRouter = router({
 
       // Se trial NÃO está habilitado, retornar com informação do PIX
       return {
-        gymId,
+        gymId: gymId!,
         gymSlug: input.slug,
         plan,
         trial: {
@@ -413,7 +417,7 @@ export const gymsRouter = router({
 
       // Criar configurações padrão para a academia (DEPOIS da transação)
       try {
-        await createGymSettings(gymId);
+        await createGymSettings(gymId!);
       } catch (settingsError) {
         console.error("❌ Erro ao criar configurações:", settingsError);
         // Continuar mesmo se falhar - configurações podem ser criadas depois
@@ -422,9 +426,9 @@ export const gymsRouter = router({
       // Retornar informações importantes
       return {
         success: true,
-        gymId,
+        gymId: gymId!,
         gymSlug: input.gymSlug,
-        agentId: `academia-${gymId}`,
+        agentId: `academia-${gymId!}`,
         message: "Academia cadastrada com sucesso!",
       };
     }),
