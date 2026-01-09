@@ -51,21 +51,25 @@ export default function Signup() {
     const params = new URLSearchParams(window.location.search);
     const planSlug = params.get("plan") || "professional";
 
+    console.log("[Signup] planSlug:", planSlug);
+    console.log("[Signup] saasPlans:", saasPlans);
+
     // Se temos os planos carregados, buscar o preço correto
     if (saasPlans && saasPlans.length > 0) {
       const selectedPlan = saasPlans.find(p => p.slug === planSlug);
+      console.log("[Signup] selectedPlan:", selectedPlan);
+
       if (selectedPlan) {
         const priceInReais = selectedPlan.priceInCents / 100;
+        console.log("[Signup] Atualizando preço para:", priceInReais);
         setFormData((prev) => ({
           ...prev,
           plan: planSlug,
           price: priceInReais
         }));
+      } else {
+        console.warn("[Signup] Plano não encontrado:", planSlug);
       }
-    } else {
-      // Fallback para preço padrão se não encontrar
-      const price = parseInt(params.get("price") || "299");
-      setFormData((prev) => ({ ...prev, plan: planSlug, price }));
     }
   }, [saasPlans]);
 
