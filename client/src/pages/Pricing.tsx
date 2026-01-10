@@ -1,14 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { CheckCircle2, Dumbbell, X, ArrowLeft } from "lucide-react";
+import { CheckCircle2, Dumbbell, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
 export default function Pricing() {
   const [, setLocation] = useLocation();
 
-  // Buscar planos do banco de dados
-  const { data: saasPlans, isLoading } = trpc.saasPlans.list.useQuery();
+  // Buscar planos ativos do banco de dados (rota pública)
+  const { data: saasPlans, isLoading } = trpc.saasPlans.listActive.useQuery();
 
   const handleSelectPlan = (planSlug: string, price: number) => {
     setLocation(`/signup?plan=${planSlug}&price=${price}`);
