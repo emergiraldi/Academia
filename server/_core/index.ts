@@ -11,6 +11,7 @@ import { startCronJobs } from "../cron";
 import wellhubWebhookRouter from "../wellhubWebhook";
 import pixWebhookRouter from "../pixWebhookRouter";
 import { initializeAgentWebSocket } from "../agentWebSocket";
+import uploadRouter from "../uploadRouter";
 
 async function startServer() {
   const app = express();
@@ -26,6 +27,8 @@ async function startServer() {
   app.use(wellhubWebhookRouter);
   // PIX webhook endpoint
   app.use(pixWebhookRouter);
+  // Upload endpoint
+  app.use(uploadRouter);
   // tRPC API
   app.use(
     "/api/trpc",

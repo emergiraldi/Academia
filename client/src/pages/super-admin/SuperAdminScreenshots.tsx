@@ -58,6 +58,9 @@ export default function SuperAdminScreenshots() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
   const [formData, setFormData] = useState<ScreenshotForm>(emptyForm);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
 
   // Queries
   const { data: screenshots, isLoading, refetch } = trpc.landingPageScreenshots.list.useQuery();
@@ -97,12 +100,64 @@ export default function SuperAdminScreenshots() {
     },
   });
 
-  const handleCreate = () => {
-    if (!formData.title || !formData.imageUrl) {
-      toast.error("Preencha título e URL da imagem");
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("Erro ao fazer upload da imagem");
+    }
+
+    const data = await response.json();
+    return data.url;
+  };
+
+  const handleCreate = async () => {
+    if (!formData.title) {
+      toast.error("Preencha o título");
       return;
     }
-    createMutation.mutate(formData);
+
+    if (!imageFile && !formData.imageUrl) {
+      toast.error("Selecione uma imagem");
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      let imageUrl = formData.imageUrl;
+
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+      }
+
+      createMutation.mutate({ ...formData, imageUrl });
+      setImageFile(null);
+      setImagePreview("");
+    } catch (error) {
+      toast.error("Erro ao fazer upload: " + (error as Error).message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleEdit = (screenshot: any) => {
@@ -207,18 +262,50 @@ export default function SuperAdminScreenshots() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="imageUrl">URL da Imagem *</Label>
-                  <Input
-                    id="imageUrl"
-                    value={formData.imageUrl}
-                    onChange={(e) =>
-                      setFormData({ ...formData, imageUrl: e.target.value })
-                    }
-                    placeholder="/images/screenshots/dashboard.png"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Adicione a imagem na pasta public/images/screenshots/
-                  </p>
+                  <Label htmlFor="image">Imagem *</Label>
+                  <div className="space-y-3">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition cursor-pointer">
+                      <input
+                        type="file"
+                        id="image"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="image"
+                        className="flex flex-col items-center justify-center cursor-pointer"
+                      >
+                        {imagePreview ? (
+                          <div className="space-y-2 text-center">
+                            <img
+                              src={imagePreview}
+                              alt="Preview"
+                              className="max-h-40 rounded-lg mx-auto"
+                            />
+                            <p className="text-sm text-gray-600">
+                              Clique para trocar a imagem
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <Image className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm text-gray-600">
+                              Clique ou arraste uma imagem aqui
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              PNG, JPG, GIF até 5MB
+                            </p>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                    {imageFile && (
+                      <p className="text-xs text-green-600">
+                        ✓ {imageFile.name}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="displayOrder">Ordem de Exibição</Label>
@@ -253,14 +340,19 @@ export default function SuperAdminScreenshots() {
                   <Button
                     variant="outline"
                     onClick={() => setCreateDialogOpen(false)}
+                    disabled={uploading || createMutation.isPending}
                   >
                     Cancelar
                   </Button>
                   <Button
                     onClick={handleCreate}
-                    disabled={createMutation.isPending}
+                    disabled={uploading || createMutation.isPending}
                   >
-                    {createMutation.isPending ? "Criando..." : "Criar"}
+                    {uploading
+                      ? "Fazendo upload..."
+                      : createMutation.isPending
+                      ? "Criando..."
+                      : "Criar"}
                   </Button>
                 </div>
               </div>
