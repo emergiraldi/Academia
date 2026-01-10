@@ -192,51 +192,102 @@ export default function SuperAdminReports() {
     const pdf = new jsPDF("p", "mm", "a4");
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 10;
+    const margin = 15;
     let yPosition = margin;
 
-    // Título
-    pdf.setFontSize(18);
+    // ========== HEADER PROFISSIONAL ==========
+    // Background azul no topo
+    pdf.setFillColor(59, 130, 246); // Azul profissional
+    pdf.rect(0, 0, pageWidth, 35, "F");
+
+    // Título principal branco
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(22);
     pdf.setFont("helvetica", "bold");
-    pdf.text("Relatório Financeiro - SysFit Pro", margin, yPosition);
-    yPosition += 8;
+    const title = "SysFit Pro";
+    const titleWidth = pdf.getTextWidth(title);
+    pdf.text(title, (pageWidth - titleWidth) / 2, yPosition + 8);
+
+    // Subtítulo
+    pdf.setFontSize(12);
+    pdf.setFont("helvetica", "normal");
+    const subtitle = "Relatório Financeiro";
+    const subtitleWidth = pdf.getTextWidth(subtitle);
+    pdf.text(subtitle, (pageWidth - subtitleWidth) / 2, yPosition + 15);
 
     // Data de geração
+    pdf.setFontSize(9);
+    const dateText = `Gerado em: ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")}`;
+    const dateWidth = pdf.getTextWidth(dateText);
+    pdf.text(dateText, (pageWidth - dateWidth) / 2, yPosition + 22);
+
+    // Linha separadora elegante
+    pdf.setDrawColor(255, 255, 255);
+    pdf.setLineWidth(0.5);
+    pdf.line(margin, yPosition + 27, pageWidth - margin, yPosition + 27);
+
+    yPosition = 45; // Após o header
+    pdf.setTextColor(0, 0, 0); // Voltar para preto
+
+    // ========== RESUMO COM CORES ==========
+    // Box de resumo com fundo cinza claro
+    pdf.setFillColor(249, 250, 251);
+    pdf.roundedRect(margin, yPosition, pageWidth - 2 * margin, 35, 2, 2, "F");
+
+    yPosition += 5;
+    pdf.setFontSize(13);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(31, 41, 55);
+    pdf.text("Resumo Financeiro", margin + 5, yPosition + 5);
+
+    yPosition += 12;
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "normal");
-    pdf.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")}`, margin, yPosition);
-    yPosition += 10;
 
-    // Resumo Estatístico
-    pdf.setFontSize(12);
+    // Total de Registros
+    pdf.setTextColor(71, 85, 105);
+    pdf.text(`Total de Registros: ${filteredData.length}`, margin + 5, yPosition);
+    yPosition += 5;
+
+    // Inadimplentes (vermelho)
+    pdf.setTextColor(220, 38, 38);
+    pdf.text(`Inadimplentes: ${filteredStats.overdueCount} (${formatCurrency(filteredStats.overdueAmount)})`, margin + 5, yPosition);
+    yPosition += 5;
+
+    // Pendentes (amarelo escuro)
+    pdf.setTextColor(202, 138, 4);
+    pdf.text(`Pendentes: ${filteredStats.pendingCount} (${formatCurrency(filteredStats.pendingAmount)})`, margin + 5, yPosition);
+    yPosition += 5;
+
+    // Pagos (verde)
+    pdf.setTextColor(21, 128, 61);
+    pdf.text(`Pagos: ${filteredStats.paidCount} (${formatCurrency(filteredStats.paidAmount)})`, margin + 5, yPosition);
+    yPosition += 5;
+
+    // Total (preto, negrito)
+    pdf.setTextColor(0, 0, 0);
     pdf.setFont("helvetica", "bold");
-    pdf.text("Resumo", margin, yPosition);
-    yPosition += 7;
+    pdf.text(`Total: ${formatCurrency(filteredStats.total)}`, margin + 5, yPosition);
 
-    pdf.setFontSize(10);
+    yPosition += 15;
     pdf.setFont("helvetica", "normal");
-    pdf.text(`Total de Registros: ${filteredData.length}`, margin, yPosition);
-    yPosition += 5;
-    pdf.text(`Inadimplentes: ${filteredStats.overdueCount} (${formatCurrency(filteredStats.overdueAmount)})`, margin, yPosition);
-    yPosition += 5;
-    pdf.text(`Pendentes: ${filteredStats.pendingCount} (${formatCurrency(filteredStats.pendingAmount)})`, margin, yPosition);
-    yPosition += 5;
-    pdf.text(`Pagos: ${filteredStats.paidCount} (${formatCurrency(filteredStats.paidAmount)})`, margin, yPosition);
-    yPosition += 5;
-    pdf.text(`Total: ${formatCurrency(filteredStats.total)}`, margin, yPosition);
-    yPosition += 10;
 
-    // Tabela de Dados
-    pdf.setFontSize(12);
+    // ========== TABELA COM HEADER COLORIDO ==========
+    pdf.setFontSize(13);
     pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(31, 41, 55);
     pdf.text("Detalhamento", margin, yPosition);
-    yPosition += 7;
+    yPosition += 10;
 
-    // Cabeçalho da tabela
-    pdf.setFontSize(8);
+    // Cabeçalho da tabela com fundo azul
+    pdf.setFillColor(59, 130, 246);
+    pdf.rect(margin, yPosition - 4, pageWidth - 2 * margin, 8, "F");
+
+    pdf.setFontSize(9);
     pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(255, 255, 255);
     const colWidths = [50, 25, 25, 25, 30, 35];
-    let xPosition = margin;
+    let xPosition = margin + 2;
 
     pdf.text("Academia", xPosition, yPosition);
     xPosition += colWidths[0];
@@ -250,22 +301,35 @@ export default function SuperAdminReports() {
     xPosition += colWidths[4];
     pdf.text("Status", xPosition, yPosition);
 
-    yPosition += 5;
-    pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 5;
+    yPosition += 8;
+    pdf.setTextColor(0, 0, 0);
 
-    // Dados
+    // Dados com linhas alternadas
     pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+
     filteredData.forEach((billing, index) => {
-      if (yPosition > pageHeight - 20) {
+      if (yPosition > pageHeight - 30) {
+        // Rodapé antes de nova página
+        pdf.setFontSize(8);
+        pdf.setTextColor(107, 114, 128);
+        pdf.text(`Página ${pdf.internal.getNumberOfPages()}`, pageWidth / 2 - 10, pageHeight - 10);
+
         pdf.addPage();
-        yPosition = margin;
+        yPosition = margin + 10;
       }
 
-      xPosition = margin;
+      // Fundo alternado (zebra striping)
+      if (index % 2 === 0) {
+        pdf.setFillColor(249, 250, 251);
+        pdf.rect(margin, yPosition - 4, pageWidth - 2 * margin, 6, "F");
+      }
+
+      xPosition = margin + 2;
+      pdf.setTextColor(31, 41, 55);
 
       // Limitar texto da academia
-      const gymName = billing.gymName.length > 20 ? billing.gymName.substring(0, 20) + "..." : billing.gymName;
+      const gymName = billing.gymName.length > 22 ? billing.gymName.substring(0, 22) + "..." : billing.gymName;
       pdf.text(gymName, xPosition, yPosition);
       xPosition += colWidths[0];
 
@@ -281,11 +345,57 @@ export default function SuperAdminReports() {
       pdf.text(formatCurrency(billing.amountCents), xPosition, yPosition);
       xPosition += colWidths[4];
 
+      // Status com cor
       const status = billing.status === "paid" ? "Pago" : billing.status === "overdue" ? "Vencido" : "Pendente";
+      if (billing.status === "paid") {
+        pdf.setTextColor(21, 128, 61); // Verde
+      } else if (billing.status === "overdue") {
+        pdf.setTextColor(220, 38, 38); // Vermelho
+      } else {
+        pdf.setTextColor(202, 138, 4); // Amarelo
+      }
       pdf.text(status, xPosition, yPosition);
+      pdf.setTextColor(31, 41, 55);
 
-      yPosition += 5;
+      yPosition += 6;
     });
+
+    // ========== RODAPÉ PROFISSIONAL ==========
+    const totalPages = pdf.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+
+      // Linha separadora
+      pdf.setDrawColor(229, 231, 235);
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20);
+
+      // Texto do rodapé
+      pdf.setFontSize(8);
+      pdf.setTextColor(107, 114, 128);
+
+      // Logo/Nome do sistema (esquerda)
+      pdf.setFont("helvetica", "bold");
+      pdf.text("SysFit Pro", margin, pageHeight - 12);
+
+      // Página (centro)
+      pdf.setFont("helvetica", "normal");
+      const pageText = `Página ${i} de ${totalPages}`;
+      const pageTextWidth = pdf.getTextWidth(pageText);
+      pdf.text(pageText, (pageWidth - pageTextWidth) / 2, pageHeight - 12);
+
+      // Site/contato (direita)
+      const contactText = "www.sysfitpro.com.br";
+      const contactWidth = pdf.getTextWidth(contactText);
+      pdf.text(contactText, pageWidth - margin - contactWidth, pageHeight - 12);
+
+      // Linha "Gerado automaticamente" (muito pequena)
+      pdf.setFontSize(7);
+      pdf.setTextColor(156, 163, 175);
+      const autoText = "Relatório gerado automaticamente pelo sistema SysFit Pro";
+      const autoWidth = pdf.getTextWidth(autoText);
+      pdf.text(autoText, (pageWidth - autoWidth) / 2, pageHeight - 6);
+    }
 
     // Salvar PDF
     pdf.save(`relatorio_mensalidades_${new Date().toISOString().split("T")[0]}.pdf`);
