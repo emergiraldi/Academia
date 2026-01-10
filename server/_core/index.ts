@@ -29,6 +29,8 @@ async function startServer() {
   app.use(pixWebhookRouter);
   // Upload endpoint
   app.use(uploadRouter);
+  // Serve uploaded files statically
+  app.use("/uploads", express.static("uploads"));
   // tRPC API
   app.use(
     "/api/trpc",

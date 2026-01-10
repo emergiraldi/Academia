@@ -5,10 +5,11 @@ import fs from "fs";
 
 const router = Router();
 
-// Configure multer para salvar na pasta public/images/screenshots
+// Configure multer para salvar em pasta PERSISTENTE (fora do dist/)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(process.cwd(), "dist/public/images/screenshots");
+    // IMPORTANTE: Pasta fora do dist/ para não perder ao fazer build
+    const uploadDir = path.join(process.cwd(), "uploads/screenshots");
 
     // Criar pasta se não existir
     if (!fs.existsSync(uploadDir)) {
@@ -50,7 +51,7 @@ router.post("/api/upload", upload.single("file"), (req, res) => {
       return res.status(400).json({ error: "Nenhum arquivo enviado" });
     }
 
-    const url = `/images/screenshots/${req.file.filename}`;
+    const url = `/uploads/screenshots/${req.file.filename}`;
     res.json({ url, message: "Upload realizado com sucesso!" });
   } catch (error) {
     console.error("Erro no upload:", error);
