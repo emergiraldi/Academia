@@ -1,5 +1,5 @@
 // Service Worker para PWA
-const CACHE_NAME = 'sysfit-pro-v2'; // Incrementado para forçar atualização
+const CACHE_NAME = 'sysfit-pro-v3'; // Incrementado para forçar atualização (fix redirect)
 const urlsToCache = [
   '/',
   '/index.html',

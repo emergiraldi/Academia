@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import * as db from "../db";
 
@@ -21,6 +21,20 @@ export const superAdminSettingsRouter = router({
    */
   get: superAdminProcedure.query(async () => {
     return await db.getSuperAdminSettings();
+  }),
+
+  /**
+   * Get public info (trial settings) - accessible without authentication
+   * Used by landing page and signup page to show trial information
+   */
+  getPublicInfo: publicProcedure.query(async () => {
+    const settings = await db.getSuperAdminSettings();
+    // Return only public/non-sensitive information
+    return {
+      trialEnabled: settings?.trialEnabled ?? false,
+      trialDays: settings?.trialDays ?? 14,
+      trialWarningDays: settings?.trialWarningDays ?? 3,
+    };
   }),
 
   /**

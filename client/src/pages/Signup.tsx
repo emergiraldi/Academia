@@ -48,8 +48,8 @@ export default function Signup() {
   // Buscar planos SaaS dinâmicos
   const { data: saasPlans } = trpc.saasPlans.listActive.useQuery();
 
-  // Buscar configurações do Super Admin para verificar trial
-  const { data: superAdminSettings } = trpc.superAdminSettings.get.useQuery();
+  // Buscar configurações do Super Admin para verificar trial (rota pública)
+  const { data: superAdminSettings } = trpc.superAdminSettings.getPublicInfo.useQuery();
 
   useEffect(() => {
     // Get plan from URL params

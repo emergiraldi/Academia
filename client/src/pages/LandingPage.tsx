@@ -121,8 +121,8 @@ export default function LandingPage() {
   // Buscar planos SaaS dinâmicos
   const { data: saasPlans, isLoading: plansLoading } = trpc.saasPlans.listActive.useQuery();
 
-  // Buscar configurações de trial do Super Admin
-  const { data: superAdminSettings } = trpc.superAdminSettings.get.useQuery();
+  // Buscar configurações de trial do Super Admin (rota pública)
+  const { data: superAdminSettings } = trpc.superAdminSettings.getPublicInfo.useQuery();
 
   // Buscar screenshots do banco de dados
   const { data: screenshotsData } = trpc.landingPageScreenshots.listActive.useQuery();
