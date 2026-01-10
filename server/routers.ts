@@ -1612,7 +1612,7 @@ export const appRouter = router({
           const pixCharge = await pixService.createImmediateCharge({
             valor: payment.amountInCents,
             pagador: {
-              cpf: student.cpf,
+              documento: student.cpf,
               nome: ctx.user.name || "Aluno",
             },
             infoAdicionais: `Mensalidade - Academia`,
