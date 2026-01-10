@@ -48,6 +48,34 @@ export async function processPixWebhook(payload: any) {
 
       console.log(`[PIX Webhook] ✅ Gym payment ${gymPayment.id} marked as paid`);
 
+      // ========== UPDATE LINKED BILLING CYCLE ==========
+      // Check if this payment is linked to a billing cycle and update it
+      const linkedBillingCycles = await db.getBillingCyclesByPaymentId(gymPayment.id);
+
+      if (linkedBillingCycles && linkedBillingCycles.length > 0) {
+        const billingCycle = linkedBillingCycles[0];
+        console.log(`[PIX Webhook] 💰 Found linked billing cycle ID: ${billingCycle.id} - updating status to paid`);
+
+        // Update billing cycle status to paid
+        await db.updateBillingCycle(billingCycle.id, {
+          status: "paid",
+          paidAt,
+        });
+
+        console.log(`[PIX Webhook] ✅ Billing cycle ${billingCycle.id} marked as paid`);
+
+        // Unblock gym if it was suspended due to non-payment
+        const gymForBilling = await db.getGymById(billingCycle.gymId);
+        if (gymForBilling && (gymForBilling.status === "suspended" || gymForBilling.planStatus === "suspended")) {
+          await db.updateGym(gymForBilling.id, {
+            status: "active",
+            planStatus: "active",
+            blockedReason: null,
+          });
+          console.log(`[PIX Webhook] ✅ Gym ${gymForBilling.id} (${gymForBilling.name}) unblocked after billing payment`);
+        }
+      }
+
       // Get gym
       const gym = await db.getGymById(gymPayment.gymId);
       if (!gym) {
