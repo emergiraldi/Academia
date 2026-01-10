@@ -58,8 +58,8 @@ export function startCronJobs() {
     }
   });
 
-  // Run every minute - Poll pending PIX payments for gyms
-  cron.schedule("* * * * *", async () => {
+  // Run every 2 seconds - Poll pending PIX payments for gyms
+  cron.schedule("*/2 * * * * *", async () => {
     console.log("Running gym PIX payment polling job...");
     try {
       await pollGymPixPayments();
@@ -107,5 +107,5 @@ export function startCronJobs() {
   console.log("  - Billing notifications: Daily at 9:30 AM");
   console.log("  - Medical exam reminders: Daily at 10:00 AM");
   console.log("  - Access logs sync: Every 30 seconds");
-  console.log("  - Gym PIX payment polling: Every minute");
+  console.log("  - Gym PIX payment polling: Every 2 seconds");
 }
