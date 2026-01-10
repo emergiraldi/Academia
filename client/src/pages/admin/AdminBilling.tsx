@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,31 @@ export default function AdminBilling() {
 
   // Query to get billing cycles
   const { data: billingCycles = [], refetch } = trpc.gymBillingCycles.list.useQuery();
+
+  // Auto-refresh: Poll every 3 seconds when modal is open to check payment status
+  useEffect(() => {
+    if (!pixModalOpen || !selectedCycle) return;
+
+    const interval = setInterval(async () => {
+      // Refetch data to check if payment was confirmed
+      await refetch();
+
+      // Check if the selected cycle is now paid
+      const updatedCycle = billingCycles.find((c) => c.id === selectedCycle.id);
+      if (updatedCycle && updatedCycle.status === "paid") {
+        // Payment confirmed! Close modal and show success
+        setPixModalOpen(false);
+        toast.success("✅ Pagamento confirmado! Mensalidade quitada.", {
+          description: "Sua academia foi desbloqueada automaticamente.",
+        });
+        setSelectedCycle(null);
+        setPixQrCode(null);
+        setPixQrCodeImage(null);
+      }
+    }, 3000); // Check every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [pixModalOpen, selectedCycle, billingCycles, refetch]);
 
   // Mutation to generate PIX payment
   const generatePixMutation = trpc.gymBillingCycles.generatePixPayment.useMutation({
