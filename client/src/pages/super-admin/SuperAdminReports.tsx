@@ -230,24 +230,24 @@ export default function SuperAdminReports() {
     pdf.setTextColor(0, 0, 0); // Voltar para preto
 
     // ========== RESUMO COM CORES ==========
-    // Box de resumo com fundo cinza claro
+    // Box de resumo com fundo cinza claro (aumentei altura)
     pdf.setFillColor(249, 250, 251);
-    pdf.roundedRect(margin, yPosition, pageWidth - 2 * margin, 35, 2, 2, "F");
+    pdf.roundedRect(margin, yPosition, pageWidth - 2 * margin, 42, 2, 2, "F");
 
-    yPosition += 5;
-    pdf.setFontSize(13);
+    yPosition += 8;
+    pdf.setFontSize(14);
     pdf.setFont("helvetica", "bold");
     pdf.setTextColor(31, 41, 55);
-    pdf.text("Resumo Financeiro", margin + 5, yPosition + 5);
+    pdf.text("Resumo Financeiro", margin + 5, yPosition);
 
-    yPosition += 12;
-    pdf.setFontSize(10);
+    yPosition += 8;
+    pdf.setFontSize(9);
     pdf.setFont("helvetica", "normal");
 
     // Total de Registros
     pdf.setTextColor(71, 85, 105);
     pdf.text(`Total de Registros: ${filteredData.length}`, margin + 5, yPosition);
-    yPosition += 5;
+    yPosition += 6;
 
     // Inadimplentes (vermelho)
     pdf.setTextColor(220, 38, 38);
@@ -264,16 +264,17 @@ export default function SuperAdminReports() {
     pdf.text(`Pagos: ${filteredStats.paidCount} (${formatCurrency(filteredStats.paidAmount)})`, margin + 5, yPosition);
     yPosition += 5;
 
-    // Total (preto, negrito)
+    // Total (preto, negrito, maior)
     pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(10);
     pdf.setFont("helvetica", "bold");
     pdf.text(`Total: ${formatCurrency(filteredStats.total)}`, margin + 5, yPosition);
 
-    yPosition += 15;
+    yPosition += 18;
     pdf.setFont("helvetica", "normal");
 
     // ========== TABELA COM HEADER COLORIDO ==========
-    pdf.setFontSize(13);
+    pdf.setFontSize(14);
     pdf.setFont("helvetica", "bold");
     pdf.setTextColor(31, 41, 55);
     pdf.text("Detalhamento", margin, yPosition);
@@ -281,13 +282,14 @@ export default function SuperAdminReports() {
 
     // Cabeçalho da tabela com fundo azul
     pdf.setFillColor(59, 130, 246);
-    pdf.rect(margin, yPosition - 4, pageWidth - 2 * margin, 8, "F");
+    pdf.rect(margin, yPosition, pageWidth - 2 * margin, 9, "F");
 
+    yPosition += 6;
     pdf.setFontSize(9);
     pdf.setFont("helvetica", "bold");
     pdf.setTextColor(255, 255, 255);
-    const colWidths = [50, 25, 25, 25, 30, 35];
-    let xPosition = margin + 2;
+    const colWidths = [55, 28, 22, 28, 28, 28];
+    let xPosition = margin + 3;
 
     pdf.text("Academia", xPosition, yPosition);
     xPosition += colWidths[0];
@@ -301,35 +303,35 @@ export default function SuperAdminReports() {
     xPosition += colWidths[4];
     pdf.text("Status", xPosition, yPosition);
 
-    yPosition += 8;
+    yPosition += 7;
     pdf.setTextColor(0, 0, 0);
 
     // Dados com linhas alternadas
     pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8);
+    pdf.setFontSize(9);
 
     filteredData.forEach((billing, index) => {
-      if (yPosition > pageHeight - 30) {
+      if (yPosition > pageHeight - 35) {
         // Rodapé antes de nova página
         pdf.setFontSize(8);
         pdf.setTextColor(107, 114, 128);
         pdf.text(`Página ${pdf.internal.getNumberOfPages()}`, pageWidth / 2 - 10, pageHeight - 10);
 
         pdf.addPage();
-        yPosition = margin + 10;
+        yPosition = margin + 15;
       }
 
       // Fundo alternado (zebra striping)
       if (index % 2 === 0) {
         pdf.setFillColor(249, 250, 251);
-        pdf.rect(margin, yPosition - 4, pageWidth - 2 * margin, 6, "F");
+        pdf.rect(margin, yPosition - 4, pageWidth - 2 * margin, 7, "F");
       }
 
-      xPosition = margin + 2;
+      xPosition = margin + 3;
       pdf.setTextColor(31, 41, 55);
 
       // Limitar texto da academia
-      const gymName = billing.gymName.length > 22 ? billing.gymName.substring(0, 22) + "..." : billing.gymName;
+      const gymName = billing.gymName.length > 24 ? billing.gymName.substring(0, 24) + "..." : billing.gymName;
       pdf.text(gymName, xPosition, yPosition);
       xPosition += colWidths[0];
 
@@ -357,7 +359,7 @@ export default function SuperAdminReports() {
       pdf.text(status, xPosition, yPosition);
       pdf.setTextColor(31, 41, 55);
 
-      yPosition += 6;
+      yPosition += 7;
     });
 
     // ========== RODAPÉ PROFISSIONAL ==========
