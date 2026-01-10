@@ -50,10 +50,9 @@ export async function processPixWebhook(payload: any) {
 
       // ========== UPDATE LINKED BILLING CYCLE ==========
       // Check if this payment is linked to a billing cycle and update it
-      const linkedBillingCycles = await db.getBillingCyclesByPaymentId(gymPayment.id);
+      const billingCycle = await db.getBillingCyclesByPaymentId(gymPayment.id);
 
-      if (linkedBillingCycles && linkedBillingCycles.length > 0) {
-        const billingCycle = linkedBillingCycles[0];
+      if (billingCycle) {
         console.log(`[PIX Webhook] 💰 Found linked billing cycle ID: ${billingCycle.id} - updating status to paid`);
 
         // Update billing cycle status to paid
