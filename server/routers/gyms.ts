@@ -717,16 +717,21 @@ export const gymsRouter = router({
 
       console.log(`✅ [RESET PASSWORD] Senha resetada para admin ${admin.email} da academia ${gym.name}`);
 
+      // Determinar email para envio: priorizar email da academia, depois contactEmail, depois email do admin
+      const emailDestino = gym.email || gym.contactEmail || admin.email;
+
+      console.log(`📧 [RESET PASSWORD] Email será enviado para: ${emailDestino} (gym.email: ${gym.email}, gym.contactEmail: ${gym.contactEmail}, admin.email: ${admin.email})`);
+
       // Enviar email com a nova senha
       try {
         const { sendAdminPasswordResetEmail } = await import("../email");
         await sendAdminPasswordResetEmail(
-          admin.email,
+          emailDestino,
           tempPassword,
           gym.name,
           gym.slug
         );
-        console.log(`✅ [RESET PASSWORD] Email enviado para ${admin.email}`);
+        console.log(`✅ [RESET PASSWORD] Email enviado para ${emailDestino}`);
       } catch (emailError) {
         console.error("❌ [RESET PASSWORD] Erro ao enviar email:", emailError);
         // Continuar mesmo se o email falhar - senha já foi resetada
