@@ -1414,14 +1414,34 @@ export const appRouter = router({
         const payments = await db.listPayments(ctx.user.gymId);
         const students = await db.listStudents(ctx.user.gymId);
 
+        console.log('[DEBUG listAll] Payments fetched:', payments.length);
+        console.log('[DEBUG listAll] Students fetched:', students.length);
+        if (payments.length > 0) {
+          console.log('[DEBUG listAll] First payment:', JSON.stringify(payments[0], null, 2));
+        }
+        if (students.length > 0) {
+          console.log('[DEBUG listAll] First student:', JSON.stringify(students[0], null, 2));
+        }
+
         // Create a map for faster lookups
         const studentMap = new Map(students.map(s => [s.id, s]));
+        console.log('[DEBUG listAll] Student map size:', studentMap.size);
 
         // Join student info with payments
-        return payments.map(payment => ({
-          ...payment,
-          student: studentMap.get(payment.studentId) || undefined,
-        }));
+        const result = payments.map(payment => {
+          const student = studentMap.get(payment.studentId);
+          console.log(`[DEBUG listAll] Payment ${payment.id} has studentId ${payment.studentId}, found student:`, !!student);
+          return {
+            ...payment,
+            student: student || undefined,
+          };
+        });
+
+        if (result.length > 0) {
+          console.log('[DEBUG listAll] First result:', JSON.stringify(result[0], null, 2));
+        }
+
+        return result;
       }),
 
     getByStudent: gymAdminProcedure
