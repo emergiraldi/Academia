@@ -1576,6 +1576,27 @@ export const appRouter = router({
           }
         }
 
+        // Send payment confirmation email to student
+        if (student && student.email) {
+          try {
+            const { sendStudentPaymentConfirmationEmail } = await import("./email");
+            await sendStudentPaymentConfirmationEmail(
+              ctx.user.gymId,
+              student.email,
+              student.name,
+              payment.amountInCents,
+              input.paidAt,
+              input.paymentMethod,
+              payment.dueDate,
+              receiptUrl
+            );
+            console.log(`[Payment] ✅ Confirmation email sent to ${student.email}`);
+          } catch (emailError) {
+            console.error(`[Payment] ❌ Failed to send confirmation email:`, emailError);
+            // Continue - payment confirmation is more important than email
+          }
+        }
+
         return {
           success: true,
           paymentId,
