@@ -740,7 +740,7 @@ export const gymsRouter = router({
       return {
         success: true,
         credentials: {
-          email: admin.email,
+          email: emailDestino, // Email para onde foi enviado (academia)
           password: tempPassword,
           loginUrl: `/admin/login?gym=${gym.slug}`,
         },
