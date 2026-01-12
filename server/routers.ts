@@ -1417,10 +1417,10 @@ export const appRouter = router({
         console.log('[DEBUG listAll] Payments fetched:', payments.length);
         console.log('[DEBUG listAll] Students fetched:', students.length);
         if (payments.length > 0) {
-          console.log('[DEBUG listAll] First payment:', JSON.stringify(payments[0], null, 2));
+          console.log('[DEBUG listAll] First payment - ID:', payments[0].id, 'studentId:', payments[0].studentId);
         }
         if (students.length > 0) {
-          console.log('[DEBUG listAll] First student:', JSON.stringify(students[0], null, 2));
+          console.log('[DEBUG listAll] First student - ID:', students[0].id, 'Name:', students[0].name, 'Email:', students[0].email, 'RegistrationNumber:', students[0].registrationNumber);
         }
 
         // Create a map for faster lookups
@@ -1430,15 +1430,18 @@ export const appRouter = router({
         // Join student info with payments
         const result = payments.map(payment => {
           const student = studentMap.get(payment.studentId);
-          console.log(`[DEBUG listAll] Payment ${payment.id} has studentId ${payment.studentId}, found student:`, !!student);
+          console.log(`[DEBUG listAll] Payment ${payment.id} studentId=${payment.studentId}, found student:`, !!student);
+          if (student) {
+            console.log(`[DEBUG listAll] Student found - ID:${student.id}, Name:${student.name}, Email:${student.email}`);
+          }
           return {
             ...payment,
             student: student || undefined,
           };
         });
 
-        if (result.length > 0) {
-          console.log('[DEBUG listAll] First result:', JSON.stringify(result[0], null, 2));
+        if (result.length > 0 && result[0].student) {
+          console.log('[DEBUG listAll] Final result - Payment ID:', result[0].id, 'Student Name:', result[0].student.name);
         }
 
         return result;
