@@ -1454,6 +1454,8 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
         }
 
+        console.log(`[DEBUG getByStudent] Fetching payments for student ${input.studentId} in gym ${ctx.user.gymId}`);
+
         // Verify student exists and belongs to this gym
         const student = await db.getStudentById(input.studentId, ctx.user.gymId);
         if (!student) {
@@ -1461,7 +1463,13 @@ export const appRouter = router({
         }
 
         // Get all payments for this student
-        return await db.getPaymentsByStudent(input.studentId, ctx.user.gymId);
+        const payments = await db.getPaymentsByStudent(input.studentId, ctx.user.gymId);
+        console.log(`[DEBUG getByStudent] Found ${payments.length} payment(s) for student ${input.studentId}`);
+        if (payments.length > 0) {
+          console.log(`[DEBUG getByStudent] First payment:`, JSON.stringify(payments[0], null, 2));
+        }
+
+        return payments;
       }),
 
     generateMonthlyPayments: gymAdminProcedure
