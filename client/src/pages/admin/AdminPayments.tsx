@@ -80,9 +80,10 @@ export default function AdminPayments() {
   const { gymSlug } = useGym();
 
   // Queries
-  const { data: payments = [], refetch: refetchPayments } = trpc.payments.listAll.useQuery({
-    gymSlug,
-  });
+  const { data: payments = [], refetch: refetchPayments } = trpc.payments.listAll.useQuery(
+    { gymSlug: gymSlug || '' },
+    { enabled: !!gymSlug }
+  );
   const { data: students = [] } = trpc.students.list.useQuery();
   const { data: plans = [] } = trpc.plans.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
   const { data: paymentMethods = [] } = trpc.paymentMethods.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
@@ -273,14 +274,20 @@ export default function AdminPayments() {
 
     // Debug: log available payment methods
     console.log("Available payment methods:", paymentMethods);
+    console.log("Payment methods length:", paymentMethods.length);
 
     // Find default payment method (cash) or first active method
-    const defaultMethod = paymentMethods.find((m: any) => m.active && m.code === "cash");
-    const firstActiveMethod = paymentMethods.find((m: any) => m.active);
-    const selectedMethod = defaultMethod?.code || firstActiveMethod?.code || "cash";
+    if (paymentMethods.length > 0) {
+      const defaultMethod = paymentMethods.find((m: any) => m.active && m.code === "cash");
+      const firstActiveMethod = paymentMethods.find((m: any) => m.active);
+      const selectedMethod = defaultMethod?.code || firstActiveMethod?.code || "cash";
+      console.log("Selected payment method:", selectedMethod);
+      setPaymentMethod(selectedMethod);
+    } else {
+      console.warn("No payment methods available, using default 'cash'");
+      setPaymentMethod("cash");
+    }
 
-    console.log("Selected payment method:", selectedMethod);
-    setPaymentMethod(selectedMethod);
     setPaymentDate(new Date().toISOString().split("T")[0]);
     setPaymentModalOpen(true);
   };
@@ -553,15 +560,29 @@ export default function AdminPayments() {
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent position="popper" sideOffset={5}>
-                      {paymentMethods
-                        .filter((m: any) => m.active)
-                        .map((method: any) => (
-                          <SelectItem key={method.id} value={method.code}>
-                            {method.name}
-                          </SelectItem>
-                        ))}
+                      {paymentMethods.length > 0 ? (
+                        paymentMethods
+                          .filter((m: any) => m.active)
+                          .map((method: any) => (
+                            <SelectItem key={method.id} value={method.code}>
+                              {method.name}
+                            </SelectItem>
+                          ))
+                      ) : (
+                        <>
+                          <SelectItem value="cash">Dinheiro</SelectItem>
+                          <SelectItem value="pix">PIX</SelectItem>
+                          <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+                          <SelectItem value="debit_card">Cartão de Débito</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
+                  {paymentMethods.length === 0 && (
+                    <p className="text-xs text-yellow-600 mt-1">
+                      ⚠️ Métodos de pagamento não carregados. Usando opções padrão.
+                    </p>
+                  )}
                 </div>
 
                 <div>
