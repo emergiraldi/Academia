@@ -270,14 +270,25 @@ export default function AdminPayments() {
 
   const handleOpenPayment = (payment: any) => {
     setSelectedPayment(payment);
+
+    // Find default payment method (cash) or first active method
     const defaultMethod = paymentMethods.find((m: any) => m.active && m.code === "cash");
-    setPaymentMethod(defaultMethod?.code || paymentMethods[0]?.code || "");
+    const firstActiveMethod = paymentMethods.find((m: any) => m.active);
+    const selectedMethod = defaultMethod?.code || firstActiveMethod?.code || "cash";
+
+    setPaymentMethod(selectedMethod);
     setPaymentDate(new Date().toISOString().split("T")[0]);
     setPaymentModalOpen(true);
   };
 
   const handleMarkAsPaid = async () => {
     if (!selectedPayment) return;
+
+    // Validate payment method is selected
+    if (!paymentMethod || paymentMethod.trim() === "") {
+      toast.error("Selecione um método de pagamento");
+      return;
+    }
 
     await markAsPaidMutation.mutateAsync({
       paymentId: selectedPayment.id,
