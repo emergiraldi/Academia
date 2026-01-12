@@ -1408,18 +1408,8 @@ export const appRouter = router({
         if (!ctx.user.gymId) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
         }
-        // Get all payments with student info
-        const payments = await db.listPayments(ctx.user.gymId);
-        const students = await db.listStudents(ctx.user.gymId);
-
-        // Join student info
-        return payments.map(payment => {
-          const student = students.find(s => s.id === payment.studentId);
-          return {
-            ...payment,
-            student,
-          };
-        });
+        // Get all payments with student info using SQL JOIN
+        return await db.listPaymentsWithStudents(ctx.user.gymId);
       }),
 
     getByStudent: gymAdminProcedure

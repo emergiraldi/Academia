@@ -735,6 +735,60 @@ export async function listPayments(gymId: number) {
   return await db.select().from(payments).where(eq(payments.gymId, gymId));
 }
 
+export async function listPaymentsWithStudents(gymId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db.select({
+    id: payments.id,
+    gymId: payments.gymId,
+    subscriptionId: payments.subscriptionId,
+    studentId: payments.studentId,
+    amountInCents: payments.amountInCents,
+    status: payments.status,
+    paymentMethod: payments.paymentMethod,
+    pixTxId: payments.pixTxId,
+    pixQrCode: payments.pixQrCode,
+    pixQrCodeImage: payments.pixQrCodeImage,
+    receiptUrl: payments.receiptUrl,
+    dueDate: payments.dueDate,
+    paidAt: payments.paidAt,
+    createdAt: payments.createdAt,
+    updatedAt: payments.updatedAt,
+    isInstallment: payments.isInstallment,
+    installmentPlanId: payments.installmentPlanId,
+    installmentNumber: payments.installmentNumber,
+    totalInstallments: payments.totalInstallments,
+    originalPaymentIds: payments.originalPaymentIds,
+    interestForgiven: payments.interestForgiven,
+    student: {
+      id: students.id,
+      userId: students.userId,
+      name: students.name,
+      registrationNumber: students.registrationNumber,
+      cpf: students.cpf,
+      phone: students.phone,
+      dateOfBirth: students.dateOfBirth,
+      address: students.address,
+      number: students.number,
+      complement: students.complement,
+      neighborhood: students.neighborhood,
+      city: students.city,
+      state: students.state,
+      zipCode: students.zipCode,
+      membershipStatus: students.membershipStatus,
+      planId: students.planId,
+      professorId: students.professorId,
+      gymId: students.gymId,
+    }
+  })
+  .from(payments)
+  .leftJoin(students, eq(payments.studentId, students.id))
+  .where(eq(payments.gymId, gymId));
+
+  return result;
+}
+
 export async function getPaymentsByStudent(studentId: number, gymId: number) {
   const db = await getDb();
   if (!db) return [];
