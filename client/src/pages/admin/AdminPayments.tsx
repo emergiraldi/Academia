@@ -548,36 +548,33 @@ export default function AdminPayments() {
                 </div>
 
                 <div>
-                  <Label>Método de Pagamento</Label>
-                  <Select
+                  <Label htmlFor="payment-method">Método de Pagamento</Label>
+                  <select
+                    id="payment-method"
                     value={paymentMethod || "cash"}
-                    onValueChange={(value) => {
-                      console.log("Payment method changed to:", value);
-                      setPaymentMethod(value);
+                    onChange={(e) => {
+                      console.log("Payment method changed to:", e.target.value);
+                      setPaymentMethod(e.target.value);
                     }}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {paymentMethods.length > 0 ? (
-                        paymentMethods
-                          .filter((m: any) => m.active)
-                          .map((method: any) => (
-                            <SelectItem key={method.id} value={method.code}>
-                              {method.name}
-                            </SelectItem>
-                          ))
-                      ) : (
-                        <>
-                          <SelectItem value="cash">Dinheiro</SelectItem>
-                          <SelectItem value="pix">PIX</SelectItem>
-                          <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
-                          <SelectItem value="debit_card">Cartão de Débito</SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
+                    {paymentMethods.length > 0 ? (
+                      paymentMethods
+                        .filter((m: any) => m.active)
+                        .map((method: any) => (
+                          <option key={method.id} value={method.code}>
+                            {method.name}
+                          </option>
+                        ))
+                    ) : (
+                      <>
+                        <option value="cash">Dinheiro</option>
+                        <option value="pix">PIX</option>
+                        <option value="credit_card">Cartão de Crédito</option>
+                        <option value="debit_card">Cartão de Débito</option>
+                      </>
+                    )}
+                  </select>
                   {paymentMethods.length === 0 && (
                     <p className="text-xs text-yellow-600 mt-1">
                       ⚠️ Métodos de pagamento não carregados. Usando opções padrão.
