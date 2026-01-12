@@ -1408,8 +1408,20 @@ export const appRouter = router({
         if (!ctx.user.gymId) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
         }
-        // Get all payments with student info using SQL JOIN
-        return await db.listPaymentsWithStudents(ctx.user.gymId);
+
+        // Get all payments and students separately, then join in memory
+        // This is simpler and more reliable than SQL JOIN with Drizzle
+        const payments = await db.listPayments(ctx.user.gymId);
+        const students = await db.listStudents(ctx.user.gymId);
+
+        // Create a map for faster lookups
+        const studentMap = new Map(students.map(s => [s.id, s]));
+
+        // Join student info with payments
+        return payments.map(payment => ({
+          ...payment,
+          student: studentMap.get(payment.studentId) || undefined,
+        }));
       }),
 
     getByStudent: gymAdminProcedure
