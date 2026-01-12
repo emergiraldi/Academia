@@ -271,11 +271,15 @@ export default function AdminPayments() {
   const handleOpenPayment = (payment: any) => {
     setSelectedPayment(payment);
 
+    // Debug: log available payment methods
+    console.log("Available payment methods:", paymentMethods);
+
     // Find default payment method (cash) or first active method
     const defaultMethod = paymentMethods.find((m: any) => m.active && m.code === "cash");
     const firstActiveMethod = paymentMethods.find((m: any) => m.active);
     const selectedMethod = defaultMethod?.code || firstActiveMethod?.code || "cash";
 
+    console.log("Selected payment method:", selectedMethod);
     setPaymentMethod(selectedMethod);
     setPaymentDate(new Date().toISOString().split("T")[0]);
     setPaymentModalOpen(true);
@@ -538,11 +542,17 @@ export default function AdminPayments() {
 
                 <div>
                   <Label>Método de Pagamento</Label>
-                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <Select
+                    value={paymentMethod}
+                    onValueChange={(value) => {
+                      console.log("Payment method changed to:", value);
+                      setPaymentMethod(value);
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" sideOffset={5}>
                       {paymentMethods
                         .filter((m: any) => m.active)
                         .map((method: any) => (
