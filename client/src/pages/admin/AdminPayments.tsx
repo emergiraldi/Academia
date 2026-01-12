@@ -559,7 +559,7 @@ export default function AdminPayments() {
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
-                    <SelectContent position="popper" sideOffset={5}>
+                    <SelectContent>
                       {paymentMethods.length > 0 ? (
                         paymentMethods
                           .filter((m: any) => m.active)
