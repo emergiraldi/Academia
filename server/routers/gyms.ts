@@ -681,8 +681,32 @@ export const gymsRouter = router({
 
       if (!admin) throw new Error("Admin não encontrado para esta academia");
 
-      // Gerar nova senha temporária
-      const tempPassword = `${gym.slug}@2024`;
+      // Gerar nova senha temporária segura
+      const generateSecurePassword = () => {
+        const length = 12;
+        const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+        const numbers = '0123456789';
+        const symbols = '!@#$%&*';
+        const allChars = uppercase + lowercase + numbers + symbols;
+
+        let pwd = '';
+        // Garantir pelo menos 1 caractere de cada tipo
+        pwd += uppercase[Math.floor(Math.random() * uppercase.length)];
+        pwd += lowercase[Math.floor(Math.random() * lowercase.length)];
+        pwd += numbers[Math.floor(Math.random() * numbers.length)];
+        pwd += symbols[Math.floor(Math.random() * symbols.length)];
+
+        // Preencher o resto aleatoriamente
+        for (let i = pwd.length; i < length; i++) {
+          pwd += allChars[Math.floor(Math.random() * allChars.length)];
+        }
+
+        // Embaralhar
+        return pwd.split('').sort(() => Math.random() - 0.5).join('');
+      };
+
+      const tempPassword = generateSecurePassword();
       const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
       // Atualizar senha
@@ -690,6 +714,23 @@ export const gymsRouter = router({
         .update(users)
         .set({ password: hashedPassword })
         .where(eq(users.id, admin.id));
+
+      console.log(`✅ [RESET PASSWORD] Senha resetada para admin ${admin.email} da academia ${gym.name}`);
+
+      // Enviar email com a nova senha
+      try {
+        const { sendAdminPasswordResetEmail } = await import("../email");
+        await sendAdminPasswordResetEmail(
+          admin.email,
+          tempPassword,
+          gym.name,
+          gym.slug
+        );
+        console.log(`✅ [RESET PASSWORD] Email enviado para ${admin.email}`);
+      } catch (emailError) {
+        console.error("❌ [RESET PASSWORD] Erro ao enviar email:", emailError);
+        // Continuar mesmo se o email falhar - senha já foi resetada
+      }
 
       return {
         success: true,

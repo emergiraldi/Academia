@@ -1188,3 +1188,124 @@ export async function sendTrialExpiredEmail(
     html,
   });
 }
+
+/**
+ * Enviar email com nova senha após reset pelo Super Admin
+ */
+export async function sendAdminPasswordResetEmail(
+  email: string,
+  password: string,
+  gymName: string,
+  gymSlug: string
+): Promise<boolean> {
+  const loginUrl = `https://www.sysfitpro.com.br/admin/login?gym=${gymSlug}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Sua senha foi resetada</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 40px 20px; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px;">🔐 Senha Resetada</h1>
+                  <p style="color: #e0e7ff; margin: 0; font-size: 16px;">Nova senha de acesso ao sistema</p>
+                </td>
+              </tr>
+
+              <!-- Mensagem -->
+              <tr>
+                <td style="padding: 40px 30px;">
+                  <h2 style="color: #333; margin: 0 0 20px 0; font-size: 24px;">Olá, ${gymName}! 👋</h2>
+                  <p style="margin: 0 0 20px 0; font-size: 16px; color: #666; line-height: 1.6;">
+                    A senha de administrador da sua academia foi resetada pelo Super Admin.
+                  </p>
+                  <p style="margin: 0 0 30px 0; font-size: 16px; color: #666; line-height: 1.6;">
+                    Use as credenciais abaixo para fazer login no sistema:
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Credenciais -->
+              <tr>
+                <td style="padding: 0 30px 30px 30px;">
+                  <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #3b82f6; padding: 30px;">
+                    <h3 style="margin: 0 0 20px 0; font-size: 20px; color: #333; text-align: center;">
+                      🔑 Novas Credenciais de Acesso
+                    </h3>
+
+                    <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 15px;">
+                      <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">
+                        <strong>Email:</strong>
+                      </p>
+                      <p style="margin: 0; font-size: 18px; color: #1e40af; font-weight: 600; word-break: break-all;">
+                        ${email}
+                      </p>
+                    </div>
+
+                    <div style="background-color: #ffffff; border-radius: 8px; padding: 20px;">
+                      <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">
+                        <strong>Nova Senha:</strong>
+                      </p>
+                      <p style="margin: 0; font-size: 24px; color: #1e40af; font-weight: bold; letter-spacing: 2px; font-family: 'Courier New', monospace; text-align: center; padding: 15px; background-color: #f8fafc; border-radius: 4px;">
+                        ${password}
+                      </p>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Alerta de Segurança -->
+              <tr>
+                <td style="padding: 0 30px 30px 30px;">
+                  <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 13px; color: #856404;">
+                      <strong>⚠️ Importante:</strong> Por segurança, recomendamos que você altere esta senha após fazer login no sistema. Acesse <strong>Configurações > Alterar Senha</strong>.
+                    </p>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Botão -->
+              <tr>
+                <td style="padding: 0 30px 40px 30px; text-align: center;">
+                  <a href="${loginUrl}"
+                     style="display: inline-block; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 8px; font-size: 18px; font-weight: 600; box-shadow: 0 4px 12px rgba(30, 64, 175, 0.4);">
+                    🚀 Fazer Login
+                  </a>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
+                  <p style="margin: 0; font-size: 12px; color: #6c757d;">
+                    © 2026 SysFit Pro - Sistema completo de gestão para academias<br>
+                    Este é um e-mail automático. Por favor, não responda.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return await sendEmailFromSuperAdmin({
+    to: email,
+    subject: `🔐 ${gymName} - Senha Resetada pelo Administrador`,
+    html,
+  });
+}
