@@ -543,7 +543,7 @@ export default function AdminPayments() {
                 <div>
                   <Label>Método de Pagamento</Label>
                   <Select
-                    value={paymentMethod}
+                    value={paymentMethod || "cash"}
                     onValueChange={(value) => {
                       console.log("Payment method changed to:", value);
                       setPaymentMethod(value);
