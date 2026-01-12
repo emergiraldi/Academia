@@ -673,13 +673,15 @@ export const gymsRouter = router({
       const [gym] = await db.select().from(gyms).where(eq(gyms.id, input.gymId));
       if (!gym) throw new Error("Academia não encontrada");
 
-      // Buscar o admin da academia
-      const [admin] = await db
+      // Buscar TODOS os admins da academia
+      const admins = await db
         .select()
         .from(users)
         .where(and(eq(users.gymId, input.gymId), eq(users.role, "gym_admin")));
 
-      if (!admin) throw new Error("Admin não encontrado para esta academia");
+      if (!admins || admins.length === 0) {
+        throw new Error("Admin não encontrado para esta academia");
+      }
 
       // Gerar nova senha temporária segura
       const generateSecurePassword = () => {
@@ -709,18 +711,19 @@ export const gymsRouter = router({
       const tempPassword = generateSecurePassword();
       const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-      // Atualizar senha
+      // Atualizar senha de TODOS os admins da academia
       await db
         .update(users)
         .set({ password: hashedPassword })
-        .where(eq(users.id, admin.id));
+        .where(and(eq(users.gymId, input.gymId), eq(users.role, "gym_admin")));
 
-      console.log(`✅ [RESET PASSWORD] Senha resetada para admin ${admin.email} da academia ${gym.name}`);
+      console.log(`✅ [RESET PASSWORD] Senha resetada para ${admins.length} admin(s) da academia ${gym.name}`);
 
-      // Determinar email para envio: priorizar email da academia, depois contactEmail, depois email do admin
-      const emailDestino = gym.email || gym.contactEmail || admin.email;
+      // Determinar email para envio: priorizar email da academia, depois contactEmail, depois email do primeiro admin
+      const emailDestino = gym.email || gym.contactEmail || admins[0].email;
 
-      console.log(`📧 [RESET PASSWORD] Email será enviado para: ${emailDestino} (gym.email: ${gym.email}, gym.contactEmail: ${gym.contactEmail}, admin.email: ${admin.email})`);
+      console.log(`📧 [RESET PASSWORD] Email será enviado para: ${emailDestino}`);
+      console.log(`📧 [RESET PASSWORD] Admins encontrados: ${admins.map(a => a.email).join(', ')}`);
 
       // Enviar email com a nova senha
       try {
