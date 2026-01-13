@@ -1438,40 +1438,35 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
         }
 
-        // Get all payments and students separately, then join in memory
-        // This is simpler and more reliable than SQL JOIN with Drizzle
+        // Get all payments, students, subscriptions and plans separately, then join in memory
         const payments = await db.listPayments(ctx.user.gymId);
         const students = await db.listStudents(ctx.user.gymId);
+        const subscriptions = await db.listSubscriptions(ctx.user.gymId);
+        const plans = await db.listPlans(ctx.user.gymId);
 
         console.log('[DEBUG listAll] Payments fetched:', payments.length);
         console.log('[DEBUG listAll] Students fetched:', students.length);
-        if (payments.length > 0) {
-          console.log('[DEBUG listAll] First payment - ID:', payments[0].id, 'studentId:', payments[0].studentId);
-        }
-        if (students.length > 0) {
-          console.log('[DEBUG listAll] First student - ID:', students[0].id, 'Name:', students[0].name, 'Email:', students[0].email, 'RegistrationNumber:', students[0].registrationNumber);
-        }
+        console.log('[DEBUG listAll] Subscriptions fetched:', subscriptions.length);
+        console.log('[DEBUG listAll] Plans fetched:', plans.length);
 
-        // Create a map for faster lookups
+        // Create maps for faster lookups
         const studentMap = new Map(students.map(s => [s.id, s]));
-        console.log('[DEBUG listAll] Student map size:', studentMap.size);
+        const subscriptionMap = new Map(subscriptions.map(s => [s.id, s]));
+        const planMap = new Map(plans.map(p => [p.id, p]));
 
-        // Join student info with payments
+        // Join student, subscription and plan info with payments
         const result = payments.map(payment => {
           const student = studentMap.get(payment.studentId);
-          console.log(`[DEBUG listAll] Payment ${payment.id} studentId=${payment.studentId}, found student:`, !!student);
-          if (student) {
-            console.log(`[DEBUG listAll] Student found - ID:${student.id}, Name:${student.name}, Email:${student.email}`);
-          }
+          const subscription = payment.subscriptionId ? subscriptionMap.get(payment.subscriptionId) : undefined;
+          const plan = subscription?.planId ? planMap.get(subscription.planId) : undefined;
+
           return {
             ...payment,
             student: student || undefined,
+            subscription: subscription || undefined,
+            plan: plan || undefined,
           };
         });
-
-        if (result.length > 0 && result[0].student) {
-          console.log('[DEBUG listAll] Final result - Payment ID:', result[0].id, 'Student Name:', result[0].student.name);
-        }
 
         return result;
       }),

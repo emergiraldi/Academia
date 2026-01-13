@@ -141,7 +141,7 @@ export default function AdminCashFlow() {
         amount: p.amountInCents,
         date: p.paidAt,
         type: "income",
-        category: "payment",
+        category: p.plan?.name || "Pagamento", // Mostra o nome do plano ou "Pagamento" como fallback
       })),
     ...expenses.map((e) => ({
       id: `expense-${e.id}`,
