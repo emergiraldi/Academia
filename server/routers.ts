@@ -75,7 +75,7 @@ const customErrorMap: z.ZodErrorMap = (issue, ctx) => {
   }
   if (issue.code === z.ZodIssueCode.invalid_string) {
     if (issue.validation === "email") {
-      return { message: "Email inválido" };
+      return { message: "Email inválido. Verifique o formato (exemplo@dominio.com)" };
     }
     if (issue.validation === "url") {
       return { message: "URL inválida" };
@@ -86,7 +86,7 @@ const customErrorMap: z.ZodErrorMap = (issue, ctx) => {
     return { message: `Valor inválido. Opções: ${issue.options.join(", ")}` };
   }
   // Proteção completa contra ctx ou defaultError undefined
-  return { message: ctx?.defaultError || "Erro de validação" };
+  return { message: ctx?.defaultError || "Erro de validação. Verifique os campos preenchidos." };
 };
 
 z.setErrorMap(customErrorMap);
