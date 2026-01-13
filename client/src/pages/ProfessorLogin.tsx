@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GraduationCap, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
+import { saveLoginType } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -17,6 +18,8 @@ export default function ProfessorLogin() {
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: async () => {
+      // Salvar tipo de login
+      saveLoginType('professor');
       // Refetch user data to ensure cache is updated before redirect
       await utils.auth.me.refetch();
       toast.success("Login realizado com sucesso!");

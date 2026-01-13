@@ -1,6 +1,7 @@
 import { SuperAdminLayout } from "@/components/SuperAdminLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
+import { saveLoginType } from "@/const";
 import { Building2, Plus, Edit, Trash2, MapPin, Phone, Mail, TrendingUp, Copy, CheckCircle2, Key, Shield, ShieldOff, Lock, Unlock, DollarSign, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -173,6 +174,8 @@ export default function SuperAdminGyms() {
 
   const loginAsGymMutation = trpc.gyms.loginAsGym.useMutation({
     onSuccess: (data: any) => {
+      // Salvar que está acessando como admin de academia
+      saveLoginType('admin');
       toast.success(`Acessando ${data.gymName}...`);
       // Redirecionar para o dashboard da academia
       window.location.href = data.loginUrl;

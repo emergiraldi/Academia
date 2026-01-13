@@ -1,5 +1,20 @@
 export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 
+// Salvar o tipo de login atual
+export const saveLoginType = (type: 'student' | 'admin' | 'super-admin' | 'professor') => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('last_login_type', type);
+  }
+};
+
+// Obter o último tipo de login usado
+export const getLastLoginType = (): 'student' | 'admin' | 'super-admin' | 'professor' => {
+  if (typeof window !== 'undefined') {
+    return (localStorage.getItem('last_login_type') as any) || 'student';
+  }
+  return 'student';
+};
+
 // Generate login URL at runtime so redirect URI reflects the current origin.
 export const getLoginUrl = () => {
   const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL;
@@ -7,7 +22,19 @@ export const getLoginUrl = () => {
 
   // Se OAuth não estiver configurado, retornar login por email/senha
   if (!oauthPortalUrl || !appId) {
-    return "/student/login";
+    // Retornar para o último login usado
+    const lastLoginType = getLastLoginType();
+
+    switch (lastLoginType) {
+      case 'admin':
+        return "/admin/login";
+      case 'super-admin':
+        return "/super-admin/login";
+      case 'professor':
+        return "/professor/login";
+      default:
+        return "/student/login";
+    }
   }
 
   const redirectUri = `${window.location.origin}/api/oauth/callback`;
