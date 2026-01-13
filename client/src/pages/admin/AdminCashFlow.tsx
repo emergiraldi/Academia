@@ -54,25 +54,21 @@ export default function AdminCashFlow() {
     gymSlug,
   });
 
-  // Mock expenses data - substituir por tRPC query quando disponível
-  const expenses = [
-    {
-      id: 1,
-      description: "Aluguel - Janeiro",
-      amount: 450000,
-      date: "2024-01-10",
-      category: "rent",
+  // Buscar despesas reais do banco de dados
+  const { data: expensesData = [] } = trpc.expenses.list.useQuery({});
+
+  // Mapear despesas para o formato usado no componente
+  // Filtrar apenas despesas pagas para cálculo do fluxo de caixa real
+  const expenses = expensesData
+    .filter((e: any) => e.status === 'paid' && e.paidAt) // Apenas despesas efetivamente pagas
+    .map((e: any) => ({
+      id: e.id,
+      description: e.description,
+      amount: e.amountInCents,
+      date: e.paidAt, // Data de pagamento efetivo
+      category: e.category?.name || 'other',
       type: "expense",
-    },
-    {
-      id: 2,
-      description: "Energia Elétrica",
-      amount: 180000,
-      date: "2024-01-15",
-      category: "utilities",
-      type: "expense",
-    },
-  ];
+    }));
 
   // Calculate monthly cash flow
   const monthlyData = Array.from({ length: parseInt(period) }, (_, i) => {
