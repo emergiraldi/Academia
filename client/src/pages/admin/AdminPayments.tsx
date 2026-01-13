@@ -93,7 +93,22 @@ export default function AdminPayments() {
       }
     }
   );
-  const { data: students = [] } = trpc.students.listAll.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
+  const { data: students = [] } = trpc.students.listAll.useQuery(
+    { gymSlug: gymSlug || '' },
+    {
+      enabled: !!gymSlug,
+      onSuccess: (data) => {
+        console.log('[STUDENTS DEBUG] Total de alunos recebidos:', data.length);
+        if (data.length > 0) {
+          console.log('[STUDENTS DEBUG] Primeiro aluno:', data[0]);
+          console.log('[STUDENTS DEBUG] Nome:', data[0].name);
+          console.log('[STUDENTS DEBUG] Matrícula:', data[0].registrationNumber);
+        } else {
+          console.log('[STUDENTS DEBUG] ⚠️ Nenhum aluno retornado do backend!');
+        }
+      }
+    }
+  );
   const { data: plans = [] } = trpc.plans.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
   const { data: paymentMethods = [] } = trpc.paymentMethods.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
 
@@ -812,15 +827,42 @@ Total de pagamentos: ${filteredPayments.length}
                   Alunos ({selectedStudents.length} selecionado{selectedStudents.length !== 1 ? 's' : ''})
                 </Label>
                 <div className="border rounded-lg max-h-[300px] overflow-y-auto">
-                  {students
-                    .filter((s: any) => {
+                  {(() => {
+                    const filteredStudents = students.filter((s: any) => {
                       const matchesPlan = selectedPlan === "all" || s.planId?.toString() === selectedPlan;
                       const matchesSearch = studentSearchTerm === "" ||
                         s.name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
                         s.registrationNumber?.toLowerCase().includes(studentSearchTerm.toLowerCase());
                       return matchesPlan && matchesSearch;
-                    })
-                    .map((student: any) => {
+                    });
+
+                    // DEBUG: Log quando o modal está aberto
+                    if (generateModalOpen) {
+                      console.log('[MODAL DEBUG] Total de alunos:', students.length);
+                      console.log('[MODAL DEBUG] Filtrados:', filteredStudents.length);
+                      console.log('[MODAL DEBUG] Termo de busca:', studentSearchTerm);
+                      console.log('[MODAL DEBUG] Plano selecionado:', selectedPlan);
+                    }
+
+                    if (students.length === 0) {
+                      return (
+                        <div className="p-8 text-center text-muted-foreground">
+                          <p className="font-semibold">Nenhum aluno cadastrado</p>
+                          <p className="text-sm mt-1">Cadastre alunos para gerar mensalidades</p>
+                        </div>
+                      );
+                    }
+
+                    if (filteredStudents.length === 0) {
+                      return (
+                        <div className="p-8 text-center text-muted-foreground">
+                          <p className="font-semibold">Nenhum aluno encontrado</p>
+                          <p className="text-sm mt-1">Tente ajustar os filtros ou a busca</p>
+                        </div>
+                      );
+                    }
+
+                    return filteredStudents.map((student: any) => {
                       const plan = plans.find((p: any) => p.id === student.planId);
                       return (
                         <div
@@ -843,7 +885,8 @@ Total de pagamentos: ${filteredPayments.length}
                           </Badge>
                         </div>
                       );
-                    })}
+                    });
+                  })()}
                 </div>
               </div>
 
