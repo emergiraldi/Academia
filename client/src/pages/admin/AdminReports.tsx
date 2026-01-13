@@ -32,12 +32,22 @@ export default function AdminReports() {
 
   // Queries
   const { data: settings } = trpc.settings.get.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
-  const { data: students = [] } = trpc.students.list.useQuery();
+  const { data: students = [] } = trpc.students.listAll.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
   const { data: payments = [] } = trpc.payments.listAll.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
   const { data: plans = [] } = trpc.plans.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
 
   // Gym name from settings
   const gymName = settings?.gymName || "Academia";
+
+  // DEBUG: Verificar estrutura dos dados
+  if (payments.length > 0) {
+    console.log('🔍 [AdminReports] Total de pagamentos:', payments.length);
+    console.log('🔍 [AdminReports] Primeiro pagamento:', payments[0]);
+    console.log('🔍 [AdminReports] Student existe?', payments[0].student ? 'SIM' : 'NÃO');
+    if (payments[0].student) {
+      console.log('🔍 [AdminReports] Nome do student:', payments[0].student.name);
+    }
+  }
 
   // PDF Header with Logo and Gym Info
   const addPDFHeader = (doc: jsPDF, title: string, subtitle?: string) => {
@@ -269,6 +279,19 @@ export default function AdminReports() {
   // Generate Payments Report (PDF)
   const generatePaymentsReport = () => {
     setGenerating("payments");
+
+    // DEBUG: Alert para verificar dados (ignora cache)
+    if (filteredPayments.length > 0) {
+      const first = filteredPayments[0];
+      alert(`🔍 DEBUG PDF
+Total: ${filteredPayments.length} pagamentos
+Primeiro pagamento ID: ${first.id}
+Student existe? ${first.student ? 'SIM' : 'NÃO'}
+Nome: ${first.student?.name || 'UNDEFINED'}`);
+    } else {
+      alert('⚠️ Nenhum pagamento filtrado!');
+    }
+
     try {
       const doc = new jsPDF('landscape');
       const period = useDateRange && customDateStart && customDateEnd
@@ -312,7 +335,7 @@ export default function AdminReports() {
       // Table
       const tableData = filteredPayments.map((payment: any) => [
         new Date(payment.dueDate).toLocaleDateString("pt-BR"),
-        payment.studentName || "-",
+        payment.student?.name || "-",
         `R$ ${(payment.amountInCents / 100).toFixed(2)}`,
         payment.status === "paid" ? "Pago" :
         payment.status === "pending" ? "Pendente" :
@@ -474,7 +497,7 @@ export default function AdminReports() {
     try {
       const data = filteredPayments.map((payment: any) => ({
         Vencimento: new Date(payment.dueDate).toLocaleDateString("pt-BR"),
-        Aluno: payment.studentName || "-",
+        Aluno: payment.student?.name || "-",
         Valor: `R$ ${(payment.amountInCents / 100).toFixed(2)}`,
         Status: payment.status === "paid" ? "Pago" :
                 payment.status === "pending" ? "Pendente" :
