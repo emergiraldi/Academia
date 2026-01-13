@@ -792,14 +792,14 @@ export const gymsRouter = router({
       }
 
       // Criar sessão para o admin da academia
-      const { sdk } = await import("./_core/sdk");
+      const { sdk } = await import("../_core/sdk");
       const sessionToken = await sdk.createSessionToken(
         admin.openId,
         { name: admin.name || admin.email }
       );
 
       // Definir cookie de sessão
-      const { COOKIE_NAME, getSessionCookieOptions } = await import("./_core/config");
+      const { COOKIE_NAME, getSessionCookieOptions } = await import("../_core/config");
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, sessionToken, {
         ...cookieOptions,
