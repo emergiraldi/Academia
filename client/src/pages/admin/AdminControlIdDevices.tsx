@@ -14,15 +14,20 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
-import { Plus, Wifi, WifiOff, Edit, Trash2, MapPin } from "lucide-react";
+import { Plus, Wifi, WifiOff, Edit, Trash2, MapPin, Info, Copy, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { useGym } from "@/_core/hooks/useGym";
+import { Separator } from "@/components/ui/separator";
 
 export default function AdminControlIdDevices() {
+  const { gymSlug } = useGym();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState<any>(null);
+  const [copiedAgentId, setCopiedAgentId] = useState(false);
 
   const { data: devices = [], refetch } = trpc.devices.list.useQuery();
+  const { data: settings } = trpc.gymSettings.get.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
 
   const createMutation = trpc.devices.create.useMutation({
     onSuccess: () => {
@@ -130,6 +135,20 @@ export default function AdminControlIdDevices() {
     }
   };
 
+  const handleCopyAgentId = async () => {
+    if (!settings?.gymId) return;
+
+    const agentId = `AGENT_ID=academia-${settings.gymId}`;
+    try {
+      await navigator.clipboard.writeText(agentId);
+      setCopiedAgentId(true);
+      toast.success('AGENT_ID copiado para a área de transferência!');
+      setTimeout(() => setCopiedAgentId(false), 3000);
+    } catch (error) {
+      toast.error('Erro ao copiar. Copie manualmente: ' + agentId);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
@@ -221,6 +240,77 @@ export default function AdminControlIdDevices() {
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Informações da Academia - AGENT_ID */}
+        {settings?.gymId && (
+          <Card className="shadow-md border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Info className="w-5 h-5 text-primary" />
+                <CardTitle>Configuração do Agent</CardTitle>
+              </div>
+              <CardDescription>
+                Cada academia precisa do seu próprio agent instalado localmente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">ID da Academia</Label>
+                  <p className="text-2xl font-bold text-primary">{settings.gymId}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Nome</Label>
+                  <p className="text-lg font-semibold">{settings.gymName}</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-sm font-semibold">
+                    🔧 AGENT_ID para configurar no computador da academia
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Copie este código e cole no arquivo .env do agent:
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 bg-background rounded-lg border-2 border-dashed border-primary/30">
+                  <code className="flex-1 text-base font-mono font-semibold text-primary">
+                    AGENT_ID=academia-{settings.gymId}
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyAgentId}
+                    className="shrink-0"
+                  >
+                    {copiedAgentId ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" />
+                        Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copiar
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    <strong>⚠️ Importante:</strong> O agent deve ser instalado no computador da academia (rede local).
+                    Cada academia tem um AGENT_ID único para garantir isolamento completo dos dados.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {devices.length === 0 ? (
           <Card className="shadow-md">

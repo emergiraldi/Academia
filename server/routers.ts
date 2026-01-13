@@ -3463,7 +3463,14 @@ export const appRouter = router({
       }))
       .query(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
-        return await db.getGymSettings(gym.id);
+        const settings = await db.getGymSettings(gym.id);
+        // Include gym info for display
+        return {
+          ...settings,
+          gymId: gym.id,
+          gymName: gym.name,
+          gymSlug: gym.slug,
+        };
       }),
 
     update: gymAdminProcedure

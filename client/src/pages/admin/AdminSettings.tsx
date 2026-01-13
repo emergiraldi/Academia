@@ -19,6 +19,9 @@ import {
   Image,
   Upload,
   X,
+  Info,
+  Copy,
+  CheckCircle2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -71,6 +74,9 @@ export default function AdminSettings() {
 
   // Track if initial data was loaded
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Track if AGENT_ID was copied
+  const [copiedAgentId, setCopiedAgentId] = useState(false);
 
   // Update form when settings are loaded (only on initial load)
   useEffect(() => {
@@ -141,6 +147,20 @@ export default function AdminSettings() {
     toast.success('Logo removido! Clique em "Salvar" para aplicar');
   };
 
+  const handleCopyAgentId = async () => {
+    if (!settings?.gymId) return;
+
+    const agentId = `AGENT_ID=academia-${settings.gymId}`;
+    try {
+      await navigator.clipboard.writeText(agentId);
+      setCopiedAgentId(true);
+      toast.success('AGENT_ID copiado para a área de transferência!');
+      setTimeout(() => setCopiedAgentId(false), 3000);
+    } catch (error) {
+      toast.error('Erro ao copiar. Copie manualmente: ' + agentId);
+    }
+  };
+
   const handleSave = async () => {
     try {
       await updateSettings.mutateAsync({
@@ -165,6 +185,90 @@ export default function AdminSettings() {
             </Button>
           }
         />
+
+        {/* Parâmetros Gerais do Sistema */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-primary" />
+              <CardTitle>Parâmetros Gerais do Sistema</CardTitle>
+            </div>
+            <CardDescription>
+              Informações da academia e configurações básicas
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Informações da Academia */}
+            {settings?.gymId && (
+              <div className="space-y-4 p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-primary/20">
+                <div>
+                  <Label className="text-sm font-semibold flex items-center gap-2">
+                    <Info className="w-4 h-4" />
+                    Informações da Academia
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Dados importantes para configuração de integrações
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">ID da Academia</Label>
+                    <p className="text-2xl font-bold text-primary">{settings.gymId}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Nome</Label>
+                    <p className="text-lg font-semibold">{settings.gymName}</p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm font-semibold">
+                      🔧 Configuração do Control ID Agent
+                    </Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Use este AGENT_ID ao configurar o agent da catraca Control ID:
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 p-3 bg-background rounded-lg border-2 border-dashed border-primary/30">
+                    <code className="flex-1 text-base font-mono font-semibold text-primary">
+                      AGENT_ID=academia-{settings.gymId}
+                    </code>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopyAgentId}
+                      className="shrink-0"
+                    >
+                      {copiedAgentId ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" />
+                          Copiado!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copiar
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                      <strong>⚠️ Importante:</strong> Cada academia precisa do seu próprio AGENT_ID único.
+                      Copie este código e cole no arquivo <code className="font-mono text-xs bg-amber-100 dark:bg-amber-900 px-1 py-0.5 rounded">.env</code> do agent instalado na sua academia.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Configurações de Bloqueio de Acesso */}
         <Card className="shadow-md">
