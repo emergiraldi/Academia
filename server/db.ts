@@ -2029,7 +2029,7 @@ export async function markTokenAsUsed(id: number) {
 
 import mysql from 'mysql2/promise';
 
-async function getConnection() {
+export async function getConnection() {
   // Parse DATABASE_URL to get credentials
   const dbUrl = process.env.DATABASE_URL || 'mysql://root@localhost:3306/academia_db';
   const url = new URL(dbUrl);
