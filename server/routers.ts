@@ -3172,7 +3172,9 @@ export const appRouter = router({
         if (!ctx.user.gymId) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
         }
+        console.log(`[CASHFLOW DEBUG] expenses.list - gymId: ${ctx.user.gymId}, userEmail: ${ctx.user.email}`);
         const expenses = await db.getExpensesByGym(ctx.user.gymId);
+        console.log(`[CASHFLOW DEBUG] Found ${expenses.length} expenses for gym ${ctx.user.gymId}`);
 
         // Filter by status if provided
         if (input.status) {
