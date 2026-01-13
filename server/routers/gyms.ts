@@ -784,7 +784,31 @@ export const gymsRouter = router({
       // LOG DE AUDITORIA
       console.log(`🔐 [SUPER ADMIN ACCESS] Super Admin ${ctx.user.email} acessando academia ${gym.name} (ID: ${gym.id})`);
 
-      // Retornar dados para login direto no frontend
+      // Garantir que o admin tem openId
+      if (!admin.openId) {
+        const openId = `email-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        await db.update(users).set({ openId }).where(eq(users.id, admin.id));
+        admin.openId = openId;
+      }
+
+      // Criar sessão para o admin da academia
+      const { sdk } = await import("./_core/sdk");
+      const sessionToken = await sdk.createSessionToken(
+        admin.openId,
+        { name: admin.name || admin.email }
+      );
+
+      // Definir cookie de sessão
+      const { COOKIE_NAME, getSessionCookieOptions } = await import("./_core/config");
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(COOKIE_NAME, sessionToken, {
+        ...cookieOptions,
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+      });
+
+      console.log(`✅ [SUPER ADMIN ACCESS] Sessão criada para ${admin.email} na academia ${gym.name}`);
+
+      // Retornar dados para redirecionamento
       return {
         success: true,
         adminUserId: admin.id,
