@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PaymentCalendar } from "@/components/PaymentCalendar";
 import {
   Select,
   SelectContent,
@@ -769,13 +770,28 @@ export default function AdminPayments() {
                 <Label className="mb-2 block">
                   Alunos ({selectedStudents.length} selecionado{selectedStudents.length !== 1 ? 's' : ''})
                 </Label>
+
+                {/* DEBUG INFO */}
+                <div className="mb-2 p-2 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs space-y-1">
+                  <div><strong>Total de alunos:</strong> {students.length}</div>
+                  <div><strong>Termo de busca:</strong> "{studentSearchTerm}"</div>
+                  <div><strong>Plano selecionado:</strong> {selectedPlan}</div>
+                  <div><strong>Resultados após filtro:</strong> {students.filter((s: any) => {
+                    const matchesPlan = selectedPlan === "all" || s.planId?.toString() === selectedPlan;
+                    const matchesSearch = studentSearchTerm === "" ||
+                      (s.name && s.name.toLowerCase().includes(studentSearchTerm.toLowerCase())) ||
+                      (s.registrationNumber && s.registrationNumber.toLowerCase().includes(studentSearchTerm.toLowerCase()));
+                    return matchesPlan && matchesSearch;
+                  }).length}</div>
+                </div>
+
                 <div className="border rounded-lg max-h-[300px] overflow-y-auto">
                   {(() => {
                     const filteredStudents = students.filter((s: any) => {
                       const matchesPlan = selectedPlan === "all" || s.planId?.toString() === selectedPlan;
                       const matchesSearch = studentSearchTerm === "" ||
-                        s.name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-                        s.registrationNumber?.toLowerCase().includes(studentSearchTerm.toLowerCase());
+                        (s.name && s.name.toLowerCase().includes(studentSearchTerm.toLowerCase())) ||
+                        (s.registrationNumber && s.registrationNumber.toLowerCase().includes(studentSearchTerm.toLowerCase()));
                       return matchesPlan && matchesSearch;
                     });
 
