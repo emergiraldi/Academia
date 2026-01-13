@@ -88,7 +88,16 @@ export default function AdminLogin() {
                 {isLoading ? "Entrando..." : "Entrar"}
               </Button>
             </form>
-            <p className="text-xs text-center text-muted-foreground mt-4">
+            <div className="mt-4 text-center">
+              <Button
+                variant="link"
+                className="text-sm text-primary"
+                onClick={() => setLocation("/admin/forgot-password")}
+              >
+                Esqueceu a senha?
+              </Button>
+            </div>
+            <p className="text-xs text-center text-muted-foreground mt-2">
               Apenas usuários autorizados podem acessar esta área
             </p>
           </CardContent>

@@ -13,6 +13,7 @@ import StudentResetPassword from "./pages/StudentResetPassword";
 import StudentDashboard from "./pages/StudentDashboardNew";
 import StudentWorkoutDetail from "./pages/StudentWorkoutDetailNew";
 import AdminLogin from "./pages/AdminLogin";
+import AdminForgotPassword from "./pages/AdminForgotPassword";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminPayments from "./pages/admin/AdminPayments";
 import AdminBilling from "./pages/admin/AdminBilling";
@@ -97,6 +98,7 @@ function Router() {
       {/* Admin Routes (direct access only) */}
       <Route path={"/admin"} component={AdminLogin} />
       <Route path={"/admin/login"} component={AdminLogin} />
+      <Route path={"/admin/forgot-password"} component={AdminForgotPassword} />
       <Route path={"/admin/dashboard"} component={AdminDashboard} />
       <Route path={"/admin/payments"} component={AdminPayments} />
       <Route path={"/admin/billing"} component={AdminBilling} />

@@ -650,6 +650,34 @@ export const appRouter = router({
           message: "Senha alterada com sucesso!"
         };
       }),
+
+    // Change password (authenticated user)
+    changePassword: protectedProcedure
+      .input(z.object({
+        currentPassword: z.string().min(6),
+        newPassword: z.string().min(6),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const user = await db.getUserById(ctx.user.id);
+        if (!user) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Usuário não encontrado" });
+        }
+
+        // Verify current password
+        const isValid = await bcrypt.compare(input.currentPassword, user.password);
+        if (!isValid) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Senha atual incorreta" });
+        }
+
+        // Hash and update new password
+        const hashedPassword = await bcrypt.hash(input.newPassword, SALT_ROUNDS);
+        await db.updateUserPassword(user.id, hashedPassword);
+
+        return {
+          success: true,
+          message: "Senha alterada com sucesso!"
+        };
+      }),
   }),
 
   // ============ STUDENTS ============

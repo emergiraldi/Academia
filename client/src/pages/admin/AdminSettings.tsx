@@ -22,6 +22,7 @@ import {
   Info,
   Copy,
   CheckCircle2,
+  Key,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -77,6 +78,13 @@ export default function AdminSettings() {
 
   // Track if AGENT_ID was copied
   const [copiedAgentId, setCopiedAgentId] = useState(false);
+
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
 
   // Update form when settings are loaded (only on initial load)
   useEffect(() => {
@@ -159,6 +167,40 @@ export default function AdminSettings() {
     } catch (error) {
       toast.error('Erro ao copiar. Copie manualmente: ' + agentId);
     }
+  };
+
+  // Change password mutation
+  const changePasswordMutation = trpc.auth.changePassword.useMutation({
+    onSuccess: () => {
+      toast.success("Senha alterada com sucesso!");
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    },
+    onError: (error) => {
+      toast.error(`Erro ao alterar senha: ${error.message}`);
+    },
+  });
+
+  const handleChangePassword = async () => {
+    // Validação
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast.error("A nova senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+
+    changePasswordMutation.mutate({
+      currentPassword: passwordData.currentPassword,
+      newPassword: passwordData.newPassword,
+    });
   };
 
   const handleSave = async () => {
@@ -823,6 +865,76 @@ export default function AdminSettings() {
                   <li>• O logo aparecerá no header do app</li>
                 </ul>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Trocar Senha */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Key className="w-5 h-5 text-primary" />
+              <CardTitle>Trocar Senha</CardTitle>
+            </div>
+            <CardDescription>
+              Altere sua senha de acesso ao sistema
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4 max-w-md">
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Senha Atual *</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  placeholder="Digite sua senha atual"
+                  value={passwordData.currentPassword}
+                  onChange={(e) =>
+                    setPasswordData({ ...passwordData, currentPassword: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Nova Senha *</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  placeholder="Digite a nova senha (mín. 6 caracteres)"
+                  value={passwordData.newPassword}
+                  onChange={(e) =>
+                    setPasswordData({ ...passwordData, newPassword: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Nova Senha *</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Digite a nova senha novamente"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) =>
+                    setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+                  }
+                />
+              </div>
+
+              <Button
+                onClick={handleChangePassword}
+                disabled={changePasswordMutation.isPending}
+                className="w-full"
+              >
+                <Key className="w-4 h-4 mr-2" />
+                {changePasswordMutation.isPending ? "Alterando Senha..." : "Alterar Senha"}
+              </Button>
+            </div>
+
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg max-w-md">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                <strong>⚠️ Importante:</strong> Após alterar a senha, você precisará fazer login novamente em todos os dispositivos.
+              </p>
             </div>
           </CardContent>
         </Card>
