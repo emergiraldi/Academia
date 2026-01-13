@@ -20,14 +20,12 @@ export default function StudentLogin() {
     onSuccess: async () => {
       // Salvar tipo de login
       saveLoginType('student');
-      // Refetch auth data and invalidate all queries to force reload
-      await utils.auth.me.refetch();
-      utils.invalidate();
       toast.success("Login realizado com sucesso!");
-      // Small delay to ensure cookies are set
-      setTimeout(() => {
-        setLocation("/student/dashboard");
-      }, 100);
+      // Refetch auth data to ensure cache is updated before redirect
+      await utils.auth.me.refetch();
+      // Delay maior para garantir que o cookie foi setado
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setLocation("/student/dashboard");
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao fazer login");
