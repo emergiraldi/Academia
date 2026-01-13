@@ -799,7 +799,8 @@ export const gymsRouter = router({
       );
 
       // Definir cookie de sessão
-      const { COOKIE_NAME, getSessionCookieOptions } = await import("../_core/config");
+      const { COOKIE_NAME } = await import("@shared/const");
+      const { getSessionCookieOptions } = await import("../_core/cookies");
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, sessionToken, {
         ...cookieOptions,
