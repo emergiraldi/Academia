@@ -617,12 +617,33 @@ export default function AdminPayments() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    placeholder="Nome ou matrícula..."
+                    placeholder="Digite o nome ou matrícula do aluno..."
                     value={studentSearchTerm}
                     onChange={(e) => setStudentSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 pr-20"
+                    autoFocus
                   />
+                  {studentSearchTerm && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      {students.filter((s: any) => {
+                        const matchesPlan = selectedPlan === "all" || s.planId?.toString() === selectedPlan;
+                        const matchesSearch = s.name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                          s.registrationNumber?.toLowerCase().includes(studentSearchTerm.toLowerCase());
+                        return matchesPlan && matchesSearch;
+                      }).length} {students.filter((s: any) => {
+                        const matchesPlan = selectedPlan === "all" || s.planId?.toString() === selectedPlan;
+                        const matchesSearch = s.name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                          s.registrationNumber?.toLowerCase().includes(studentSearchTerm.toLowerCase());
+                        return matchesPlan && matchesSearch;
+                      }).length === 1 ? 'aluno' : 'alunos'}
+                    </div>
+                  )}
                 </div>
+                {studentSearchTerm && students.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Busca ativa: mostrando resultados em tempo real
+                  </p>
+                )}
               </div>
 
               {/* Plan Filter */}
@@ -778,10 +799,16 @@ export default function AdminPayments() {
 
                     return filteredStudents.map((student: any) => {
                       const plan = plans.find((p: any) => p.id === student.planId);
+                      const isSearchMatch = studentSearchTerm && (
+                        student.name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                        student.registrationNumber?.toLowerCase().includes(studentSearchTerm.toLowerCase())
+                      );
                       return (
                         <div
                           key={student.id}
-                          className="flex items-center space-x-2 p-3 border-b last:border-b-0 hover:bg-accent cursor-pointer"
+                          className={`flex items-center space-x-2 p-3 border-b last:border-b-0 hover:bg-accent cursor-pointer transition-colors ${
+                            isSearchMatch ? 'bg-blue-50 dark:bg-blue-950/20' : ''
+                          }`}
                           onClick={() => handleStudentToggle(student.id)}
                         >
                           <Checkbox
