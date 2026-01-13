@@ -1,7 +1,7 @@
 import { SuperAdminLayout } from "@/components/SuperAdminLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
-import { Building2, Plus, Edit, Trash2, MapPin, Phone, Mail, TrendingUp, Copy, CheckCircle2, Key, Shield, ShieldOff, Lock, Unlock, DollarSign } from "lucide-react";
+import { Building2, Plus, Edit, Trash2, MapPin, Phone, Mail, TrendingUp, Copy, CheckCircle2, Key, Shield, ShieldOff, Lock, Unlock, DollarSign, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
@@ -168,6 +168,17 @@ export default function SuperAdminGyms() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Erro ao resetar senha");
+    },
+  });
+
+  const loginAsGymMutation = trpc.gyms.loginAsGym.useMutation({
+    onSuccess: (data: any) => {
+      toast.success(`Acessando ${data.gymName}...`);
+      // Redirecionar para o dashboard da academia
+      window.location.href = data.loginUrl;
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao acessar academia");
     },
   });
 
@@ -380,6 +391,12 @@ export default function SuperAdminGyms() {
   const handleResetPassword = (gymId: number, gymName: string) => {
     if (confirm(`Tem certeza que deseja resetar a senha do admin da academia "${gymName}"?\n\nA senha será resetada para: [slug]@2024`)) {
       resetPasswordMutation.mutate({ gymId });
+    }
+  };
+
+  const handleLoginAsGym = (gymId: number, gymName: string) => {
+    if (confirm(`Deseja acessar a academia "${gymName}" como administrador?`)) {
+      loginAsGymMutation.mutate({ gymId });
     }
   };
 
@@ -615,6 +632,17 @@ export default function SuperAdminGyms() {
 
                       {/* Action Buttons */}
                       <div className="space-y-2 pt-4 border-t">
+                        {/* Botão ACESSAR ACADEMIA - Destaque */}
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleLoginAsGym(gym.id, gym.name)}
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                          disabled={loginAsGymMutation.isPending}
+                        >
+                          <LogIn className="w-4 h-4 mr-1" />
+                          {loginAsGymMutation.isPending ? "Acessando..." : "Acessar Academia"}
+                        </Button>
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"

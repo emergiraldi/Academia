@@ -750,6 +750,51 @@ export const gymsRouter = router({
       };
     }),
 
+  // Super Admin: Fazer login como academia (sem senha)
+  loginAsGym: publicProcedure
+    .input(z.object({ gymId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // VERIFICAR SE É SUPER ADMIN
+      if (!ctx.user || ctx.user.role !== 'super_admin') {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Apenas Super Admin pode acessar outras academias"
+        });
+      }
+
+      // Buscar a academia
+      const [gym] = await db.select().from(gyms).where(eq(gyms.id, input.gymId));
+      if (!gym) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Academia não encontrada" });
+      }
+
+      // Buscar o primeiro admin da academia
+      const [admin] = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.gymId, input.gymId), eq(users.role, "gym_admin")));
+
+      if (!admin) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Admin não encontrado para esta academia" });
+      }
+
+      // LOG DE AUDITORIA
+      console.log(`🔐 [SUPER ADMIN ACCESS] Super Admin ${ctx.user.email} acessando academia ${gym.name} (ID: ${gym.id})`);
+
+      // Retornar dados para login direto no frontend
+      return {
+        success: true,
+        adminUserId: admin.id,
+        adminEmail: admin.email,
+        gymSlug: gym.slug,
+        gymName: gym.name,
+        loginUrl: `/admin/dashboard?gym=${gym.slug}`,
+      };
+    }),
+
   // Deletar academia
   delete: publicProcedure
     .input(z.object({ gymId: z.number() }))
