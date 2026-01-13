@@ -4,29 +4,6 @@ import { generateReceiptHTML, generateReceiptFilename } from "./receipt";
 import { storagePut } from "./storage";
 
 /**
- * Helper function to check if a payment status indicates the payment was completed
- * Accepts multiple status values from different payment providers:
- * - "paid", "PAID"
- * - "pago", "PAGO"
- * - "liquidado", "LIQUIDADO", "Liquidado"
- * - "quitado", "QUITADO"
- * - "concluida", "CONCLUIDA"
- */
-function isPaymentPaid(status: string): boolean {
-  if (!status) return false;
-
-  const statusUpper = status.toUpperCase();
-
-  return (
-    statusUpper === 'PAID' ||
-    statusUpper === 'PAGO' ||
-    statusUpper.includes('LIQUIDADO') ||
-    statusUpper === 'QUITADO' ||
-    statusUpper === 'CONCLUIDA'
-  );
-}
-
-/**
  * Process PIX webhook notification from Efí Pay
  * This is called when a PIX payment is completed
  */
@@ -58,8 +35,8 @@ export async function processPixWebhook(payload: any) {
       console.log(`[PIX Webhook] 🏢 Detected GYM SUBSCRIPTION payment - ID: ${gymPayment.id}`);
 
       // Check if already processed
-      if (isPaymentPaid(gymPayment.status)) {
-        console.log(`[PIX Webhook] Gym payment ${gymPayment.id} already processed (status: ${gymPayment.status})`);
+      if (gymPayment.status === "paid") {
+        console.log(`[PIX Webhook] Gym payment ${gymPayment.id} already processed`);
         return { success: true, message: "Already processed" };
       }
 
@@ -189,8 +166,8 @@ export async function processPixWebhook(payload: any) {
           console.log(`[PIX Webhook] 💰 Detected BILLING CYCLE payment - Cycle ID: ${billingCycle.id}, Gym ID: ${billingCycle.gymId}`);
 
           // Check if already processed
-          if (isPaymentPaid(billingCycle.status)) {
-            console.log(`[PIX Webhook] Billing cycle ${billingCycle.id} already processed (status: ${billingCycle.status})`);
+          if (billingCycle.status === "paid") {
+            console.log(`[PIX Webhook] Billing cycle ${billingCycle.id} already processed`);
             return { success: true, message: "Already processed" };
           }
 
@@ -293,8 +270,8 @@ export async function processPixWebhook(payload: any) {
     }
 
     // Check if already processed
-    if (isPaymentPaid(payment.status)) {
-      console.log(`[PIX Webhook] Payment ${payment.id} already processed (status: ${payment.status})`);
+    if (payment.status === "paid") {
+      console.log(`[PIX Webhook] Payment ${payment.id} already processed`);
       return { success: true, message: "Already processed" };
     }
 
