@@ -39,16 +39,6 @@ export default function AdminReports() {
   // Gym name from settings
   const gymName = settings?.gymName || "Academia";
 
-  // DEBUG: Verificar estrutura dos dados
-  if (payments.length > 0) {
-    console.log('🔍 [AdminReports] Total de pagamentos:', payments.length);
-    console.log('🔍 [AdminReports] Primeiro pagamento:', payments[0]);
-    console.log('🔍 [AdminReports] Student existe?', payments[0].student ? 'SIM' : 'NÃO');
-    if (payments[0].student) {
-      console.log('🔍 [AdminReports] Nome do student:', payments[0].student.name);
-    }
-  }
-
   // PDF Header with Logo and Gym Info
   const addPDFHeader = (doc: jsPDF, title: string, subtitle?: string) => {
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -279,18 +269,6 @@ export default function AdminReports() {
   // Generate Payments Report (PDF)
   const generatePaymentsReport = () => {
     setGenerating("payments");
-
-    // DEBUG: Alert para verificar dados (ignora cache)
-    if (filteredPayments.length > 0) {
-      const first = filteredPayments[0];
-      alert(`🔍 DEBUG PDF
-Total: ${filteredPayments.length} pagamentos
-Primeiro pagamento ID: ${first.id}
-Student existe? ${first.student ? 'SIM' : 'NÃO'}
-Nome: ${first.student?.name || 'UNDEFINED'}`);
-    } else {
-      alert('⚠️ Nenhum pagamento filtrado!');
-    }
 
     try {
       const doc = new jsPDF('landscape');

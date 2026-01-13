@@ -80,35 +80,8 @@ export default function AdminPayments() {
   const { gymSlug } = useGym();
 
   // Queries
-  const { data: payments = [], refetch: refetchPayments } = trpc.payments.listAll.useQuery(
-    { gymSlug: gymSlug || '' },
-    {
-      enabled: !!gymSlug,
-      onSuccess: (data) => {
-        console.log('[QUERY DEBUG] Payments received from API:', data.length);
-        if (data.length > 0) {
-          console.log('[QUERY DEBUG] First payment from API:', data[0]);
-          console.log('[QUERY DEBUG] First payment student from API:', data[0].student);
-        }
-      }
-    }
-  );
-  const { data: students = [] } = trpc.students.listAll.useQuery(
-    { gymSlug: gymSlug || '' },
-    {
-      enabled: !!gymSlug,
-      onSuccess: (data) => {
-        console.log('[STUDENTS DEBUG] Total de alunos recebidos:', data.length);
-        if (data.length > 0) {
-          console.log('[STUDENTS DEBUG] Primeiro aluno:', data[0]);
-          console.log('[STUDENTS DEBUG] Nome:', data[0].name);
-          console.log('[STUDENTS DEBUG] Matrícula:', data[0].registrationNumber);
-        } else {
-          console.log('[STUDENTS DEBUG] ⚠️ Nenhum aluno retornado do backend!');
-        }
-      }
-    }
-  );
+  const { data: payments = [], refetch: refetchPayments } = trpc.payments.listAll.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
+  const { data: students = [] } = trpc.students.listAll.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
   const { data: plans = [] } = trpc.plans.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
   const { data: paymentMethods = [] } = trpc.paymentMethods.list.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
 
@@ -409,58 +382,8 @@ export default function AdminPayments() {
   };
 
   const handlePrint = () => {
-    // DEBUG COM ALERT - Ignora cache do navegador
-    if (filteredPayments.length > 0) {
-      const firstPayment = filteredPayments[0];
-      const debugInfo = `
-🔍 DEBUG - DADOS DO PAGAMENTO:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ID: ${firstPayment.id}
-Status: ${firstPayment.status}
-Valor: R$ ${(firstPayment.amountInCents / 100).toFixed(2)}
-
-📋 OBJETO STUDENT:
-${firstPayment.student ? 'EXISTE' : 'NÃO EXISTE (undefined)'}
-
-👤 DADOS DO ALUNO:
-Nome: ${firstPayment.student?.name || 'UNDEFINED'}
-Email: ${firstPayment.student?.email || 'UNDEFINED'}
-Matrícula: ${firstPayment.student?.registrationNumber || 'UNDEFINED'}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Total de pagamentos: ${filteredPayments.length}
-      `.trim();
-
-      alert(debugInfo);
-    } else {
-      alert('⚠️ Nenhum pagamento encontrado em filteredPayments!');
-    }
-
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-
-    // DEBUG: Adicionar linha de debug no PDF
-    let debugRowHTML = '';
-    if (filteredPayments.length > 0) {
-      const fp = filteredPayments[0];
-      debugRowHTML = `
-        <tr style="background-color: #fffbeb; border: 3px solid #f59e0b;">
-          <td colspan="6" style="padding: 15px; border: 3px solid #f59e0b;">
-            <div style="font-family: monospace; font-size: 11px; color: #92400e;">
-              <strong style="color: #f59e0b; font-size: 14px;">🔍 DEBUG - DADOS DO PRIMEIRO PAGAMENTO:</strong><br>
-              <strong>ID:</strong> ${fp.id} |
-              <strong>Status:</strong> ${fp.status} |
-              <strong>Valor:</strong> R$ ${(fp.amountInCents / 100).toFixed(2)}<br>
-              <strong>Student Object EXISTS:</strong> ${fp.student ? 'SIM' : 'NÃO (undefined)'}<br>
-              <strong>Student NAME:</strong> ${fp.student?.name || 'UNDEFINED'}<br>
-              <strong>Student EMAIL:</strong> ${fp.student?.email || 'UNDEFINED'}<br>
-              <strong>Student REGISTRATION:</strong> ${fp.student?.registrationNumber || 'UNDEFINED'}<br>
-              <strong>Timestamp:</strong> ${new Date().toISOString()}
-            </div>
-          </td>
-        </tr>
-      `;
-    }
 
     const tableHTML = filteredPayments.map((payment: any) => {
       const status = payment.status === "paid" ? "Pago" :
@@ -514,7 +437,6 @@ Total de pagamentos: ${filteredPayments.length}
               </tr>
             </thead>
             <tbody>
-              ${debugRowHTML}
               ${tableHTML}
             </tbody>
           </table>
@@ -835,14 +757,6 @@ Total de pagamentos: ${filteredPayments.length}
                         s.registrationNumber?.toLowerCase().includes(studentSearchTerm.toLowerCase());
                       return matchesPlan && matchesSearch;
                     });
-
-                    // DEBUG: Log quando o modal está aberto
-                    if (generateModalOpen) {
-                      console.log('[MODAL DEBUG] Total de alunos:', students.length);
-                      console.log('[MODAL DEBUG] Filtrados:', filteredStudents.length);
-                      console.log('[MODAL DEBUG] Termo de busca:', studentSearchTerm);
-                      console.log('[MODAL DEBUG] Plano selecionado:', selectedPlan);
-                    }
 
                     if (students.length === 0) {
                       return (
