@@ -50,7 +50,12 @@ import {
   Printer,
   FileDown,
   FileSpreadsheet,
+  Calendar as CalendarIcon,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useGym } from "@/_core/hooks/useGym";
@@ -59,7 +64,8 @@ export default function AdminPayments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [methodFilter, setMethodFilter] = useState<string>("all");
-  const [periodFilter, setPeriodFilter] = useState<string>("current_month");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
@@ -146,31 +152,20 @@ export default function AdminPayments() {
 
     const matchesMethod = methodFilter === "all" || payment.paymentMethod === methodFilter;
 
-    // Period filter
-    let matchesPeriod = false;
+    // Date range filter
+    let matchesPeriod = true;
     const dueDate = new Date(payment.dueDate);
-    const now = new Date();
 
-    if (periodFilter === "all") {
-      matchesPeriod = true;
-    } else if (periodFilter === "current_month") {
-      matchesPeriod = dueDate.getMonth() === now.getMonth() && dueDate.getFullYear() === now.getFullYear();
-    } else if (periodFilter === "last_30_days") {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      matchesPeriod = dueDate >= thirtyDaysAgo;
-    } else if (periodFilter === "last_60_days") {
-      const sixtyDaysAgo = new Date();
-      sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-      matchesPeriod = dueDate >= sixtyDaysAgo;
-    } else if (periodFilter === "last_90_days") {
-      const ninetyDaysAgo = new Date();
-      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-      matchesPeriod = dueDate >= ninetyDaysAgo;
-    } else if (periodFilter === "next_30_days") {
-      const thirtyDaysAhead = new Date();
-      thirtyDaysAhead.setDate(thirtyDaysAhead.getDate() + 30);
-      matchesPeriod = dueDate <= thirtyDaysAhead && dueDate >= now;
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      matchesPeriod = matchesPeriod && dueDate >= fromDate;
+    }
+
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      matchesPeriod = matchesPeriod && dueDate <= toDate;
     }
 
     return matchesSearch && matchesStatus && matchesMethod && matchesPeriod;
@@ -770,21 +765,6 @@ export default function AdminPayments() {
                 <Label className="mb-2 block">
                   Alunos ({selectedStudents.length} selecionado{selectedStudents.length !== 1 ? 's' : ''})
                 </Label>
-
-                {/* DEBUG INFO */}
-                <div className="mb-2 p-2 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs space-y-1">
-                  <div><strong>Total de alunos:</strong> {students.length}</div>
-                  <div><strong>Termo de busca:</strong> "{studentSearchTerm}"</div>
-                  <div><strong>Plano selecionado:</strong> {selectedPlan}</div>
-                  <div><strong>Resultados após filtro:</strong> {students.filter((s: any) => {
-                    const matchesPlan = selectedPlan === "all" || s.planId?.toString() === selectedPlan;
-                    const matchesSearch = studentSearchTerm === "" ||
-                      (s.name && s.name.toLowerCase().includes(studentSearchTerm.toLowerCase())) ||
-                      (s.registrationNumber && s.registrationNumber.toLowerCase().includes(studentSearchTerm.toLowerCase()));
-                    return matchesPlan && matchesSearch;
-                  }).length}</div>
-                </div>
-
                 <div className="border rounded-lg max-h-[300px] overflow-y-auto">
                   {(() => {
                     const filteredStudents = students.filter((s: any) => {
@@ -967,21 +947,64 @@ export default function AdminPayments() {
                 </div>
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label>Período</Label>
-                <Select value={periodFilter} onValueChange={setPeriodFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="current_month">Mês Atual</SelectItem>
-                    <SelectItem value="last_30_days">Últimos 30 dias</SelectItem>
-                    <SelectItem value="last_60_days">Últimos 60 dias</SelectItem>
-                    <SelectItem value="last_90_days">Últimos 90 dias</SelectItem>
-                    <SelectItem value="next_30_days">Próximos 30 dias</SelectItem>
-                    <SelectItem value="all">Todos os períodos</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateFrom && dateTo ? (
+                        <>
+                          {format(dateFrom, "dd/MM/yyyy", { locale: ptBR })} - {format(dateTo, "dd/MM/yyyy", { locale: ptBR })}
+                        </>
+                      ) : dateFrom ? (
+                        <>Desde {format(dateFrom, "dd/MM/yyyy", { locale: ptBR })}</>
+                      ) : dateTo ? (
+                        <>Até {format(dateTo, "dd/MM/yyyy", { locale: ptBR })}</>
+                      ) : (
+                        <span className="text-muted-foreground">Selecione o período</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <div className="p-3 space-y-2 border-b">
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>
+                          Limpar
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => {
+                          const now = new Date();
+                          setDateFrom(new Date(now.getFullYear(), now.getMonth(), 1));
+                          setDateTo(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+                        }}>
+                          Mês Atual
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex">
+                      <div className="p-3 border-r">
+                        <div className="text-sm font-medium mb-2">Data Inicial</div>
+                        <Calendar
+                          mode="single"
+                          selected={dateFrom}
+                          onSelect={setDateFrom}
+                          locale={ptBR}
+                          initialFocus
+                        />
+                      </div>
+                      <div className="p-3">
+                        <div className="text-sm font-medium mb-2">Data Final</div>
+                        <Calendar
+                          mode="single"
+                          selected={dateTo}
+                          onSelect={setDateTo}
+                          locale={ptBR}
+                          disabled={(date) => dateFrom ? date < dateFrom : false}
+                        />
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div>
