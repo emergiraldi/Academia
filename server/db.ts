@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, sql } from "drizzle-orm";
+import { eq, and, or, isNull, desc, asc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "../drizzle/schema";
@@ -1019,14 +1019,27 @@ export async function createExercise(exercise: InsertExercise) {
 export async function listExercises(gymId: number) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(exercises).where(eq(exercises.gymId, gymId));
+  // Busca exercícios GLOBAIS (gymId = NULL) + exercícios da PRÓPRIA academia
+  return await db.select().from(exercises).where(
+    or(
+      isNull(exercises.gymId),        // Biblioteca global (todas academias)
+      eq(exercises.gymId, gymId)      // Exercícios customizados da academia
+    )
+  );
 }
 
 export async function getExerciseById(id: number, gymId: number) {
   const db = await getDb();
   if (!db) return undefined;
+  // Busca exercício global OU da própria academia
   const result = await db.select().from(exercises)
-    .where(and(eq(exercises.id, id), eq(exercises.gymId, gymId)))
+    .where(and(
+      eq(exercises.id, id),
+      or(
+        isNull(exercises.gymId),        // Biblioteca global
+        eq(exercises.gymId, gymId)      // Exercício da academia
+      )
+    ))
     .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
