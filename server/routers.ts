@@ -85,7 +85,8 @@ const customErrorMap: z.ZodErrorMap = (issue, ctx) => {
   if (issue.code === z.ZodIssueCode.invalid_enum_value) {
     return { message: `Valor inválido. Opções: ${issue.options.join(", ")}` };
   }
-  return { message: ctx.defaultError ?? "Erro de validação" };
+  // Proteção completa contra ctx ou defaultError undefined
+  return { message: ctx?.defaultError || "Erro de validação" };
 };
 
 z.setErrorMap(customErrorMap);
