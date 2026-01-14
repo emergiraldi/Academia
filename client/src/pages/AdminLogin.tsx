@@ -17,12 +17,14 @@ export default function AdminLogin() {
   const utils = trpc.useUtils();
 
   const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       // Salvar tipo de login
       saveLoginType('admin');
-      // Refetch user data to ensure cache is updated before redirect
-      await utils.auth.me.refetch();
       toast.success("Login realizado com sucesso!");
+      // Set user data directly in cache
+      utils.auth.me.setData(undefined, data.user);
+      // Wait a bit for cookie to be set
+      await new Promise(resolve => setTimeout(resolve, 300));
       setLocation("/admin/dashboard");
     },
     onError: (error) => {

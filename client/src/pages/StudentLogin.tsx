@@ -17,13 +17,13 @@ export default function StudentLogin() {
   const utils = trpc.useUtils();
 
   const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       // Salvar tipo de login
       saveLoginType('student');
       toast.success("Login realizado com sucesso!");
-      // Refetch auth data to ensure cache is updated before redirect
-      await utils.auth.me.refetch();
-      // Delay maior para garantir que o cookie foi setado
+      // Set user data directly in cache
+      utils.auth.me.setData(undefined, data.user);
+      // Wait a bit for cookie to be set
       await new Promise(resolve => setTimeout(resolve, 300));
       setLocation("/student/dashboard");
     },
