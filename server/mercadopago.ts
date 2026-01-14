@@ -64,7 +64,10 @@ export class MercadoPagoService {
       console.log('🔵 [Mercado Pago] Criando cobrança PIX...');
       console.log('  - Valor: R$', valorReais.toFixed(2));
       console.log('  - Pagador:', charge.pagador.nome);
-      console.log('  - Documento:', charge.pagador.documento);
+      console.log('  - Documento ORIGINAL:', charge.pagador.documento);
+      console.log('  - Documento LIMPO:', charge.pagador.documento.replace(/\D/g, ''));
+      console.log('  - Tipo detectado:', charge.pagador.documento.replace(/\D/g, '').length === 11 ? 'CPF' : 'CNPJ');
+      console.log('  - Tamanho:', charge.pagador.documento.replace(/\D/g, '').length);
 
       const response = await fetch(`${this.baseUrl}/v1/payments`, {
         method: 'POST',
