@@ -345,8 +345,9 @@ export function getPixService(): PixService {
 
 /**
  * Create PIX service instance from bank account configuration
+ * Detecta automaticamente o provedor (Sicoob, Mercado Pago, etc.) e retorna o serviço correto
  */
-export async function getPixServiceFromBankAccount(gymId: number): Promise<PixService> {
+export async function getPixServiceFromBankAccount(gymId: number): Promise<PixService | any> {
   const db = await import("./db");
 
   console.log("🔍 [PIX] Buscando conta bancária PIX para gymId:", gymId);
@@ -356,9 +357,30 @@ export async function getPixServiceFromBankAccount(gymId: number): Promise<PixSe
     throw new Error("Nenhuma conta bancária com PIX ativo configurada para esta academia");
   }
 
+  const provedor = bankAccount.pix_provedor || 'sicoob';
   console.log("✅ [PIX] Conta bancária encontrada:");
   console.log("  - Banco:", bankAccount.banco);
+  console.log("  - Provedor:", provedor);
   console.log("  - PIX Ativo:", bankAccount.pix_ativo);
+
+  // ======== MERCADO PAGO ========
+  if (provedor === 'mercadopago') {
+    console.log("💳 [PIX] Usando provedor: MERCADO PAGO");
+    console.log("  - Access Token:", bankAccount.mp_access_token ? "***" + bankAccount.mp_access_token.slice(-10) : "VAZIO");
+
+    if (!bankAccount.mp_access_token) {
+      throw new Error("Access Token do Mercado Pago não configurado");
+    }
+
+    const { MercadoPagoService } = await import("./mercadopago");
+    return new MercadoPagoService({
+      accessToken: bankAccount.mp_access_token,
+      publicKey: bankAccount.mp_public_key || undefined,
+    });
+  }
+
+  // ======== SICOOB (ou outros bancos com certificado) ========
+  console.log("🏦 [PIX] Usando provedor: SICOOB (certificado)");
   console.log("  - Client ID:", bankAccount.pix_client_id ? "***" + bankAccount.pix_client_id.slice(-4) : "VAZIO");
   console.log("  - Client Secret:", bankAccount.pix_client_secret ? "***" + bankAccount.pix_client_secret.slice(-4) : "VAZIO");
   console.log("  - PIX Chave:", bankAccount.pix_chave || "VAZIO");
