@@ -361,15 +361,42 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Billing cycle already paid" });
         }
 
+        const paidAt = new Date();
+
         // Update billing cycle to paid
         await db.updateBillingCycle(input.billingCycleId, {
           status: "paid",
-          paidAt: new Date(),
+          paidAt,
           paymentMethod: input.paymentMethod,
           notes: input.notes || billingCycle.notes,
         });
 
         console.log(`✅ [Super Admin] Billing cycle ${input.billingCycleId} marked as paid - Payment method: ${input.paymentMethod}`);
+
+        // Send confirmation email to gym admin
+        try {
+          const gym = await db.getGymById(billingCycle.gymId);
+          if (gym) {
+            // Get gym admin email
+            const gymAdmins = await db.getUsersByGymId(gym.id);
+            const gymAdmin = gymAdmins.find(u => u.role === 'gym_admin');
+
+            if (gymAdmin && gymAdmin.email) {
+              const { sendGymBillingConfirmedEmail } = await import("./email");
+              await sendGymBillingConfirmedEmail(
+                gymAdmin.email,
+                gym.name,
+                billingCycle.referenceMonth,
+                billingCycle.amountCents,
+                paidAt
+              );
+              console.log(`📧 [Email] Confirmation sent to ${gymAdmin.email} for billing cycle ${input.billingCycleId}`);
+            }
+          }
+        } catch (emailError) {
+          console.error(`❌ [Email] Failed to send confirmation for billing cycle ${input.billingCycleId}:`, emailError);
+          // Continue - payment confirmation is more important than email
+        }
 
         return { success: true };
       }),
