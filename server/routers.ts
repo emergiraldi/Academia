@@ -378,8 +378,8 @@ export const appRouter = router({
           const gym = await db.getGymById(billingCycle.gymId);
           if (gym) {
             // Get gym admin email
-            const gymAdmins = await db.getUsersByGymId(gym.id);
-            const gymAdmin = gymAdmins.find(u => u.role === 'gym_admin');
+            const gymAdmins = await db.getUsersByRole(gym.id, 'gym_admin');
+            const gymAdmin = gymAdmins[0];
 
             if (gymAdmin && gymAdmin.email) {
               const { sendGymBillingConfirmedEmail } = await import("./email");
