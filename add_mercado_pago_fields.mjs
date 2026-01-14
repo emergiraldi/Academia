@@ -10,14 +10,25 @@ const conn = await mysql.createConnection({
 console.log('\n🔧 MIGRAÇÃO: Adicionando campos Mercado Pago à tabela bank_accounts...\n');
 
 try {
-  // 1. Adicionar coluna pix_provedor (padrão: 'sicoob' para não quebrar dados existentes)
-  console.log('📌 Adicionando coluna pix_provedor...');
-  await conn.execute(`
-    ALTER TABLE bank_accounts
-    ADD COLUMN IF NOT EXISTS pix_provedor VARCHAR(20) DEFAULT 'sicoob'
-    AFTER pix_ativo
+  // 1. Verificar e adicionar coluna pix_provedor (padrão: 'sicoob' para não quebrar dados existentes)
+  console.log('📌 Verificando coluna pix_provedor...');
+  const [columns1] = await conn.execute(`
+    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'academia_db'
+    AND TABLE_NAME = 'bank_accounts'
+    AND COLUMN_NAME = 'pix_provedor'
   `);
-  console.log('✅ Coluna pix_provedor adicionada com sucesso!');
+
+  if (columns1.length === 0) {
+    await conn.execute(`
+      ALTER TABLE bank_accounts
+      ADD COLUMN pix_provedor VARCHAR(20) DEFAULT 'sicoob'
+      AFTER pix_ativo
+    `);
+    console.log('✅ Coluna pix_provedor adicionada com sucesso!');
+  } else {
+    console.log('ℹ️  Coluna pix_provedor já existe, pulando...');
+  }
 
   // 2. Atualizar registros existentes para terem pix_provedor = 'sicoob'
   console.log('\n📌 Garantindo que registros existentes tenham pix_provedor = "sicoob"...');
@@ -28,23 +39,45 @@ try {
   `);
   console.log(`✅ ${updateResult.affectedRows} registro(s) atualizado(s) com sucesso!`);
 
-  // 3. Adicionar coluna mp_access_token
-  console.log('\n📌 Adicionando coluna mp_access_token...');
-  await conn.execute(`
-    ALTER TABLE bank_accounts
-    ADD COLUMN IF NOT EXISTS mp_access_token TEXT NULL
-    AFTER pix_url_token
+  // 3. Verificar e adicionar coluna mp_access_token
+  console.log('\n📌 Verificando coluna mp_access_token...');
+  const [columns2] = await conn.execute(`
+    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'academia_db'
+    AND TABLE_NAME = 'bank_accounts'
+    AND COLUMN_NAME = 'mp_access_token'
   `);
-  console.log('✅ Coluna mp_access_token adicionada com sucesso!');
 
-  // 4. Adicionar coluna mp_public_key
-  console.log('\n📌 Adicionando coluna mp_public_key...');
-  await conn.execute(`
-    ALTER TABLE bank_accounts
-    ADD COLUMN IF NOT EXISTS mp_public_key TEXT NULL
-    AFTER mp_access_token
+  if (columns2.length === 0) {
+    await conn.execute(`
+      ALTER TABLE bank_accounts
+      ADD COLUMN mp_access_token TEXT NULL
+      AFTER pix_url_token
+    `);
+    console.log('✅ Coluna mp_access_token adicionada com sucesso!');
+  } else {
+    console.log('ℹ️  Coluna mp_access_token já existe, pulando...');
+  }
+
+  // 4. Verificar e adicionar coluna mp_public_key
+  console.log('\n📌 Verificando coluna mp_public_key...');
+  const [columns3] = await conn.execute(`
+    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'academia_db'
+    AND TABLE_NAME = 'bank_accounts'
+    AND COLUMN_NAME = 'mp_public_key'
   `);
-  console.log('✅ Coluna mp_public_key adicionada com sucesso!');
+
+  if (columns3.length === 0) {
+    await conn.execute(`
+      ALTER TABLE bank_accounts
+      ADD COLUMN mp_public_key TEXT NULL
+      AFTER mp_access_token
+    `);
+    console.log('✅ Coluna mp_public_key adicionada com sucesso!');
+  } else {
+    console.log('ℹ️  Coluna mp_public_key já existe, pulando...');
+  }
 
   // 5. Verificar resultado final
   console.log('\n📊 Verificando estrutura atualizada...');
