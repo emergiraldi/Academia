@@ -44,6 +44,7 @@ const BANCOS = [
   { codigo: 748, nome: "Sicredi" },
   { codigo: 260, nome: "Nubank" },
   { codigo: 336, nome: "C6 Bank" },
+  { codigo: 323, nome: "Mercado Pago" }, // Código oficial do Mercado Pago
 ];
 
 const TIPOS_CHAVE_PIX = [
