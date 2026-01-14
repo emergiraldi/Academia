@@ -128,6 +128,16 @@ export default function AdminBankAccounts() {
     },
   });
 
+  const togglePixMutation = trpc.bankAccounts.update.useMutation({
+    onSuccess: () => {
+      toast.success("Status PIX atualizado!");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao atualizar status PIX");
+    },
+  });
+
   const resetForm = () => {
     setEditingAccount(null);
     setTitular("");
@@ -226,6 +236,19 @@ export default function AdminBankAccounts() {
   const handleDelete = (id: number) => {
     if (confirm("Tem certeza que deseja excluir esta conta?")) {
       deleteMutation.mutate({ id, gymSlug });
+    }
+  };
+
+  const handleTogglePix = (account: any) => {
+    const newStatus = account.pix_ativo === "S" ? "N" : "S";
+    const action = newStatus === "S" ? "ativar" : "desativar";
+
+    if (confirm(`Tem certeza que deseja ${action} o PIX desta conta?`)) {
+      togglePixMutation.mutate({
+        id: account.id,
+        gymSlug,
+        pixAtivo: newStatus,
+      });
     }
   };
 
@@ -633,12 +656,40 @@ export default function AdminBankAccounts() {
                         {account.conta_dv && `-${account.conta_dv}`}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          {account.pix_ativo === "S" ? (
-                            <>
-                              <Badge className="bg-green-100 text-green-800 w-fit">
-                                Ativo
-                              </Badge>
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2">
+                            {account.pix_ativo === "S" ? (
+                              <>
+                                <Badge className="bg-green-100 text-green-800 w-fit">
+                                  Ativo
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs text-orange-600 hover:text-orange-700"
+                                  onClick={() => handleTogglePix(account)}
+                                  title="Desativar PIX"
+                                >
+                                  Desativar
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Badge variant="secondary" className="w-fit">Inativo</Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs text-green-600 hover:text-green-700"
+                                  onClick={() => handleTogglePix(account)}
+                                  title="Ativar PIX"
+                                >
+                                  Ativar
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                          {account.pix_ativo === "S" && (
+                            <div>
                               {account.pix_provedor === "mercadopago" ? (
                                 <Badge className="bg-blue-100 text-blue-800 w-fit text-xs">
                                   💳 Mercado Pago
@@ -648,9 +699,7 @@ export default function AdminBankAccounts() {
                                   🏦 Sicoob
                                 </Badge>
                               )}
-                            </>
-                          ) : (
-                            <Badge variant="secondary" className="w-fit">Inativo</Badge>
+                            </div>
                           )}
                         </div>
                       </TableCell>
