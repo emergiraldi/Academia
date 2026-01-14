@@ -1000,6 +1000,13 @@ export async function pollGymPixPayments() {
         // Ignore 404 errors (charge not found) - it might not have been created yet in Efí Pay
         if (paymentError.message?.includes("404") || paymentError.message?.includes("not found")) {
           console.log(`[CRON] ℹ️  Payment ${payment.id} not found in Efí Pay yet, will check again later`);
+        }
+        // Ignore connection timeouts and network errors (old Sicoob payments)
+        else if (paymentError.message?.includes("ECONNRESET") ||
+                 paymentError.message?.includes("ETIMEDOUT") ||
+                 paymentError.message?.includes("ENOTFOUND") ||
+                 paymentError.message?.includes("timeout")) {
+          console.log(`[CRON] ⚠️  Payment ${payment.id} connection timeout, will retry later (${paymentError.message})`);
         } else {
           console.error(`[CRON] ❌ Error checking payment ${payment.id}:`, paymentError);
         }

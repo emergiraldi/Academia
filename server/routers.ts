@@ -1845,12 +1845,24 @@ export const appRouter = router({
           }
 
           return {
-            status: status.status,
-            paid: status.status === "CONCLUIDA",
-            paidAt: status.paidAt,
+            status: isPaid ? "CONCLUIDA" : "ATIVA",
+            paid: isPaid,
+            paidAt: paidAt,
           };
         } catch (error: any) {
           console.error("Failed to check payment status:", error);
+
+          // Better error messages for connection timeouts (old Sicoob payments)
+          if (error.message?.includes("ECONNRESET") ||
+              error.message?.includes("ETIMEDOUT") ||
+              error.message?.includes("ENOTFOUND") ||
+              error.message?.includes("timeout")) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Erro ao conectar com o servidor PIX. Tente novamente em alguns instantes."
+            });
+          }
+
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to check payment status"
