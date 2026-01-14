@@ -246,6 +246,7 @@ export default function AdminBilling() {
                     <TableHead>Vencimento</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Forma de Pagamento</TableHead>
                     <TableHead>Data de Pagamento</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -264,6 +265,9 @@ export default function AdminBilling() {
                       </TableCell>
                       <TableCell>
                         {getStatusBadge(cycle.status)}
+                      </TableCell>
+                      <TableCell>
+                        {cycle.paymentMethod || "-"}
                       </TableCell>
                       <TableCell>
                         {cycle.paidAt ? formatDate(cycle.paidAt) : "-"}

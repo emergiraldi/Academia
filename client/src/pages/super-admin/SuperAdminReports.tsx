@@ -1,6 +1,10 @@
 import { SuperAdminLayout } from "@/components/SuperAdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import {
   FileText,
@@ -14,7 +18,8 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Check
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import html2canvas from "html2canvas";
@@ -32,9 +37,16 @@ export default function SuperAdminReports() {
   const [sortField, setSortField] = useState<SortField>("dueDate");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
+  // Modal de dar baixa
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedBilling, setSelectedBilling] = useState<any>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
+
   // Buscar dados
-  const { data: billingStats, isLoading } = trpc.gymBillingCycles.getBillingStats.useQuery();
+  const { data: billingStats, isLoading, refetch } = trpc.gymBillingCycles.getBillingStats.useQuery();
   const { data: gyms } = trpc.gyms.list.useQuery();
+  const markAsPaid = trpc.gymBillingCycles.markAsPaid.useMutation();
 
   // Formatar valores
   const formatCurrency = (cents: number) => {
@@ -59,6 +71,32 @@ export default function SuperAdminReports() {
       month: "2-digit",
       year: "numeric",
     });
+  };
+
+  // Dar baixa manual em billing cycle
+  const handleMarkAsPaid = async () => {
+    if (!selectedBilling || !paymentMethod) {
+      alert("Selecione a forma de pagamento");
+      return;
+    }
+
+    try {
+      await markAsPaid.mutateAsync({
+        billingCycleId: selectedBilling.id,
+        paymentMethod,
+        notes: notes || undefined,
+      });
+
+      alert("✅ Baixa efetuada com sucesso!");
+      setDialogOpen(false);
+      setPaymentMethod("");
+      setNotes("");
+      setSelectedBilling(null);
+      refetch(); // Refresh data
+    } catch (error: any) {
+      console.error("Erro ao dar baixa:", error);
+      alert(`❌ Erro ao dar baixa: ${error.message || "Erro desconhecido"}`);
+    }
   };
 
   // Aplicar filtros e ordenação
@@ -158,6 +196,7 @@ export default function SuperAdminReports() {
       "Data Vencimento",
       "Valor",
       "Status",
+      "Forma Pagamento",
       "Data Pagamento",
     ];
 
@@ -168,6 +207,7 @@ export default function SuperAdminReports() {
       formatDate(billing.dueDate),
       formatCurrency(billing.amountCents),
       billing.status === "paid" ? "Pago" : billing.status === "overdue" ? "Vencido" : "Pendente",
+      billing.paymentMethod || "-",
       billing.paidAt ? formatDate(billing.paidAt) : "-",
     ]);
 
@@ -285,10 +325,10 @@ export default function SuperAdminReports() {
     pdf.rect(margin, yPosition, pageWidth - 2 * margin, 9, "F");
 
     yPosition += 6;
-    pdf.setFontSize(9);
+    pdf.setFontSize(8);
     pdf.setFont("helvetica", "bold");
     pdf.setTextColor(255, 255, 255);
-    const colWidths = [55, 28, 22, 28, 28, 28];
+    const colWidths = [45, 22, 18, 24, 24, 20, 24];
     let xPosition = margin + 3;
 
     pdf.text("Academia", xPosition, yPosition);
@@ -302,6 +342,8 @@ export default function SuperAdminReports() {
     pdf.text("Valor", xPosition, yPosition);
     xPosition += colWidths[4];
     pdf.text("Status", xPosition, yPosition);
+    xPosition += colWidths[5];
+    pdf.text("Forma Pag.", xPosition, yPosition);
 
     yPosition += 7;
     pdf.setTextColor(0, 0, 0);
@@ -358,6 +400,13 @@ export default function SuperAdminReports() {
       }
       pdf.text(status, xPosition, yPosition);
       pdf.setTextColor(31, 41, 55);
+      xPosition += colWidths[5];
+
+      // Forma de Pagamento
+      const payMethod = billing.paymentMethod || "-";
+      pdf.setFontSize(7);
+      pdf.text(payMethod.length > 12 ? payMethod.substring(0, 12) : payMethod, xPosition, yPosition);
+      pdf.setFontSize(8);
 
       yPosition += 7;
     });
@@ -650,7 +699,13 @@ export default function SuperAdminReports() {
                         Status {sortField === "status" && (sortOrder === "asc" ? "↑" : "↓")}
                       </th>
                       <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">
+                        Forma Pag.
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">
                         Pago em
+                      </th>
+                      <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">
+                        Ações
                       </th>
                     </tr>
                   </thead>
@@ -687,7 +742,26 @@ export default function SuperAdminReports() {
                           </div>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-700">
+                          {billing.paymentMethod || "-"}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-700">
                           {billing.paidAt ? formatDate(billing.paidAt) : "-"}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {(billing.status === "pending" || billing.status === "overdue") && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => {
+                                setSelectedBilling(billing);
+                                setDialogOpen(true);
+                              }}
+                            >
+                              <Check className="w-4 h-4 mr-1" />
+                              Dar Baixa
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -737,6 +811,88 @@ export default function SuperAdminReports() {
             </CardContent>
           </Card>
         )}
+
+        {/* Modal para dar baixa manual */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Confirmar Baixa de Mensalidade</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {selectedBilling && (
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Academia:</span>
+                    <span className="text-sm font-semibold">{selectedBilling.gymName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Mês Referência:</span>
+                    <span className="text-sm font-semibold">{selectedBilling.referenceMonth}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Valor:</span>
+                    <span className="text-sm font-semibold text-green-600">
+                      {formatCurrency(selectedBilling.amountCents)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Vencimento:</span>
+                    <span className="text-sm font-semibold">{formatDate(selectedBilling.dueDate)}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="paymentMethod">Forma de Pagamento *</Label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger id="paymentMethod">
+                    <SelectValue placeholder="Selecione a forma de pagamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PIX">PIX</SelectItem>
+                    <SelectItem value="Boleto">Boleto</SelectItem>
+                    <SelectItem value="Transferência">Transferência Bancária</SelectItem>
+                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                    <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+                    <SelectItem value="Cartão de Débito">Cartão de Débito</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Observações (opcional)</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Ex: Pago em 3 parcelas, comprovante enviado por email, etc."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDialogOpen(false);
+                    setPaymentMethod("");
+                    setNotes("");
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleMarkAsPaid}
+                  disabled={!paymentMethod || markAsPaid.isLoading}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {markAsPaid.isLoading ? "Processando..." : "Confirmar Baixa"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </SuperAdminLayout>
   );

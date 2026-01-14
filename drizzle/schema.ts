@@ -191,6 +191,7 @@ export const gymBillingCycles = mysqlTable("gym_billing_cycles", {
   paymentId: int("payment_id"), // FK to gymPayments when PIX QR code is generated
   createdAt: timestamp("created_at").defaultNow().notNull(),
   paidAt: timestamp("paid_at"),
+  paymentMethod: varchar("payment_method", { length: 50 }), // PIX, Boleto, Transferência, Dinheiro, Cartão, etc.
   notifiedAt: timestamp("notified_at"), // When billing notification email was sent
   blockedAt: timestamp("blocked_at"), // When gym was blocked for non-payment
   notes: text("notes"),

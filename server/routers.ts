@@ -342,6 +342,37 @@ export const appRouter = router({
           gyms: Object.values(gymStats),
         };
       }),
+
+    // Super Admin: Mark billing cycle as paid manually
+    markAsPaid: superAdminProcedure
+      .input(z.object({
+        billingCycleId: z.number(),
+        paymentMethod: z.string().min(1, "Forma de pagamento é obrigatória"),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const billingCycle = await db.getBillingCycleById(input.billingCycleId);
+
+        if (!billingCycle) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Billing cycle not found" });
+        }
+
+        if (billingCycle.status === "paid") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Billing cycle already paid" });
+        }
+
+        // Update billing cycle to paid
+        await db.updateBillingCycle(input.billingCycleId, {
+          status: "paid",
+          paidAt: new Date(),
+          paymentMethod: input.paymentMethod,
+          notes: input.notes || billingCycle.notes,
+        });
+
+        console.log(`✅ [Super Admin] Billing cycle ${input.billingCycleId} marked as paid - Payment method: ${input.paymentMethod}`);
+
+        return { success: true };
+      }),
   }),
 
   auth: router({
