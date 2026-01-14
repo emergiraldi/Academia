@@ -3454,33 +3454,36 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
-        await db.updateBankAccount(input.id, gym.id, {
-          banco: input.banco || null,
-          titularNome: input.titularNome || null,
-          agenciaNumero: input.agenciaNumero || null,
-          agenciaDv: input.agenciaDv || null,
-          contaNumero: input.contaNumero || null,
-          contaDv: input.contaDv || null,
-          pixAtivo: input.pixAtivo || null,
-          pixProvedor: input.pixProvedor || null,
-          pixScope: input.pixScope || null,
-          pixChave: input.pixChave || null,
-          pixTipoChave: input.pixTipoChave || null,
-          pixTipoAmbiente: input.pixTipoAmbiente || null,
-          pixClientId: input.pixClientId || null,
-          pixClientSecret: input.pixClientSecret || null,
-          pixCertificado: input.pixCertificado || null,
-          pixChavePrivada: input.pixChavePrivada || null,
-          pixSenhaCertificado: input.pixSenhaCertificado || null,
-          pixVersaoApi: input.pixVersaoApi || null,
-          pixTimeoutMs: input.pixTimeoutMs || null,
-          pixTokenExpiracao: input.pixTokenExpiracao || null,
-          pixTipoAutenticacao: input.pixTipoAutenticacao || null,
-          pixUrlBase: input.pixUrlBase || null,
-          pixUrlToken: input.pixUrlToken || null,
-          mpAccessToken: input.mpAccessToken || null,
-          mpPublicKey: input.mpPublicKey || null,
-        });
+
+        // Build update object with only provided fields
+        const updateData: any = {};
+        if (input.banco !== undefined) updateData.banco = input.banco;
+        if (input.titularNome !== undefined) updateData.titularNome = input.titularNome;
+        if (input.agenciaNumero !== undefined) updateData.agenciaNumero = input.agenciaNumero;
+        if (input.agenciaDv !== undefined) updateData.agenciaDv = input.agenciaDv;
+        if (input.contaNumero !== undefined) updateData.contaNumero = input.contaNumero;
+        if (input.contaDv !== undefined) updateData.contaDv = input.contaDv;
+        if (input.pixAtivo !== undefined) updateData.pixAtivo = input.pixAtivo;
+        if (input.pixProvedor !== undefined) updateData.pixProvedor = input.pixProvedor;
+        if (input.pixScope !== undefined) updateData.pixScope = input.pixScope;
+        if (input.pixChave !== undefined) updateData.pixChave = input.pixChave;
+        if (input.pixTipoChave !== undefined) updateData.pixTipoChave = input.pixTipoChave;
+        if (input.pixTipoAmbiente !== undefined) updateData.pixTipoAmbiente = input.pixTipoAmbiente;
+        if (input.pixClientId !== undefined) updateData.pixClientId = input.pixClientId;
+        if (input.pixClientSecret !== undefined) updateData.pixClientSecret = input.pixClientSecret;
+        if (input.pixCertificado !== undefined) updateData.pixCertificado = input.pixCertificado;
+        if (input.pixChavePrivada !== undefined) updateData.pixChavePrivada = input.pixChavePrivada;
+        if (input.pixSenhaCertificado !== undefined) updateData.pixSenhaCertificado = input.pixSenhaCertificado;
+        if (input.pixVersaoApi !== undefined) updateData.pixVersaoApi = input.pixVersaoApi;
+        if (input.pixTimeoutMs !== undefined) updateData.pixTimeoutMs = input.pixTimeoutMs;
+        if (input.pixTokenExpiracao !== undefined) updateData.pixTokenExpiracao = input.pixTokenExpiracao;
+        if (input.pixTipoAutenticacao !== undefined) updateData.pixTipoAutenticacao = input.pixTipoAutenticacao;
+        if (input.pixUrlBase !== undefined) updateData.pixUrlBase = input.pixUrlBase;
+        if (input.pixUrlToken !== undefined) updateData.pixUrlToken = input.pixUrlToken;
+        if (input.mpAccessToken !== undefined) updateData.mpAccessToken = input.mpAccessToken;
+        if (input.mpPublicKey !== undefined) updateData.mpPublicKey = input.mpPublicKey;
+
+        await db.updateBankAccount(input.id, gym.id, updateData);
         return { success: true };
       }),
 
