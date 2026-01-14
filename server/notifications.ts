@@ -954,13 +954,29 @@ export async function pollGymPixPayments() {
 
         console.log(`[CRON] Checking payment ${payment.id} (TxID: ${payment.pixTxId})...`);
 
-        // Check payment status with Efí Pay/Sicoob
-        const paymentStatus = await pixService.checkPaymentStatus(payment.pixTxId);
+        // Detect service type and get status accordingly
+        let isPaid = false;
+        let paidAtDate: Date | undefined;
 
-        console.log(`[CRON] Payment ${payment.id} status: ${paymentStatus.status}`);
+        // Check if it's Mercado Pago service (has getPaymentStatus method)
+        if ('getPaymentStatus' in pixService && typeof pixService.getPaymentStatus === 'function') {
+          // Mercado Pago
+          const mpStatus = await pixService.getPaymentStatus(payment.pixTxId);
+          console.log(`[CRON] Payment ${payment.id} status (Mercado Pago): ${mpStatus}`);
+
+          isPaid = mpStatus === 'approved';
+          paidAtDate = isPaid ? new Date() : undefined;
+        } else {
+          // Sicoob (has checkPaymentStatus method)
+          const paymentStatus = await pixService.checkPaymentStatus(payment.pixTxId);
+          console.log(`[CRON] Payment ${payment.id} status (Sicoob): ${paymentStatus.status}`);
+
+          isPaid = paymentStatus.status === "CONCLUIDA";
+          paidAtDate = paymentStatus.paidAt;
+        }
 
         // If payment is confirmed, process it via webhook function
-        if (paymentStatus.status === "CONCLUIDA") {
+        if (isPaid) {
           console.log(`[CRON] ✅ Payment ${payment.id} is confirmed! Processing...`);
 
           const { processPixWebhook } = await import("./pixWebhook");
@@ -971,7 +987,7 @@ export async function pollGymPixPayments() {
               txid: payment.pixTxId,
               endToEndId: `E${Date.now()}`,
               valor: (payment.amountInCents / 100).toFixed(2),
-              horario: paymentStatus.paidAt?.toISOString() || new Date().toISOString()
+              horario: paidAtDate?.toISOString() || new Date().toISOString()
             }]
           };
 

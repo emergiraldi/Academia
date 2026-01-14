@@ -1741,10 +1741,32 @@ export const appRouter = router({
 
         try {
           const pixService = await getPixServiceFromBankAccount(ctx.user.gymId!);
-          const status = await pixService.checkPaymentStatus(payment.pixTxId);
+
+          // Detect service type and get status accordingly
+          let isPaid = false;
+          let paidAt: Date | undefined;
+
+          // Check if it's Mercado Pago service (has getPaymentStatus method)
+          if ('getPaymentStatus' in pixService && typeof pixService.getPaymentStatus === 'function') {
+            // Mercado Pago
+            console.log('💳 [Payment Status] Verificando status no Mercado Pago...');
+            const mpStatus = await pixService.getPaymentStatus(payment.pixTxId);
+            console.log('💳 [Payment Status] Status Mercado Pago:', mpStatus);
+
+            isPaid = mpStatus === 'approved';
+            paidAt = isPaid ? new Date() : undefined;
+          } else {
+            // Sicoob (has checkPaymentStatus method)
+            console.log('🏦 [Payment Status] Verificando status no Sicoob...');
+            const sicoobStatus = await pixService.checkPaymentStatus(payment.pixTxId);
+            console.log('🏦 [Payment Status] Status Sicoob:', sicoobStatus.status);
+
+            isPaid = sicoobStatus.status === "CONCLUIDA";
+            paidAt = sicoobStatus.paidAt;
+          }
 
           // Update payment if paid
-          if (status.status === "CONCLUIDA" && payment.status !== "paid") {
+          if (isPaid && payment.status !== "paid") {
             // Get student and gym info for receipt
             const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId!);
             const gym = await db.getGymById(ctx.user.gymId!);
@@ -1758,7 +1780,7 @@ export const appRouter = router({
                   studentName: ctx.user.name || "Aluno",
                   studentCpf: student.cpf,
                   amount: payment.amountInCents,
-                  paidAt: status.paidAt || new Date(),
+                  paidAt: paidAt || new Date(),
                   paymentMethod: payment.paymentMethod,
                   gymName: gym.name,
                   description: "Mensalidade",
@@ -1780,7 +1802,7 @@ export const appRouter = router({
 
             await db.updatePayment(payment.id, ctx.user.gymId!, {
               status: "paid",
-              paidAt: status.paidAt || new Date(),
+              paidAt: paidAt || new Date(),
               receiptUrl,
             });
 
