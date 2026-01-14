@@ -68,9 +68,12 @@ export default function AdminBankAccounts() {
 
   // PIX fields
   const [pixAtivo, setPixAtivo] = useState("N");
+  const [pixProvedor, setPixProvedor] = useState("sicoob"); // 'sicoob' ou 'mercadopago'
   const [pixChave, setPixChave] = useState("");
   const [pixTipoChave, setPixTipoChave] = useState("");
   const [pixTipoAmbiente, setPixTipoAmbiente] = useState("P");
+
+  // Campos Sicoob
   const [pixClientId, setPixClientId] = useState("");
   const [pixClientSecret, setPixClientSecret] = useState("");
   const [pixCertificado, setPixCertificado] = useState("");
@@ -78,6 +81,10 @@ export default function AdminBankAccounts() {
   const [pixSenhaCertificado, setPixSenhaCertificado] = useState("");
   const [pixUrlBase, setPixUrlBase] = useState("");
   const [pixUrlToken, setPixUrlToken] = useState("");
+
+  // Campos Mercado Pago
+  const [mpAccessToken, setMpAccessToken] = useState("");
+  const [mpPublicKey, setMpPublicKey] = useState("");
 
   const { gymSlug } = useGym();
 
@@ -129,6 +136,7 @@ export default function AdminBankAccounts() {
     setConta("");
     setContaDv("");
     setPixAtivo("N");
+    setPixProvedor("sicoob");
     setPixChave("");
     setPixTipoChave("");
     setPixTipoAmbiente("P");
@@ -139,6 +147,8 @@ export default function AdminBankAccounts() {
     setPixSenhaCertificado("");
     setPixUrlBase("");
     setPixUrlToken("");
+    setMpAccessToken("");
+    setMpPublicKey("");
   };
 
   const handleEdit = (account: any) => {
@@ -150,6 +160,7 @@ export default function AdminBankAccounts() {
     setConta(account.conta_numero || "");
     setContaDv(account.conta_dv || "");
     setPixAtivo(account.pix_ativo || "N");
+    setPixProvedor(account.pix_provedor || "sicoob");
     setPixChave(account.pix_chave || "");
     setPixTipoChave(account.pix_tipo_chave || "");
     setPixTipoAmbiente(account.pix_tipo_ambiente || "P");
@@ -160,6 +171,8 @@ export default function AdminBankAccounts() {
     setPixSenhaCertificado(account.pix_senha_certificado || "");
     setPixUrlBase(account.pix_url_base || "");
     setPixUrlToken(account.pix_url_token || "");
+    setMpAccessToken(account.mp_access_token || "");
+    setMpPublicKey(account.mp_public_key || "");
     setDialogOpen(true);
   };
 
@@ -187,6 +200,7 @@ export default function AdminBankAccounts() {
       contaNumero: conta,
       contaDv: contaDv,
       pixAtivo,
+      pixProvedor,
       pixChave,
       pixTipoChave,
       pixTipoAmbiente,
@@ -197,6 +211,8 @@ export default function AdminBankAccounts() {
       pixSenhaCertificado,
       pixUrlBase,
       pixUrlToken,
+      mpAccessToken,
+      mpPublicKey,
     };
 
     if (editingAccount) {
@@ -355,6 +371,22 @@ export default function AdminBankAccounts() {
                       </Select>
                     </div>
 
+                    <div className="col-span-2">
+                      <Label>Provedor PIX</Label>
+                      <Select value={pixProvedor} onValueChange={setPixProvedor}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o provedor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sicoob">Sicoob</SelectItem>
+                          <SelectItem value="mercadopago">Mercado Pago</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Escolha qual provedor usar para gerar cobranças PIX
+                      </p>
+                    </div>
+
                     <div>
                       <Label>Tipo de Chave PIX</Label>
                       <Select value={pixTipoChave} onValueChange={setPixTipoChave}>
@@ -380,106 +412,159 @@ export default function AdminBankAccounts() {
                       />
                     </div>
 
-                    <div className="col-span-2">
-                      <Label>Client ID</Label>
-                      <Input
-                        value={pixClientId}
-                        onChange={(e) => setPixClientId(e.target.value)}
-                        placeholder="Client ID OAuth"
-                      />
-                    </div>
+                    {/* Campos específicos do Sicoob */}
+                    {pixProvedor === "sicoob" && (
+                      <>
+                        <div className="col-span-2">
+                          <Label>Client ID (Sicoob)</Label>
+                          <Input
+                            value={pixClientId}
+                            onChange={(e) => setPixClientId(e.target.value)}
+                            placeholder="Client ID OAuth Sicoob"
+                          />
+                        </div>
 
-                    <div className="col-span-2">
-                      <Label>Client Secret</Label>
-                      <Input
-                        type="password"
-                        value={pixClientSecret}
-                        onChange={(e) => setPixClientSecret(e.target.value)}
-                        placeholder="Client Secret OAuth"
-                      />
-                    </div>
+                        <div className="col-span-2">
+                          <Label>Client Secret (Sicoob)</Label>
+                          <Input
+                            type="password"
+                            value={pixClientSecret}
+                            onChange={(e) => setPixClientSecret(e.target.value)}
+                            placeholder="Client Secret OAuth Sicoob"
+                          />
+                        </div>
+                      </>
+                    )}
 
-                    <div className="col-span-2">
-                      <Label>Certificado PIX (.pem)</Label>
-                      <Input
-                        type="file"
-                        accept=".pem,.crt,.cer"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            handleFileRead(file, (content) => {
-                              setPixCertificado(content);
-                              toast.success("Certificado carregado com sucesso!");
-                            });
-                          }
-                        }}
-                      />
-                      {pixCertificado && (
-                        <p className="text-sm text-green-600 mt-1">
-                          ✓ Certificado {editingAccount ? "atualizado" : "carregado"} ({pixCertificado.length} bytes)
-                        </p>
-                      )}
-                      {editingAccount && !pixCertificado && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          💡 Deixe em branco para manter o certificado atual
-                        </p>
-                      )}
-                    </div>
+                    {/* Campos específicos do Mercado Pago */}
+                    {pixProvedor === "mercadopago" && (
+                      <>
+                        <div className="col-span-2 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                          <p className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                            💳 Configurações Mercado Pago
+                          </p>
+                          <div className="space-y-3">
+                            <div>
+                              <Label>Access Token (Obrigatório)</Label>
+                              <Input
+                                type="password"
+                                value={mpAccessToken}
+                                onChange={(e) => setMpAccessToken(e.target.value)}
+                                placeholder="APP_USR-xxxxxxxxxxxx-xxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                className="font-mono text-sm"
+                              />
+                              <p className="text-xs text-blue-700 mt-1">
+                                📍 Obtenha em: mercadopago.com.br/developers/panel
+                              </p>
+                            </div>
 
-                    <div className="col-span-2">
-                      <Label>Chave Privada PIX (.key ou .pem)</Label>
-                      <Input
-                        type="file"
-                        accept=".key,.pem"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            handleFileRead(file, (content) => {
-                              setPixChavePrivada(content);
-                              toast.success("Chave privada carregada com sucesso!");
-                            });
-                          }
-                        }}
-                      />
-                      {pixChavePrivada && (
-                        <p className="text-sm text-green-600 mt-1">
-                          ✓ Chave privada {editingAccount ? "atualizada" : "carregada"} ({pixChavePrivada.length} bytes)
-                        </p>
-                      )}
-                      {editingAccount && !pixChavePrivada && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          💡 Deixe em branco para manter a chave privada atual
-                        </p>
-                      )}
-                    </div>
+                            <div>
+                              <Label>Public Key (Opcional)</Label>
+                              <Input
+                                value={mpPublicKey}
+                                onChange={(e) => setMpPublicKey(e.target.value)}
+                                placeholder="APP_USR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                className="font-mono text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
 
-                    <div className="col-span-2">
-                      <Label>Senha do Certificado (opcional)</Label>
-                      <Input
-                        type="password"
-                        value={pixSenhaCertificado}
-                        onChange={(e) => setPixSenhaCertificado(e.target.value)}
-                        placeholder="Senha (se houver)"
-                      />
-                    </div>
+                    {/* Campos específicos do Sicoob */}
+                    {pixProvedor === "sicoob" && (
+                      <>
+                        <div className="col-span-2 p-4 bg-green-50 border border-green-200 rounded-md">
+                          <p className="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
+                            🏦 Configurações Sicoob
+                          </p>
+                          <div className="space-y-3">
+                            <div>
+                              <Label>Certificado PIX (.pem)</Label>
+                              <Input
+                                type="file"
+                                accept=".pem,.crt,.cer"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    handleFileRead(file, (content) => {
+                                      setPixCertificado(content);
+                                      toast.success("Certificado carregado com sucesso!");
+                                    });
+                                  }
+                                }}
+                              />
+                              {pixCertificado && (
+                                <p className="text-sm text-green-600 mt-1">
+                                  ✓ Certificado {editingAccount ? "atualizado" : "carregado"} ({pixCertificado.length} bytes)
+                                </p>
+                              )}
+                              {editingAccount && !pixCertificado && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  💡 Deixe em branco para manter o certificado atual
+                                </p>
+                              )}
+                            </div>
 
-                    <div className="col-span-2">
-                      <Label>URL Base da API PIX</Label>
-                      <Input
-                        value={pixUrlBase}
-                        onChange={(e) => setPixUrlBase(e.target.value)}
-                        placeholder="https://api.banco.com.br/pix/api/v2"
-                      />
-                    </div>
+                            <div>
+                              <Label>Chave Privada PIX (.key ou .pem)</Label>
+                              <Input
+                                type="file"
+                                accept=".key,.pem"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    handleFileRead(file, (content) => {
+                                      setPixChavePrivada(content);
+                                      toast.success("Chave privada carregada com sucesso!");
+                                    });
+                                  }
+                                }}
+                              />
+                              {pixChavePrivada && (
+                                <p className="text-sm text-green-600 mt-1">
+                                  ✓ Chave privada {editingAccount ? "atualizada" : "carregada"} ({pixChavePrivada.length} bytes)
+                                </p>
+                              )}
+                              {editingAccount && !pixChavePrivada && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  💡 Deixe em branco para manter a chave privada atual
+                                </p>
+                              )}
+                            </div>
 
-                    <div className="col-span-2">
-                      <Label>URL Token OAuth</Label>
-                      <Input
-                        value={pixUrlToken}
-                        onChange={(e) => setPixUrlToken(e.target.value)}
-                        placeholder="https://auth.banco.com.br/oauth/token"
-                      />
-                    </div>
+                            <div>
+                              <Label>Senha do Certificado (opcional)</Label>
+                              <Input
+                                type="password"
+                                value={pixSenhaCertificado}
+                                onChange={(e) => setPixSenhaCertificado(e.target.value)}
+                                placeholder="Senha (se houver)"
+                              />
+                            </div>
+
+                            <div>
+                              <Label>URL Base da API PIX</Label>
+                              <Input
+                                value={pixUrlBase}
+                                onChange={(e) => setPixUrlBase(e.target.value)}
+                                placeholder="https://api.sicoob.com.br/pix/api/v2"
+                              />
+                            </div>
+
+                            <div>
+                              <Label>URL Token OAuth</Label>
+                              <Input
+                                value={pixUrlToken}
+                                onChange={(e) => setPixUrlToken(e.target.value)}
+                                placeholder="https://auth.sicoob.com.br/auth/realms/cooperado/protocol/openid-connect/token"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -547,13 +632,26 @@ export default function AdminBankAccounts() {
                         {account.conta_dv && `-${account.conta_dv}`}
                       </TableCell>
                       <TableCell>
-                        {account.pix_ativo === "S" ? (
-                          <Badge className="bg-green-100 text-green-800">
-                            Ativo
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary">Inativo</Badge>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          {account.pix_ativo === "S" ? (
+                            <>
+                              <Badge className="bg-green-100 text-green-800 w-fit">
+                                Ativo
+                              </Badge>
+                              {account.pix_provedor === "mercadopago" ? (
+                                <Badge className="bg-blue-100 text-blue-800 w-fit text-xs">
+                                  💳 Mercado Pago
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-green-100 text-green-800 w-fit text-xs">
+                                  🏦 Sicoob
+                                </Badge>
+                              )}
+                            </>
+                          ) : (
+                            <Badge variant="secondary" className="w-fit">Inativo</Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">

@@ -3089,19 +3089,21 @@ export async function createBankAccount(data: any) {
   const [result] = await conn.execute(
     `INSERT INTO bank_accounts (
       gymId, titular_nome, banco, agencia_numero, agencia_dv,
-      conta_numero, conta_dv, pix_ativo, pix_scope, pix_chave,
+      conta_numero, conta_dv, pix_ativo, pix_provedor, pix_scope, pix_chave,
       pix_tipo_chave, pix_tipo_ambiente, pix_client_id, pix_client_secret,
       pix_certificado_path, pix_chave_privada_path, pix_senha_certificado,
       pix_versao_api, pix_timeout_ms, pix_token_expiracao, pix_tipo_autenticacao,
-      pix_url_base, pix_url_token
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      pix_url_base, pix_url_token, mp_access_token, mp_public_key
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.gymId, data.titularNome, data.banco, data.agenciaNumero, data.agenciaDv,
-      data.contaNumero, data.contaDv, data.pixAtivo || 'N', data.pixScope || 'cob.write cob.read pix.read pix.write',
+      data.contaNumero, data.contaDv, data.pixAtivo || 'N', data.pixProvedor || 'sicoob',
+      data.pixScope || 'cob.write cob.read pix.read pix.write',
       data.pixChave, data.pixTipoChave, data.pixTipoAmbiente, data.pixClientId, data.pixClientSecret,
       data.pixCertificadoPath, data.pixChavePrivadaPath, data.pixSenhaCertificado,
       data.pixVersaoApi, data.pixTimeoutMs || 90000, data.pixTokenExpiracao || 3600,
-      data.pixTipoAutenticacao || 'N', data.pixUrlBase, data.pixUrlToken
+      data.pixTipoAutenticacao || 'N', data.pixUrlBase, data.pixUrlToken,
+      data.mpAccessToken, data.mpPublicKey
     ]
   );
   await conn.end();
@@ -3120,6 +3122,7 @@ export async function updateBankAccount(id: number, gymId: number, data: any) {
   if (data.contaNumero !== undefined) { fields.push('conta_numero = ?'); values.push(data.contaNumero); }
   if (data.contaDv !== undefined) { fields.push('conta_dv = ?'); values.push(data.contaDv); }
   if (data.pixAtivo !== undefined) { fields.push('pix_ativo = ?'); values.push(data.pixAtivo); }
+  if (data.pixProvedor !== undefined) { fields.push('pix_provedor = ?'); values.push(data.pixProvedor); }
   if (data.pixScope !== undefined) { fields.push('pix_scope = ?'); values.push(data.pixScope); }
   if (data.pixChave !== undefined) { fields.push('pix_chave = ?'); values.push(data.pixChave); }
   if (data.pixTipoChave !== undefined) { fields.push('pix_tipo_chave = ?'); values.push(data.pixTipoChave); }
@@ -3135,6 +3138,8 @@ export async function updateBankAccount(id: number, gymId: number, data: any) {
   if (data.pixTipoAutenticacao !== undefined) { fields.push('pix_tipo_autenticacao = ?'); values.push(data.pixTipoAutenticacao); }
   if (data.pixUrlBase !== undefined) { fields.push('pix_url_base = ?'); values.push(data.pixUrlBase); }
   if (data.pixUrlToken !== undefined) { fields.push('pix_url_token = ?'); values.push(data.pixUrlToken); }
+  if (data.mpAccessToken !== undefined) { fields.push('mp_access_token = ?'); values.push(data.mpAccessToken); }
+  if (data.mpPublicKey !== undefined) { fields.push('mp_public_key = ?'); values.push(data.mpPublicKey); }
 
   if (fields.length === 0) {
     await conn.end();

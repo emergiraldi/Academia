@@ -3366,10 +3366,12 @@ export const appRouter = router({
         contaNumero: z.string().optional(),
         contaDv: z.string().optional(),
         pixAtivo: z.string().optional(),
+        pixProvedor: z.string().optional(), // 'sicoob' ou 'mercadopago'
         pixScope: z.string().optional(),
         pixChave: z.string().optional(),
         pixTipoChave: z.string().optional(),
         pixTipoAmbiente: z.string().optional(),
+        // Campos Sicoob
         pixClientId: z.string().optional(),
         pixClientSecret: z.string().optional(),
         pixCertificado: z.string().optional(),
@@ -3381,6 +3383,9 @@ export const appRouter = router({
         pixTipoAutenticacao: z.string().optional(),
         pixUrlBase: z.string().optional(),
         pixUrlToken: z.string().optional(),
+        // Campos Mercado Pago
+        mpAccessToken: z.string().optional(),
+        mpPublicKey: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
@@ -3393,6 +3398,7 @@ export const appRouter = router({
           contaNumero: input.contaNumero || null,
           contaDv: input.contaDv || null,
           pixAtivo: input.pixAtivo || null,
+          pixProvedor: input.pixProvedor || 'sicoob', // Default: sicoob (para não quebrar dados existentes)
           pixScope: input.pixScope || null,
           pixChave: input.pixChave || null,
           pixTipoChave: input.pixTipoChave || null,
@@ -3408,6 +3414,8 @@ export const appRouter = router({
           pixTipoAutenticacao: input.pixTipoAutenticacao || null,
           pixUrlBase: input.pixUrlBase || null,
           pixUrlToken: input.pixUrlToken || null,
+          mpAccessToken: input.mpAccessToken || null,
+          mpPublicKey: input.mpPublicKey || null,
         });
         return { success: true };
       }),
@@ -3423,10 +3431,12 @@ export const appRouter = router({
         contaNumero: z.string().optional(),
         contaDv: z.string().optional(),
         pixAtivo: z.string().optional(),
+        pixProvedor: z.string().optional(), // 'sicoob' ou 'mercadopago'
         pixScope: z.string().optional(),
         pixChave: z.string().optional(),
         pixTipoChave: z.string().optional(),
         pixTipoAmbiente: z.string().optional(),
+        // Campos Sicoob
         pixClientId: z.string().optional(),
         pixClientSecret: z.string().optional(),
         pixCertificado: z.string().optional(),
@@ -3438,6 +3448,9 @@ export const appRouter = router({
         pixTipoAutenticacao: z.string().optional(),
         pixUrlBase: z.string().optional(),
         pixUrlToken: z.string().optional(),
+        // Campos Mercado Pago
+        mpAccessToken: z.string().optional(),
+        mpPublicKey: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
@@ -3449,6 +3462,7 @@ export const appRouter = router({
           contaNumero: input.contaNumero || null,
           contaDv: input.contaDv || null,
           pixAtivo: input.pixAtivo || null,
+          pixProvedor: input.pixProvedor || null,
           pixScope: input.pixScope || null,
           pixChave: input.pixChave || null,
           pixTipoChave: input.pixTipoChave || null,
@@ -3464,6 +3478,8 @@ export const appRouter = router({
           pixTipoAutenticacao: input.pixTipoAutenticacao || null,
           pixUrlBase: input.pixUrlBase || null,
           pixUrlToken: input.pixUrlToken || null,
+          mpAccessToken: input.mpAccessToken || null,
+          mpPublicKey: input.mpPublicKey || null,
         });
         return { success: true };
       }),
