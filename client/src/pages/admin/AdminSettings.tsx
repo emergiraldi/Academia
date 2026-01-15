@@ -55,6 +55,17 @@ export default function AdminSettings() {
     },
   });
 
+  const updateTurnstileTypeMutation = trpc.gyms.updateTurnstileType.useMutation({
+    onSuccess: async () => {
+      toast.success("Tipo de catraca atualizado com sucesso!");
+      await utils.gymSettings.get.invalidate();
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Erro ao atualizar tipo de catraca: ${error.message}`);
+    },
+  });
+
   // Form state
   const [formData, setFormData] = useState({
     daysToBlockAfterDue: 7,
@@ -332,17 +343,11 @@ export default function AdminSettings() {
               <Label htmlFor="turnstileType">Tipo de Sistema</Label>
               <Select
                 value={settings?.turnstileType || "control_id"}
-                onValueChange={async (value: "control_id" | "toletus_hub") => {
-                  try {
-                    await utils.gyms.updateTurnstileType.mutate({
-                      gymId: settings?.gymId || 0,
-                      turnstileType: value,
-                    });
-                    toast.success("Tipo de catraca atualizado com sucesso!");
-                    refetch();
-                  } catch (error) {
-                    toast.error("Erro ao atualizar tipo de catraca");
-                  }
+                onValueChange={(value: "control_id" | "toletus_hub") => {
+                  updateTurnstileTypeMutation.mutate({
+                    gymId: settings?.gymId || 0,
+                    turnstileType: value,
+                  });
                 }}
               >
                 <SelectTrigger id="turnstileType">
