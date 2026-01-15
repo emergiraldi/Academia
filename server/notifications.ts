@@ -702,6 +702,47 @@ export async function syncAccessLogsFromControlId() {
             newLogs++;
             console.log(`[CRON] ✅ Saved ${accessType} log for student ${student.id} at ${timestamp.toLocaleString('pt-BR')}`);
 
+            // 🔄 INTEGRAÇÃO HÍBRIDA: Control ID + Toletus HUB
+            // Se a academia usa Toletus HUB e o acesso foi aprovado (entrada), liberar a catraca Toletus
+            if (accessType === "entry" && gym.turnstileType === "toletus_hub") {
+              try {
+                console.log(`[CRON] 🔓 Academia ${gym.name} usa Toletus HUB - Liberando catraca para ${student.name}...`);
+
+                const { getToletusHubServiceForGym, createToletusDevicePayload } = await import("./toletusHub");
+                const toletusService = await getToletusHubServiceForGym(gym.id);
+
+                if (toletusService) {
+                  // Buscar dispositivos Toletus ativos da academia
+                  const toletusDevices = await db.listToletusDevices(gym.id);
+                  const activeDevices = toletusDevices.filter(d => d.active);
+
+                  if (activeDevices.length > 0) {
+                    // Liberar entrada no primeiro dispositivo ativo (pode ser ajustado para liberar em todos)
+                    const targetDevice = activeDevices[0];
+                    const devicePayload = createToletusDevicePayload(targetDevice);
+                    const message = `Bem-vindo, ${student.name}!`;
+
+                    console.log(`[CRON] 🚪 Enviando comando de liberação para dispositivo ${targetDevice.name} (${targetDevice.deviceIp})`);
+
+                    const released = await toletusService.releaseEntry(devicePayload, message);
+
+                    if (released) {
+                      console.log(`[CRON] ✅ Catraca Toletus liberada com sucesso para ${student.name}`);
+                    } else {
+                      console.log(`[CRON] ⚠️  Falha ao liberar catraca Toletus para ${student.name}`);
+                    }
+                  } else {
+                    console.log(`[CRON] ⚠️  Nenhum dispositivo Toletus ativo encontrado para academia ${gym.id}`);
+                  }
+                } else {
+                  console.log(`[CRON] ⚠️  Serviço Toletus HUB não disponível para academia ${gym.id}`);
+                }
+              } catch (toletusError) {
+                console.error(`[CRON] ❌ Erro ao liberar catraca Toletus:`, toletusError);
+                // Não interrompe o fluxo - o log já foi salvo
+              }
+            }
+
           } catch (logError) {
             console.error(`[CRON] Error processing individual log:`, logError);
           }
