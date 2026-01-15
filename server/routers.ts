@@ -3806,7 +3806,13 @@ export const appRouter = router({
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
 
         const { gymSlug, ...settings } = input;
-        await db.updateGymSettings(gym.id, settings);
+
+        // Remove undefined fields (Drizzle requires null for SQL NULL)
+        const cleanSettings = Object.fromEntries(
+          Object.entries(settings).filter(([_, v]) => v !== undefined)
+        );
+
+        await db.updateGymSettings(gym.id, cleanSettings);
         return { success: true };
       }),
   }),
