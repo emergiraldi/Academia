@@ -3773,6 +3773,7 @@ export const appRouter = router({
           gymId: gym.id,
           gymName: gym.name,
           gymSlug: gym.slug,
+          turnstileType: gym.turnstileType || 'control_id', // Tipo de catraca da academia
         };
       }),
 
