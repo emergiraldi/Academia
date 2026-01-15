@@ -1,4 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useGym } from "@/_core/hooks/useGym";
+import { trpc } from "@/lib/trpc";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -35,33 +37,6 @@ import {
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
-
-const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
-  { icon: Users, label: "Alunos", path: "/admin/students" },
-  { icon: UserPlus, label: "CRM / Leads", path: "/admin/crm" },
-  { icon: CreditCard, label: "Planos", path: "/admin/plans" },
-  { icon: Calendar, label: "Agendamento", path: "/admin/schedule" },
-  { icon: Ruler, label: "Avaliações", path: "/admin/assessments" },
-  { icon: GraduationCap, label: "Professores", path: "/admin/professors" },
-  { icon: UserCog, label: "Funcionários", path: "/admin/staff" },
-  { icon: DollarSign, label: "Pagamentos", path: "/admin/payments" },
-  { icon: Calendar, label: "Mensalidades", path: "/admin/billing" },
-  { icon: Receipt, label: "Contas a Pagar", path: "/admin/accounts-payable" },
-  { icon: Tag, label: "Categorias", path: "/admin/categories" },
-  { icon: Building2, label: "Fornecedores", path: "/admin/suppliers" },
-  { icon: Target, label: "Centros de Custo", path: "/admin/cost-centers" },
-  { icon: CreditCard, label: "Formas de Pagamento", path: "/admin/payment-methods" },
-  { icon: Landmark, label: "Contas Bancárias", path: "/admin/bank-accounts" },
-  { icon: Wallet, label: "Fluxo de Caixa", path: "/admin/cash-flow" },
-  { icon: TrendingUp, label: "Financeiro", path: "/admin/financial" },
-  { icon: AlertCircle, label: "Inadimplentes", path: "/admin/defaulters" },
-  { icon: Shield, label: "Control ID", path: "/admin/control-id-devices" },
-  { icon: Users, label: "Wellhub - Membros", path: "/admin/wellhub/members" },
-  { icon: UserCheck, label: "Wellhub - Check-in", path: "/admin/wellhub/checkin" },
-  { icon: FileText, label: "Relatórios", path: "/admin/reports" },
-  { icon: Settings, label: "Parâmetros", path: "/admin/settings" },
-];
 
 export default function DashboardLayout({
   children,
@@ -106,6 +81,52 @@ export default function DashboardLayout({
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
+  const { gymSlug } = useGym();
+
+  // Query gym settings to determine turnstile type
+  const { data: settings } = trpc.gymSettings.get.useQuery(
+    { gymSlug: gymSlug || '' },
+    { enabled: !!gymSlug }
+  );
+
+  // Base menu items
+  const baseMenuItems = [
+    { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
+    { icon: Users, label: "Alunos", path: "/admin/students" },
+    { icon: UserPlus, label: "CRM / Leads", path: "/admin/crm" },
+    { icon: CreditCard, label: "Planos", path: "/admin/plans" },
+    { icon: Calendar, label: "Agendamento", path: "/admin/schedule" },
+    { icon: Ruler, label: "Avaliações", path: "/admin/assessments" },
+    { icon: GraduationCap, label: "Professores", path: "/admin/professors" },
+    { icon: UserCog, label: "Funcionários", path: "/admin/staff" },
+    { icon: DollarSign, label: "Pagamentos", path: "/admin/payments" },
+    { icon: Calendar, label: "Mensalidades", path: "/admin/billing" },
+    { icon: Receipt, label: "Contas a Pagar", path: "/admin/accounts-payable" },
+    { icon: Tag, label: "Categorias", path: "/admin/categories" },
+    { icon: Building2, label: "Fornecedores", path: "/admin/suppliers" },
+    { icon: Target, label: "Centros de Custo", path: "/admin/cost-centers" },
+    { icon: CreditCard, label: "Formas de Pagamento", path: "/admin/payment-methods" },
+    { icon: Landmark, label: "Contas Bancárias", path: "/admin/bank-accounts" },
+    { icon: Wallet, label: "Fluxo de Caixa", path: "/admin/cash-flow" },
+    { icon: TrendingUp, label: "Financeiro", path: "/admin/financial" },
+    { icon: AlertCircle, label: "Inadimplentes", path: "/admin/defaulters" },
+  ];
+
+  // Conditional turnstile menu item
+  const turnstileMenuItem = settings?.turnstileType === 'toletus_hub'
+    ? { icon: Shield, label: "Toletus HUB", path: "/admin/toletus-devices" }
+    : { icon: Shield, label: "Control ID", path: "/admin/control-id-devices" };
+
+  // Bottom menu items
+  const bottomMenuItems = [
+    { icon: Users, label: "Wellhub - Membros", path: "/admin/wellhub/members" },
+    { icon: UserCheck, label: "Wellhub - Check-in", path: "/admin/wellhub/checkin" },
+    { icon: FileText, label: "Relatórios", path: "/admin/reports" },
+    { icon: Settings, label: "Parâmetros", path: "/admin/settings" },
+  ];
+
+  // Combine all menu items
+  const menuItems = [...baseMenuItems, turnstileMenuItem, ...bottomMenuItems];
 
   return (
     <div className="flex min-h-screen bg-gray-50">

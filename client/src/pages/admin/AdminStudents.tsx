@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Users, Plus, Edit, Trash2, Search, Mail, Phone, Calendar, CreditCard, CheckCircle, XCircle, DollarSign, Clock, AlertCircle, Camera, X } from "lucide-react";
+import { Users, Plus, Edit, Trash2, Search, Mail, Phone, Calendar, CreditCard, CheckCircle, XCircle, DollarSign, Clock, AlertCircle, Camera, X, DoorOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import DashboardLayout from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -30,6 +30,10 @@ export default function AdminStudents() {
   const [showWebcam, setShowWebcam] = useState(false);
   const [editFaceImage, setEditFaceImage] = useState<string>("");
   const [editShowWebcam, setEditShowWebcam] = useState(false);
+  const [isReleaseOpen, setIsReleaseOpen] = useState(false);
+  const [releasingStudent, setReleasingStudent] = useState<any>(null);
+  const [releaseDeviceId, setReleaseDeviceId] = useState<number>(0);
+  const [releaseMessage, setReleaseMessage] = useState<string>("");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -59,7 +63,11 @@ export default function AdminStudents() {
     { gymSlug, studentId: viewingStudentPayments?.id || 0 },
     { enabled: !!viewingStudentPayments?.id }
   );
-  
+  const { data: settings } = trpc.gymSettings.get.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
+  const { data: toletusDevices = [] } = trpc.toletusDevices.list.useQuery(undefined, {
+    enabled: settings?.turnstileType === 'toletus_hub'
+  });
+
   const enrollFaceMutation = trpc.students.enrollFace.useMutation({
     onSuccess: () => {
       toast.success("Foto facial cadastrada com sucesso!");
@@ -133,6 +141,19 @@ export default function AdminStudents() {
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao excluir aluno");
+    },
+  });
+
+  const releaseEntryMutation = trpc.toletusDevices.releaseEntry.useMutation({
+    onSuccess: () => {
+      toast.success("Catraca liberada com sucesso!");
+      setIsReleaseOpen(false);
+      setReleasingStudent(null);
+      setReleaseDeviceId(0);
+      setReleaseMessage("");
+    },
+    onError: (error) => {
+      toast.error(`Erro ao liberar catraca: ${error.message}`);
     },
   });
 
@@ -376,6 +397,23 @@ export default function AdminStudents() {
     setDueDay("10");
     setStartDate(new Date().toISOString().split("T")[0]);
     setIsPaymentsOpen(true);
+  };
+
+  const handleReleaseEntry = (student: any) => {
+    setReleasingStudent(student);
+    setReleaseMessage(`Bem-vindo, ${student.name}!`);
+    setIsReleaseOpen(true);
+  };
+
+  const handleConfirmRelease = () => {
+    if (!releaseDeviceId) {
+      toast.error("Selecione um dispositivo");
+      return;
+    }
+    releaseEntryMutation.mutate({
+      deviceId: releaseDeviceId,
+      message: releaseMessage,
+    });
   };
 
   const handleGenerateFuturePayments = () => {
@@ -868,6 +906,16 @@ export default function AdminStudents() {
                         <Button variant="outline" size="icon" onClick={() => handleDelete(student.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
+                        {settings?.turnstileType === 'toletus_hub' && student.membershipStatus === 'active' && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleReleaseEntry(student)}
+                            title="Liberar Catraca"
+                          >
+                            <DoorOpen className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -1405,6 +1453,60 @@ export default function AdminStudents() {
                 </Button>
                 <Button onClick={handleUpdate} disabled={updateStudent.isPending}>
                   {updateStudent.isPending ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Release Turnstile Dialog */}
+        <Dialog open={isReleaseOpen} onOpenChange={setIsReleaseOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Liberar Catraca</DialogTitle>
+              <DialogDescription>
+                Selecione o dispositivo e configure a mensagem de liberação para {releasingStudent?.name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="release-device">Dispositivo *</Label>
+                <Select
+                  value={releaseDeviceId.toString()}
+                  onValueChange={(value) => setReleaseDeviceId(Number(value))}
+                >
+                  <SelectTrigger id="release-device">
+                    <SelectValue placeholder="Selecione o dispositivo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {toletusDevices.filter((d: any) => d.active).map((device: any) => (
+                      <SelectItem key={device.id} value={device.id.toString()}>
+                        {device.name} ({device.location || device.deviceIp})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="release-message">Mensagem</Label>
+                <Input
+                  id="release-message"
+                  value={releaseMessage}
+                  onChange={(e) => setReleaseMessage(e.target.value)}
+                  placeholder="Mensagem a ser exibida na catraca"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setIsReleaseOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleConfirmRelease}
+                  disabled={releaseEntryMutation.isPending || !releaseDeviceId}
+                >
+                  {releaseEntryMutation.isPending ? "Liberando..." : "Liberar Entrada"}
                 </Button>
               </div>
             </div>

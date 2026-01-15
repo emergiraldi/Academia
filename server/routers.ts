@@ -2785,6 +2785,173 @@ export const appRouter = router({
       }),
   }),
 
+  // Toletus HUB Devices Management
+  toletusDevices: router({
+    list: gymAdminProcedure.query(async ({ ctx }) => {
+      if (!ctx.user.gymId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+      }
+      return await db.listToletusDevices(ctx.user.gymId);
+    }),
+
+    discover: gymAdminProcedure.query(async ({ ctx }) => {
+      if (!ctx.user.gymId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+      }
+      const { getToletusHubServiceForGym } = await import("./toletusHub");
+      const service = await getToletusHubServiceForGym(ctx.user.gymId);
+      if (!service) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Toletus HUB não configurado. Cadastre pelo menos um dispositivo primeiro." });
+      }
+      return await service.discoverDevices();
+    }),
+
+    getConnected: gymAdminProcedure.query(async ({ ctx }) => {
+      if (!ctx.user.gymId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+      }
+      const { getToletusHubServiceForGym } = await import("./toletusHub");
+      const service = await getToletusHubServiceForGym(ctx.user.gymId);
+      if (!service) return [];
+      return await service.getDevices();
+    }),
+
+    create: gymAdminProcedure
+      .input(z.object({
+        name: z.string(),
+        hubUrl: z.string().url().default("https://localhost:7067"),
+        deviceId: z.number(),
+        deviceIp: z.string(),
+        devicePort: z.number().default(7878),
+        deviceType: z.enum(["LiteNet1", "LiteNet2", "LiteNet3"]),
+        location: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        }
+        const result = await db.createToletusDevice({
+          gymId: ctx.user.gymId,
+          name: input.name,
+          hubUrl: input.hubUrl,
+          deviceId: input.deviceId,
+          deviceIp: input.deviceIp,
+          devicePort: input.devicePort,
+          deviceType: input.deviceType,
+          location: input.location || null,
+          active: true,
+        });
+        return { success: true, deviceId: result.insertId };
+      }),
+
+    update: gymAdminProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string(),
+        hubUrl: z.string().url(),
+        deviceId: z.number(),
+        deviceIp: z.string(),
+        devicePort: z.number(),
+        deviceType: z.enum(["LiteNet1", "LiteNet2", "LiteNet3"]),
+        location: z.string().optional(),
+        active: z.boolean(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateToletusDevice(id, data);
+        return { success: true };
+      }),
+
+    delete: gymAdminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteToletusDevice(input.id);
+        return { success: true };
+      }),
+
+    releaseEntry: gymAdminProcedure
+      .input(z.object({
+        deviceId: z.number(),
+        message: z.string().default("Bem-vindo!"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        }
+        const device = await db.getToletusDeviceById(input.deviceId);
+        if (!device) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Dispositivo não encontrado" });
+        }
+        const { getToletusHubServiceForGym, createToletusDevicePayload } = await import("./toletusHub");
+        const service = await getToletusHubServiceForGym(ctx.user.gymId);
+        if (!service) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Toletus HUB não disponível" });
+        }
+        const devicePayload = createToletusDevicePayload(device);
+        const success = await service.releaseEntry(devicePayload, input.message);
+        return { success };
+      }),
+
+    releaseExit: gymAdminProcedure
+      .input(z.object({
+        deviceId: z.number(),
+        message: z.string().default("Até logo!"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        }
+        const device = await db.getToletusDeviceById(input.deviceId);
+        if (!device) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Dispositivo não encontrado" });
+        }
+        const { getToletusHubServiceForGym, createToletusDevicePayload } = await import("./toletusHub");
+        const service = await getToletusHubServiceForGym(ctx.user.gymId);
+        if (!service) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Toletus HUB não disponível" });
+        }
+        const devicePayload = createToletusDevicePayload(device);
+        const success = await service.releaseExit(devicePayload, input.message);
+        return { success };
+      }),
+
+    releaseEntryAndExit: gymAdminProcedure
+      .input(z.object({
+        deviceId: z.number(),
+        message: z.string().default("Passagem liberada!"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        }
+        const device = await db.getToletusDeviceById(input.deviceId);
+        if (!device) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Dispositivo não encontrado" });
+        }
+        const { getToletusHubServiceForGym, createToletusDevicePayload } = await import("./toletusHub");
+        const service = await getToletusHubServiceForGym(ctx.user.gymId);
+        if (!service) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Toletus HUB não disponível" });
+        }
+        const devicePayload = createToletusDevicePayload(device);
+        const success = await service.releaseEntryAndExit(devicePayload, input.message);
+        return { success };
+      }),
+
+    checkStatus: gymAdminProcedure.query(async ({ ctx }) => {
+      if (!ctx.user.gymId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+      }
+      const { getToletusHubServiceForGym } = await import("./toletusHub");
+      const service = await getToletusHubServiceForGym(ctx.user.gymId);
+      if (!service) {
+        return { online: false };
+      }
+      const online = await service.checkStatus();
+      return { online };
+    }),
+  }),
+
   // Professors Management
   professors: router({
     list: gymAdminProcedure

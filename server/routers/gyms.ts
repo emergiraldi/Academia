@@ -1091,4 +1091,25 @@ export const gymsRouter = router({
         throw new Error(`Erro ao gerar pagamento PIX: ${error.message}`);
       }
     }),
+
+  // Atualizar tipo de catraca da academia
+  updateTurnstileType: publicProcedure
+    .input(z.object({
+      gymId: z.number(),
+      turnstileType: z.enum(["control_id", "toletus_hub"]),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      console.log(`🔄 [UPDATE TURNSTILE TYPE] Academia ${input.gymId} → ${input.turnstileType}`);
+
+      await db.update(gyms)
+        .set({ turnstileType: input.turnstileType })
+        .where(eq(gyms.id, input.gymId));
+
+      console.log(`✅ [UPDATE TURNSTILE TYPE] Tipo de catraca atualizado com sucesso`);
+
+      return { success: true };
+    }),
 });

@@ -46,6 +46,9 @@ export const gyms = mysqlTable("gyms", {
   wellhubApiKey: varchar("wellhubApiKey", { length: 255 }),
   wellhubWebhookSecret: varchar("wellhubWebhookSecret", { length: 255 }),
 
+  // Turnstile type - which access control system the gym uses
+  turnstileType: mysqlEnum("turnstileType", ["control_id", "toletus_hub"]).default("control_id").notNull(),
+
   // Onboarding - senha temporária do admin (limpar após enviar email)
   tempAdminPassword: varchar("tempAdminPassword", { length: 100 }),
   tempAdminEmail: varchar("tempAdminEmail", { length: 320 }),
@@ -568,6 +571,7 @@ export const accessLogs = mysqlTable("access_logs", {
   gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
   studentId: int("studentId").notNull().references(() => students.id, { onDelete: "cascade" }),
   deviceId: int("deviceId").references(() => controlIdDevices.id),
+  deviceType: mysqlEnum("deviceType", ["control_id", "toletus_hub"]).default("control_id").notNull(),
   accessType: mysqlEnum("accessType", ["entry", "exit", "denied"]).notNull(),
   denialReason: varchar("denialReason", { length: 255 }),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
@@ -596,6 +600,27 @@ export const controlIdDevices = mysqlTable("control_id_devices", {
 
 export type ControlIdDevice = typeof controlIdDevices.$inferSelect;
 export type InsertControlIdDevice = typeof controlIdDevices.$inferInsert;
+
+/**
+ * Toletus Hub Devices - LiteNet turnstiles
+ */
+export const toletusDevices = mysqlTable("toletus_devices", {
+  id: int("id").autoincrement().primaryKey(),
+  gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 200 }).notNull(),
+  hubUrl: varchar("hubUrl", { length: 500 }).default("https://localhost:7067").notNull(),
+  deviceId: int("deviceId").notNull(),
+  deviceIp: varchar("deviceIp", { length: 50 }).notNull(),
+  devicePort: int("devicePort").default(7878).notNull(),
+  deviceType: mysqlEnum("deviceType", ["LiteNet1", "LiteNet2", "LiteNet3"]).notNull(),
+  location: varchar("location", { length: 200 }),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ToletusDevice = typeof toletusDevices.$inferSelect;
+export type InsertToletusDevice = typeof toletusDevices.$inferInsert;
 
 /**
  * PIX Webhooks - payment notifications

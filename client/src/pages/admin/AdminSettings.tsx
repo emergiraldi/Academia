@@ -7,6 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Settings,
   Lock,
   Calendar,
@@ -309,6 +316,77 @@ export default function AdminSettings() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Sistema de Catraca */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle>Sistema de Catraca</CardTitle>
+            <CardDescription>
+              Escolha qual sistema de controle de acesso sua academia utiliza
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="turnstileType">Tipo de Sistema</Label>
+              <Select
+                value={settings?.turnstileType || "control_id"}
+                onValueChange={async (value: "control_id" | "toletus_hub") => {
+                  try {
+                    await utils.gyms.updateTurnstileType.mutate({
+                      gymId: settings?.gymId || 0,
+                      turnstileType: value,
+                    });
+                    toast.success("Tipo de catraca atualizado com sucesso!");
+                    refetch();
+                  } catch (error) {
+                    toast.error("Erro ao atualizar tipo de catraca");
+                  }
+                }}
+              >
+                <SelectTrigger id="turnstileType">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="control_id">
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Control ID</span>
+                      <span className="text-xs text-muted-foreground">
+                        Catracas com reconhecimento facial automático
+                      </span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="toletus_hub">
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Toletus HUB</span>
+                      <span className="text-xs text-muted-foreground">
+                        Catracas LiteNet via middleware Toletus HUB
+                      </span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                {settings?.turnstileType === "toletus_hub" ? (
+                  <>
+                    <strong>Toletus HUB:</strong> Liberação manual ou via cartão. Configure os dispositivos na página{" "}
+                    <a href={`/${gymSlug}/admin/toletus-devices`} className="text-primary underline">
+                      Dispositivos Toletus
+                    </a>
+                    .
+                  </>
+                ) : (
+                  <>
+                    <strong>Control ID:</strong> Liberação automática por reconhecimento facial. Configure os dispositivos na página{" "}
+                    <a href={`/${gymSlug}/admin/control-id-devices`} className="text-primary underline">
+                      Dispositivos Control ID
+                    </a>
+                    .
+                  </>
+                )}
+              </p>
+            </div>
           </CardContent>
         </Card>
 

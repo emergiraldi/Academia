@@ -24,6 +24,7 @@ import AdminStudents from "./pages/admin/AdminStudents";
 import AdminProfessors from "./pages/admin/AdminProfessors";
 import AdminStaff from "./pages/admin/AdminStaff";
 import AdminControlIdDevices from "./pages/admin/AdminControlIdDevices";
+import AdminToletusDevices from "./pages/admin/AdminToletusDevices";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminAccountsPayable from "./pages/admin/AdminAccountsPayable";
 import AdminCashFlow from "./pages/admin/AdminCashFlow";
@@ -109,6 +110,7 @@ function Router() {
       <Route path="/admin/professors" component={AdminProfessors} />
       <Route path="/admin/staff" component={AdminStaff} />
       <Route path="/admin/control-id-devices" component={AdminControlIdDevices} />
+      <Route path="/admin/toletus-devices" component={AdminToletusDevices} />
       <Route path="/admin/reports" component={AdminReports} />
       <Route path="/admin/accounts-payable" component={AdminAccountsPayable} />
       <Route path="/admin/cash-flow" component={AdminCashFlow} />

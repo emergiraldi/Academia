@@ -26,6 +26,9 @@ const config = {
     username: process.env.LEITORA_USERNAME || 'admin',
     password: process.env.LEITORA_PASSWORD || 'admin'
   },
+  toletus: {
+    hubUrl: process.env.TOLETUS_HUB_URL || 'https://localhost:7067'
+  },
   vps: {
     url: process.env.VPS_URL || 'ws://localhost:8080',
     reconnectInterval: 5000, // 5 segundos
@@ -115,6 +118,186 @@ async function verificarLeitora() {
 }
 
 // ============================================
+// COMUNICAÇÃO COM TOLETUS HUB
+// ============================================
+
+const https = require('https');
+
+// Agent HTTPS que ignora certificados autoassinados
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
+
+function getToletusUrl(endpoint) {
+  return `${config.toletus.hubUrl}${endpoint}`;
+}
+
+async function toletusDiscoverDevices() {
+  log('info', 'Toletus: Descobrindo dispositivos na rede...');
+  const response = await axios.get(
+    getToletusUrl('/DeviceConnection/DiscoverDevices'),
+    { httpsAgent, timeout: 15000 }
+  );
+  log('success', `Toletus: ${response.data?.length || 0} dispositivos encontrados`);
+  return response.data;
+}
+
+async function toletusGetDevices() {
+  log('info', 'Toletus: Listando dispositivos conectados...');
+  const response = await axios.get(
+    getToletusUrl('/DeviceConnection/GetDevices'),
+    { httpsAgent, timeout: 10000 }
+  );
+  log('success', `Toletus: ${response.data?.length || 0} dispositivos conectados`);
+  return response.data;
+}
+
+async function toletusConnectDevice({ ip, type }) {
+  log('info', `Toletus: Conectando ao dispositivo ${ip} (${type})...`);
+  const response = await axios.post(
+    getToletusUrl(`/DeviceConnection/Connect?ip=${ip}&type=${type}`),
+    {},
+    { httpsAgent, timeout: 10000 }
+  );
+  log('success', `Toletus: Conectado ao dispositivo ${ip}`);
+  return response.data;
+}
+
+async function toletusDisconnectDevice({ ip, type }) {
+  log('info', `Toletus: Desconectando do dispositivo ${ip} (${type})...`);
+  const response = await axios.post(
+    getToletusUrl(`/DeviceConnection/Disconnect?ip=${ip}&type=${type}`),
+    {},
+    { httpsAgent, timeout: 10000 }
+  );
+  log('success', `Toletus: Desconectado do dispositivo ${ip}`);
+  return response.data;
+}
+
+async function toletusReleaseEntry({ device, message }) {
+  log('info', `Toletus: Liberando entrada - ${device.name} (${device.ip}) - Msg: "${message}"`);
+
+  // Converter tipo para número conforme esperado pelo Toletus HUB
+  const typeMap = { 'LiteNet1': 0, 'LiteNet2': 1, 'LiteNet3': 2 };
+  const payload = {
+    id: device.id,
+    name: device.name,
+    ip: device.ip,
+    port: device.port,
+    type: typeMap[device.type] || 1,
+    connected: device.connected
+  };
+
+  const response = await axios.post(
+    getToletusUrl(`/BasicCommonCommands/ReleaseEntry?message=${encodeURIComponent(message)}`),
+    payload,
+    {
+      headers: { 'Content-Type': 'application/json' },
+      httpsAgent,
+      timeout: 10000
+    }
+  );
+
+  const success = response.data?.response?.success || false;
+  if (success) {
+    log('success', `Toletus: Entrada liberada com sucesso`);
+  } else {
+    log('error', `Toletus: Falha ao liberar entrada`);
+  }
+  return success;
+}
+
+async function toletusReleaseExit({ device, message }) {
+  log('info', `Toletus: Liberando saída - ${device.name} (${device.ip}) - Msg: "${message}"`);
+
+  const typeMap = { 'LiteNet1': 0, 'LiteNet2': 1, 'LiteNet3': 2 };
+  const payload = {
+    id: device.id,
+    name: device.name,
+    ip: device.ip,
+    port: device.port,
+    type: typeMap[device.type] || 1,
+    connected: device.connected
+  };
+
+  const response = await axios.post(
+    getToletusUrl(`/BasicCommonCommands/ReleaseExit?message=${encodeURIComponent(message)}`),
+    payload,
+    {
+      headers: { 'Content-Type': 'application/json' },
+      httpsAgent,
+      timeout: 10000
+    }
+  );
+
+  const success = response.data?.response?.success || false;
+  if (success) {
+    log('success', `Toletus: Saída liberada com sucesso`);
+  } else {
+    log('error', `Toletus: Falha ao liberar saída`);
+  }
+  return success;
+}
+
+async function toletusReleaseEntryAndExit({ device, message }) {
+  log('info', `Toletus: Liberando entrada/saída - ${device.name} (${device.ip}) - Msg: "${message}"`);
+
+  const typeMap = { 'LiteNet1': 0, 'LiteNet2': 1, 'LiteNet3': 2 };
+  const payload = {
+    id: device.id,
+    name: device.name,
+    ip: device.ip,
+    port: device.port,
+    type: typeMap[device.type] || 1,
+    connected: device.connected
+  };
+
+  const response = await axios.post(
+    getToletusUrl(`/BasicCommonCommands/ReleaseEntryAndExit?message=${encodeURIComponent(message)}`),
+    payload,
+    {
+      headers: { 'Content-Type': 'application/json' },
+      httpsAgent,
+      timeout: 10000
+    }
+  );
+
+  const success = response.data?.response?.success || false;
+  if (success) {
+    log('success', `Toletus: Entrada/saída liberada com sucesso`);
+  } else {
+    log('error', `Toletus: Falha ao liberar entrada/saída`);
+  }
+  return success;
+}
+
+async function toletusSetWebhook({ endpoint }) {
+  log('info', `Toletus: Configurando webhook: ${endpoint}`);
+  const response = await axios.post(
+    getToletusUrl(`/Webhook/SetEndpoint?endpoint=${encodeURIComponent(endpoint)}`),
+    {},
+    { httpsAgent, timeout: 10000 }
+  );
+  log('success', `Toletus: Webhook configurado`);
+  return true;
+}
+
+async function toletusCheckStatus() {
+  try {
+    log('info', 'Toletus: Verificando status do HUB...');
+    await axios.get(
+      getToletusUrl('/DeviceConnection/GetNetworks'),
+      { httpsAgent, timeout: 5000 }
+    );
+    log('success', 'Toletus: HUB online');
+    return true;
+  } catch (error) {
+    log('error', `Toletus: HUB offline - ${error.message}`);
+    return false;
+  }
+}
+
+// ============================================
 // AÇÕES NA LEITORA
 // ============================================
 
@@ -157,6 +340,34 @@ async function executarAcao(action, data) {
 
     case 'removeUserFace':
       return await removerFaceUsuario(data);
+
+    // ========== TOLETUS HUB ==========
+    case 'toletus_discoverDevices':
+      return await toletusDiscoverDevices();
+
+    case 'toletus_getDevices':
+      return await toletusGetDevices();
+
+    case 'toletus_connectDevice':
+      return await toletusConnectDevice(data);
+
+    case 'toletus_disconnectDevice':
+      return await toletusDisconnectDevice(data);
+
+    case 'toletus_releaseEntry':
+      return await toletusReleaseEntry(data);
+
+    case 'toletus_releaseExit':
+      return await toletusReleaseExit(data);
+
+    case 'toletus_releaseEntryAndExit':
+      return await toletusReleaseEntryAndExit(data);
+
+    case 'toletus_setWebhook':
+      return await toletusSetWebhook(data);
+
+    case 'toletus_checkStatus':
+      return await toletusCheckStatus();
 
     default:
       throw new Error(`Ação desconhecida: ${action}`);

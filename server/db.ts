@@ -25,6 +25,7 @@ import {
   personalRecords, InsertPersonalRecord,
   accessLogs, InsertAccessLog,
   controlIdDevices, InsertControlIdDevice,
+  toletusDevices, InsertToletusDevice,
   pixWebhooks, InsertPixWebhook,
   passwordResetTokens, InsertPasswordResetToken,
   bankAccounts, InsertBankAccount,
@@ -1986,6 +1987,62 @@ export async function deleteDevice(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(controlIdDevices).where(eq(controlIdDevices.id, id));
+}
+
+// ============ TOLETUS HUB DEVICES ============
+
+export async function createToletusDevice(device: InsertToletusDevice) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(toletusDevices).values(device);
+  return { insertId: Number(result[0].insertId) };
+}
+
+export async function listToletusDevices(gymId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(toletusDevices).where(eq(toletusDevices.gymId, gymId));
+}
+
+export async function getToletusDeviceById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(toletusDevices).where(eq(toletusDevices.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getActiveToletusDevices(gymId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(toletusDevices)
+    .where(and(eq(toletusDevices.gymId, gymId), eq(toletusDevices.active, true)));
+}
+
+export async function updateToletusDevice(id: number, data: Partial<InsertToletusDevice>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(toletusDevices).set(data).where(eq(toletusDevices.id, id));
+}
+
+export async function deleteToletusDevice(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(toletusDevices).where(eq(toletusDevices.id, id));
+}
+
+// ============ GYM TURNSTILE TYPE ============
+
+export async function updateGymTurnstileType(gymId: number, turnstileType: 'control_id' | 'toletus_hub') {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(gyms).set({ turnstileType }).where(eq(gyms.id, gymId));
+}
+
+export async function getGymTurnstileType(gymId: number): Promise<'control_id' | 'toletus_hub'> {
+  const db = await getDb();
+  if (!db) return 'control_id';
+  const result = await db.select({ turnstileType: gyms.turnstileType }).from(gyms).where(eq(gyms.id, gymId)).limit(1);
+  return result.length > 0 ? result[0].turnstileType : 'control_id';
 }
 
 // ============ PIX WEBHOOKS ============
