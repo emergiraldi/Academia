@@ -112,10 +112,16 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     { icon: AlertCircle, label: "Inadimplentes", path: "/admin/defaulters" },
   ];
 
-  // Conditional turnstile menu item
-  const turnstileMenuItem = settings?.turnstileType === 'toletus_hub'
-    ? { icon: Shield, label: "Toletus HUB", path: "/admin/toletus-devices" }
-    : { icon: Shield, label: "Control ID", path: "/admin/control-id-devices" };
+  // Conditional turnstile menu items
+  // Se usar Toletus HUB, mostra AMBOS (Control ID para reconhecimento + Toletus para catraca)
+  const turnstileMenuItems = settings?.turnstileType === 'toletus_hub'
+    ? [
+        { icon: Shield, label: "Control ID", path: "/admin/control-id-devices" },
+        { icon: Shield, label: "Toletus HUB", path: "/admin/toletus-devices" },
+      ]
+    : [
+        { icon: Shield, label: "Control ID", path: "/admin/control-id-devices" },
+      ];
 
   // Bottom menu items
   const bottomMenuItems = [
@@ -126,7 +132,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   ];
 
   // Combine all menu items
-  const menuItems = [...baseMenuItems, turnstileMenuItem, ...bottomMenuItems];
+  const menuItems = [...baseMenuItems, ...turnstileMenuItems, ...bottomMenuItems];
 
   return (
     <div className="flex min-h-screen bg-gray-50">
