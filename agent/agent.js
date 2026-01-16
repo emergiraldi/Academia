@@ -204,56 +204,102 @@ async function toletusDisconnectDevice({ ip, type }) {
 async function toletusReleaseEntry({ device, message }) {
   log('info', `Toletus: Liberando entrada - ${device.name} (${device.ip}) - Msg: "${message}"`);
 
-  // IMPORTANTE: Descobrir dispositivos primeiro e obter ID correto do Toletus HUB
-  let discoveredDevice = null;
-  try {
-    log('info', `Toletus: Descobrindo dispositivos na rede...`);
-    const devices = await toletusDiscoverDevices();
+  // Função auxiliar para tentar liberar
+  const tryRelease = async (payload) => {
+    const endpoint = device.type === 'LiteNet1' ? '/LiteNet1Commands/ReleaseEntry' :
+                     device.type === 'LiteNet2' ? '/LiteNet2Commands/ReleaseEntry' :
+                     device.type === 'LiteNet3' ? '/LiteNet3Commands/ReleaseEntry' :
+                     '/BasicCommonCommands/ReleaseEntry';
 
-    // Encontrar o dispositivo específico pelo IP
-    discoveredDevice = devices.find(d => d.ip === device.ip);
-    if (!discoveredDevice) {
-      log('warn', `Toletus: Dispositivo ${device.ip} não encontrado no discover`);
-    } else {
-      log('success', `Toletus: Dispositivo ${device.ip} encontrado (ID Toletus: ${discoveredDevice.id})`);
-    }
-  } catch (discoverError) {
-    log('warn', `Toletus: Erro ao descobrir (${discoverError.message}), tentando liberar mesmo assim...`);
-  }
+    const response = await axios.post(
+      getToletusUrl(`${endpoint}?message=${encodeURIComponent(message)}`),
+      payload,
+      {
+        headers: { 'Content-Type': 'application/json' },
+        httpsAgent,
+        timeout: 10000
+      }
+    );
+    return response.data?.response?.success || false;
+  };
 
-  // Criar payload usando ID do Toletus HUB (obrigatório!)
-  const payload = {
-    Id: discoveredDevice?.id || device.id,
-    Name: discoveredDevice?.name || device.name,
+  // OTIMIZAÇÃO: Tentar liberar diretamente primeiro (assume que já está conectado)
+  let payload = {
+    Id: device.id,
+    Name: device.name,
     Ip: device.ip,
+    SerialNumber: '',
     Port: device.port,
-    Type: device.type,
+    Type: device.type === 'LiteNet1' ? 0 : device.type === 'LiteNet2' ? 1 : device.type === 'LiteNet3' ? 2 : 1,
     Connected: true
   };
 
-  // Usar endpoint específico baseado no tipo de dispositivo
-  const endpoint = device.type === 'LiteNet1' ? '/LiteNet1Commands/ReleaseEntry' :
-                   device.type === 'LiteNet2' ? '/LiteNet2Commands/ReleaseEntry' :
-                   device.type === 'LiteNet3' ? '/LiteNet3Commands/ReleaseEntry' :
-                   '/BasicCommonCommands/ReleaseEntry';
-
-  const response = await axios.post(
-    getToletusUrl(`${endpoint}?message=${encodeURIComponent(message)}`),
-    payload,
-    {
-      headers: { 'Content-Type': 'application/json' },
-      httpsAgent,
-      timeout: 10000
+  try {
+    const success = await tryRelease(payload);
+    if (success) {
+      log('success', `Toletus: Entrada liberada com sucesso (dispositivo já conectado)`);
+      return true;
     }
-  );
+  } catch (firstError) {
+    // Se falhou, verificar se é por "not connected"
+    const errorMsg = firstError.response?.data?.response?.message || '';
+    if (errorMsg.includes('not in connected') || errorMsg.includes('not connected')) {
+      log('info', `Toletus: Dispositivo não conectado, fazendo discover e connect...`);
 
-  const success = response.data?.response?.success || false;
-  if (success) {
-    log('success', `Toletus: Entrada liberada com sucesso`);
-  } else {
-    log('error', `Toletus: Falha ao liberar entrada`);
+      // Descobrir dispositivo para obter dados corretos
+      try {
+        const devices = await toletusDiscoverDevices();
+        const discoveredDevice = devices.find(d => d.ip === device.ip);
+
+        if (discoveredDevice) {
+          log('success', `Toletus: Dispositivo ${device.ip} encontrado (ID: ${discoveredDevice.id})`);
+
+          // Atualizar payload com dados descobertos
+          payload = {
+            Id: discoveredDevice.id,
+            Name: discoveredDevice.name,
+            Ip: discoveredDevice.ip,
+            SerialNumber: discoveredDevice.serialNumber || '',
+            Port: discoveredDevice.port,
+            Type: discoveredDevice.type,
+            Connected: true
+          };
+
+          // Conectar dispositivo
+          try {
+            await toletusConnectDevice({
+              ip: payload.Ip,
+              type: device.type,
+              network: device.network
+            });
+            log('success', `Toletus: Dispositivo conectado`);
+          } catch (connectError) {
+            if (connectError.response?.data?.response?.message?.includes('already connected')) {
+              log('info', `Toletus: Dispositivo já conectado`);
+            } else {
+              log('warn', `Toletus: Aviso ao conectar: ${connectError.message}`);
+            }
+          }
+
+          // Tentar liberar novamente
+          const success = await tryRelease(payload);
+          if (success) {
+            log('success', `Toletus: Entrada liberada com sucesso`);
+            return true;
+          }
+        }
+      } catch (retryError) {
+        log('error', `Toletus: Erro ao reconectar: ${retryError.message}`);
+        throw retryError;
+      }
+    } else {
+      log('error', `Toletus: Erro HTTP ${firstError.response?.status}: ${JSON.stringify(firstError.response?.data)}`);
+      throw firstError;
+    }
   }
-  return success;
+
+  log('error', `Toletus: Falha ao liberar entrada após todas as tentativas`);
+  return false;
 }
 
 async function toletusReleaseExit({ device, message }) {
@@ -276,15 +322,34 @@ async function toletusReleaseExit({ device, message }) {
     log('warn', `Toletus: Erro ao descobrir (${discoverError.message}), tentando liberar mesmo assim...`);
   }
 
-  // Criar payload usando ID do Toletus HUB (obrigatório!)
+  // Criar payload usando TODOS os dados do dispositivo descoberto
   const payload = {
     Id: discoveredDevice?.id || device.id,
     Name: discoveredDevice?.name || device.name,
-    Ip: device.ip,
-    Port: device.port,
-    Type: device.type,
-    Connected: true
+    Ip: discoveredDevice?.ip || device.ip,
+    SerialNumber: discoveredDevice?.serialNumber || '',
+    Port: discoveredDevice?.port || device.port,
+    Type: discoveredDevice?.type || device.type,  // Usar tipo numérico do discover
+    Connected: discoveredDevice?.connected || true
   };
+
+  // IMPORTANTE: Conectar o dispositivo antes de liberar (se não estiver conectado)
+  try {
+    log('info', `Toletus: Conectando dispositivo...`);
+    await toletusConnectDevice({
+      ip: payload.Ip,
+      type: device.type,
+      network: device.network
+    });
+    log('success', `Toletus: Dispositivo conectado`);
+  } catch (connectError) {
+    // Se já estiver conectado, é ok
+    if (connectError.response?.data?.response?.message?.includes('already connected')) {
+      log('info', `Toletus: Dispositivo já está conectado`);
+    } else {
+      log('warn', `Toletus: Aviso ao conectar (${connectError.message}), tentando liberar mesmo assim...`);
+    }
+  }
 
   // Usar endpoint específico baseado no tipo de dispositivo
   const endpoint = device.type === 'LiteNet1' ? '/LiteNet1Commands/ReleaseExit' :
@@ -292,23 +357,28 @@ async function toletusReleaseExit({ device, message }) {
                    device.type === 'LiteNet3' ? '/LiteNet3Commands/ReleaseExit' :
                    '/BasicCommonCommands/ReleaseExit';
 
-  const response = await axios.post(
-    getToletusUrl(`${endpoint}?message=${encodeURIComponent(message)}`),
-    payload,
-    {
-      headers: { 'Content-Type': 'application/json' },
-      httpsAgent,
-      timeout: 10000
-    }
-  );
+  try {
+    const response = await axios.post(
+      getToletusUrl(`${endpoint}?message=${encodeURIComponent(message)}`),
+      payload,
+      {
+        headers: { 'Content-Type': 'application/json' },
+        httpsAgent,
+        timeout: 10000
+      }
+    );
 
-  const success = response.data?.response?.success || false;
-  if (success) {
-    log('success', `Toletus: Saída liberada com sucesso`);
-  } else {
-    log('error', `Toletus: Falha ao liberar saída`);
+    const success = response.data?.response?.success || false;
+    if (success) {
+      log('success', `Toletus: Saída liberada com sucesso`);
+    } else {
+      log('error', `Toletus: Falha ao liberar saída`);
+    }
+    return success;
+  } catch (error) {
+    log('error', `Toletus: Erro HTTP ${error.response?.status}: ${JSON.stringify(error.response?.data)}`);
+    throw error;
   }
-  return success;
 }
 
 async function toletusReleaseEntryAndExit({ device, message }) {
@@ -331,15 +401,34 @@ async function toletusReleaseEntryAndExit({ device, message }) {
     log('warn', `Toletus: Erro ao descobrir (${discoverError.message}), tentando liberar mesmo assim...`);
   }
 
-  // Criar payload usando ID do Toletus HUB (obrigatório!)
+  // Criar payload usando TODOS os dados do dispositivo descoberto
   const payload = {
     Id: discoveredDevice?.id || device.id,
     Name: discoveredDevice?.name || device.name,
-    Ip: device.ip,
-    Port: device.port,
-    Type: device.type,
-    Connected: true
+    Ip: discoveredDevice?.ip || device.ip,
+    SerialNumber: discoveredDevice?.serialNumber || '',
+    Port: discoveredDevice?.port || device.port,
+    Type: discoveredDevice?.type || device.type,  // Usar tipo numérico do discover
+    Connected: discoveredDevice?.connected || true
   };
+
+  // IMPORTANTE: Conectar o dispositivo antes de liberar (se não estiver conectado)
+  try {
+    log('info', `Toletus: Conectando dispositivo...`);
+    await toletusConnectDevice({
+      ip: payload.Ip,
+      type: device.type,
+      network: device.network
+    });
+    log('success', `Toletus: Dispositivo conectado`);
+  } catch (connectError) {
+    // Se já estiver conectado, é ok
+    if (connectError.response?.data?.response?.message?.includes('already connected')) {
+      log('info', `Toletus: Dispositivo já está conectado`);
+    } else {
+      log('warn', `Toletus: Aviso ao conectar (${connectError.message}), tentando liberar mesmo assim...`);
+    }
+  }
 
   // Usar endpoint específico baseado no tipo de dispositivo
   const endpoint = device.type === 'LiteNet1' ? '/LiteNet1Commands/ReleaseEntryAndExit' :
@@ -347,23 +436,28 @@ async function toletusReleaseEntryAndExit({ device, message }) {
                    device.type === 'LiteNet3' ? '/LiteNet3Commands/ReleaseEntryAndExit' :
                    '/BasicCommonCommands/ReleaseEntryAndExit';
 
-  const response = await axios.post(
-    getToletusUrl(`${endpoint}?message=${encodeURIComponent(message)}`),
-    payload,
-    {
-      headers: { 'Content-Type': 'application/json' },
-      httpsAgent,
-      timeout: 10000
-    }
-  );
+  try {
+    const response = await axios.post(
+      getToletusUrl(`${endpoint}?message=${encodeURIComponent(message)}`),
+      payload,
+      {
+        headers: { 'Content-Type': 'application/json' },
+        httpsAgent,
+        timeout: 10000
+      }
+    );
 
-  const success = response.data?.response?.success || false;
-  if (success) {
-    log('success', `Toletus: Entrada/saída liberada com sucesso`);
-  } else {
-    log('error', `Toletus: Falha ao liberar entrada/saída`);
+    const success = response.data?.response?.success || false;
+    if (success) {
+      log('success', `Toletus: Entrada/saída liberada com sucesso`);
+    } else {
+      log('error', `Toletus: Falha ao liberar entrada/saída`);
+    }
+    return success;
+  } catch (error) {
+    log('error', `Toletus: Erro HTTP ${error.response?.status}: ${JSON.stringify(error.response?.data)}`);
+    throw error;
   }
-  return success;
 }
 
 async function toletusSetWebhook({ endpoint }) {
