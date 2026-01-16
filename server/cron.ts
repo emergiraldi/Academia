@@ -38,8 +38,8 @@ export function startCronJobs() {
     }
   });
 
-  // Run every 10 seconds - Sync access logs from Control ID devices
-  cron.schedule("*/10 * * * * *", async () => {
+  // Run every 3 seconds - Sync access logs from Control ID devices (fast polling for instant turnstile release)
+  cron.schedule("*/3 * * * * *", async () => {
     console.log("Running access logs sync from Control ID...");
     try {
       await syncAccessLogsFromControlId();
