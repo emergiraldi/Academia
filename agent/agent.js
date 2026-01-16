@@ -211,6 +211,8 @@ async function toletusReleaseEntry({ device, message }) {
                      device.type === 'LiteNet3' ? '/LiteNet3Commands/ReleaseEntry' :
                      '/BasicCommonCommands/ReleaseEntry';
 
+    log('info', `Toletus: Chamando ${endpoint} com payload:`, JSON.stringify(payload));
+
     const response = await axios.post(
       getToletusUrl(`${endpoint}?message=${encodeURIComponent(message)}`),
       payload,
@@ -220,6 +222,9 @@ async function toletusReleaseEntry({ device, message }) {
         timeout: 10000
       }
     );
+
+    log('info', `Toletus: Resposta completa do HUB:`, JSON.stringify(response.data));
+
     return response.data?.response?.success || false;
   };
 
@@ -357,6 +362,8 @@ async function toletusReleaseExit({ device, message }) {
                    device.type === 'LiteNet3' ? '/LiteNet3Commands/ReleaseExit' :
                    '/BasicCommonCommands/ReleaseExit';
 
+  log('info', `Toletus: Chamando ${endpoint} com payload:`, JSON.stringify(payload));
+
   try {
     const response = await axios.post(
       getToletusUrl(`${endpoint}?message=${encodeURIComponent(message)}`),
@@ -368,11 +375,13 @@ async function toletusReleaseExit({ device, message }) {
       }
     );
 
+    log('info', `Toletus: Resposta completa do HUB:`, JSON.stringify(response.data));
+
     const success = response.data?.response?.success || false;
     if (success) {
       log('success', `Toletus: Saída liberada com sucesso`);
     } else {
-      log('error', `Toletus: Falha ao liberar saída`);
+      log('error', `Toletus: Falha ao liberar saída - success=${success}`);
     }
     return success;
   } catch (error) {

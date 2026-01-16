@@ -728,8 +728,12 @@ export async function syncAccessLogsFromControlId() {
                     const message = `Bem-vindo, ${student.name}!`;
 
                     console.log(`[CRON] 🚪 Enviando comando de liberação para dispositivo ${targetDevice.name} (${targetDevice.deviceIp})`);
+                    console.log(`[CRON] 🔑 Tipo de acesso: ${accessType} - Chamando release${accessType === "entry" ? "Entry" : "Exit"}`);
 
-                    const released = await toletusService.releaseEntry(devicePayload, message);
+                    // Chamar a função correta baseado no tipo de acesso detectado
+                    const released = accessType === "entry"
+                      ? await toletusService.releaseEntry(devicePayload, message)
+                      : await toletusService.releaseExit(devicePayload, message);
 
                     if (released) {
                       console.log(`[CRON] ✅ Catraca Toletus liberada com sucesso para ${student.name}`);
