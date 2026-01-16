@@ -734,6 +734,16 @@ export async function syncAccessLogsFromControlId() {
                     const devicePayload = createToletusDevicePayload(targetDevice);
                     const message = `Bem-vindo, ${student.name}!`;
 
+                    console.log(`[CRON] 🚪 Configurando direção da catraca para TESTE (entryClockwise=true)...`);
+
+                    // TESTE: Tentar inverter a direção da catraca
+                    try {
+                      await toletusService.setEntryClockwise(devicePayload, true);
+                      console.log(`[CRON] ✅ Direção configurada (entryClockwise=true)`);
+                    } catch (err) {
+                      console.log(`[CRON] ⚠️  Erro ao configurar direção:`, err);
+                    }
+
                     console.log(`[CRON] 🚪 Liberando catraca ${targetDevice.name} para ${student.name}`);
 
                     const released = await toletusService.releaseEntry(devicePayload, message);
