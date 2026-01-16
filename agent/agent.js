@@ -152,6 +152,19 @@ async function toletusGetDevices() {
   return response.data;
 }
 
+async function toletusDiscoverDevices() {
+  log('info', `Toletus: Descobrindo dispositivos na rede...`);
+
+  const response = await axios.get(
+    getToletusUrl(`/DeviceConnection/DiscoverDevices`),
+    { httpsAgent, timeout: 30000 }
+  );
+
+  const devices = response.data?.data || [];
+  log('success', `Toletus: ${devices.length} dispositivo(s) descoberto(s)`);
+  return devices;
+}
+
 async function toletusConnectDevice({ ip, type }) {
   log('info', `Toletus: Conectando ao dispositivo ${ip} (${type})...`);
 
@@ -181,12 +194,17 @@ async function toletusDisconnectDevice({ ip, type }) {
 async function toletusReleaseEntry({ device, message }) {
   log('info', `Toletus: Liberando entrada - ${device.name} (${device.ip}) - Msg: "${message}"`);
 
-  // IMPORTANTE: Conectar ao dispositivo primeiro antes de liberar
+  // IMPORTANTE: Descobrir e conectar ao dispositivo primeiro antes de liberar
   try {
-    log('info', `Toletus: Conectando ao dispositivo ${device.ip} (${device.type}) antes de liberar...`);
+    // 1. Descobrir dispositivos na rede
+    log('info', `Toletus: Descobrindo dispositivos antes de conectar...`);
+    await toletusDiscoverDevices();
+
+    // 2. Conectar ao dispositivo específico
+    log('info', `Toletus: Conectando ao dispositivo ${device.ip} (${device.type})...`);
     await toletusConnectDevice({ ip: device.ip, type: device.type });
   } catch (connectError) {
-    log('warn', `Toletus: Erro ao conectar (${connectError.message}), tentando liberar mesmo assim...`);
+    log('warn', `Toletus: Erro ao descobrir/conectar (${connectError.message}), tentando liberar mesmo assim...`);
   }
 
   // Criar payload com tipo como STRING (LiteNet1, LiteNet2, LiteNet3)
@@ -221,12 +239,17 @@ async function toletusReleaseEntry({ device, message }) {
 async function toletusReleaseExit({ device, message }) {
   log('info', `Toletus: Liberando saída - ${device.name} (${device.ip}) - Msg: "${message}"`);
 
-  // IMPORTANTE: Conectar ao dispositivo primeiro antes de liberar
+  // IMPORTANTE: Descobrir e conectar ao dispositivo primeiro antes de liberar
   try {
-    log('info', `Toletus: Conectando ao dispositivo ${device.ip} (${device.type}) antes de liberar...`);
+    // 1. Descobrir dispositivos na rede
+    log('info', `Toletus: Descobrindo dispositivos antes de conectar...`);
+    await toletusDiscoverDevices();
+
+    // 2. Conectar ao dispositivo específico
+    log('info', `Toletus: Conectando ao dispositivo ${device.ip} (${device.type})...`);
     await toletusConnectDevice({ ip: device.ip, type: device.type });
   } catch (connectError) {
-    log('warn', `Toletus: Erro ao conectar (${connectError.message}), tentando liberar mesmo assim...`);
+    log('warn', `Toletus: Erro ao descobrir/conectar (${connectError.message}), tentando liberar mesmo assim...`);
   }
 
   // Criar payload com tipo como STRING (LiteNet1, LiteNet2, LiteNet3)
@@ -261,12 +284,17 @@ async function toletusReleaseExit({ device, message }) {
 async function toletusReleaseEntryAndExit({ device, message }) {
   log('info', `Toletus: Liberando entrada/saída - ${device.name} (${device.ip}) - Msg: "${message}"`);
 
-  // IMPORTANTE: Conectar ao dispositivo primeiro antes de liberar
+  // IMPORTANTE: Descobrir e conectar ao dispositivo primeiro antes de liberar
   try {
-    log('info', `Toletus: Conectando ao dispositivo ${device.ip} (${device.type}) antes de liberar...`);
+    // 1. Descobrir dispositivos na rede
+    log('info', `Toletus: Descobrindo dispositivos antes de conectar...`);
+    await toletusDiscoverDevices();
+
+    // 2. Conectar ao dispositivo específico
+    log('info', `Toletus: Conectando ao dispositivo ${device.ip} (${device.type})...`);
     await toletusConnectDevice({ ip: device.ip, type: device.type });
   } catch (connectError) {
-    log('warn', `Toletus: Erro ao conectar (${connectError.message}), tentando liberar mesmo assim...`);
+    log('warn', `Toletus: Erro ao descobrir/conectar (${connectError.message}), tentando liberar mesmo assim...`);
   }
 
   // Criar payload com tipo como STRING (LiteNet1, LiteNet2, LiteNet3)
