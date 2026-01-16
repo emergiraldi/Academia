@@ -735,12 +735,12 @@ export async function syncAccessLogsFromControlId() {
                     const message = `Bem-vindo, ${student.name}!`;
 
                     console.log(`[CRON] 🚪 Enviando comando de liberação para dispositivo ${targetDevice.name} (${targetDevice.deviceIp})`);
-                    console.log(`[CRON] 🔑 Tipo de acesso detectado: ${accessType} - Sempre liberando ENTRADA`);
+                    console.log(`[CRON] 🔑 Tipo de acesso detectado: ${accessType} - Sempre liberando SAÍDA (catraca invertida)`);
 
-                    // SEMPRE liberar entrada (independente do tipo de acesso do Control ID)
-                    // Isso é necessário porque o Control ID pode estar configurado incorretamente
-                    // ou a catraca física sempre precisa de ReleaseEntry para abrir
-                    const released = await toletusService.releaseEntry(devicePayload, message);
+                    // SEMPRE liberar SAÍDA (catraca instalada ao contrário fisicamente)
+                    // A catraca física está invertida, então o que deveria ser entrada virou saída
+                    // e o que deveria ser saída virou entrada
+                    const released = await toletusService.releaseExit(devicePayload, message);
 
                     if (released) {
                       console.log(`[CRON] ✅ Catraca Toletus liberada com sucesso para ${student.name}`);
