@@ -217,8 +217,14 @@ async function toletusReleaseEntry({ device, message }) {
     connected: true
   };
 
+  // Usar endpoint específico baseado no tipo de dispositivo
+  const endpoint = device.type === 'LiteNet1' ? '/LiteNet1Commands/ReleaseEntry' :
+                   device.type === 'LiteNet2' ? '/LiteNet2Commands/ReleaseEntry' :
+                   device.type === 'LiteNet3' ? '/LiteNet3Commands/ReleaseEntry' :
+                   '/BasicCommonCommands/ReleaseEntry';
+
   const response = await axios.post(
-    getToletusUrl(`/BasicCommonCommands/ReleaseEntry?message=${encodeURIComponent(message)}`),
+    getToletusUrl(`${endpoint}?message=${encodeURIComponent(message)}`),
     payload,
     {
       headers: { 'Content-Type': 'application/json' },
@@ -262,8 +268,14 @@ async function toletusReleaseExit({ device, message }) {
     connected: true
   };
 
+  // Usar endpoint específico baseado no tipo de dispositivo
+  const endpoint = device.type === 'LiteNet1' ? '/LiteNet1Commands/ReleaseExit' :
+                   device.type === 'LiteNet2' ? '/LiteNet2Commands/ReleaseExit' :
+                   device.type === 'LiteNet3' ? '/LiteNet3Commands/ReleaseExit' :
+                   '/BasicCommonCommands/ReleaseExit';
+
   const response = await axios.post(
-    getToletusUrl(`/BasicCommonCommands/ReleaseExit?message=${encodeURIComponent(message)}`),
+    getToletusUrl(`${endpoint}?message=${encodeURIComponent(message)}`),
     payload,
     {
       headers: { 'Content-Type': 'application/json' },
@@ -307,8 +319,14 @@ async function toletusReleaseEntryAndExit({ device, message }) {
     connected: true
   };
 
+  // Usar endpoint específico baseado no tipo de dispositivo
+  const endpoint = device.type === 'LiteNet1' ? '/LiteNet1Commands/ReleaseEntryAndExit' :
+                   device.type === 'LiteNet2' ? '/LiteNet2Commands/ReleaseEntryAndExit' :
+                   device.type === 'LiteNet3' ? '/LiteNet3Commands/ReleaseEntryAndExit' :
+                   '/BasicCommonCommands/ReleaseEntryAndExit';
+
   const response = await axios.post(
-    getToletusUrl(`/BasicCommonCommands/ReleaseEntryAndExit?message=${encodeURIComponent(message)}`),
+    getToletusUrl(`${endpoint}?message=${encodeURIComponent(message)}`),
     payload,
     {
       headers: { 'Content-Type': 'application/json' },
