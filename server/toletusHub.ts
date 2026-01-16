@@ -105,7 +105,7 @@ export class ToletusHubService {
     return await this.sendToAgent('toletus_releaseEntry', {
       device,
       message
-    });
+    }, 60000); // 60 segundos para discover + connect + release
   }
 
   /**
@@ -116,7 +116,7 @@ export class ToletusHubService {
     return await this.sendToAgent('toletus_releaseExit', {
       device,
       message
-    });
+    }, 60000); // 60 segundos para discover + connect + release
   }
 
   /**
@@ -127,7 +127,7 @@ export class ToletusHubService {
     return await this.sendToAgent('toletus_releaseEntryAndExit', {
       device,
       message
-    });
+    }, 60000); // 60 segundos para discover + connect + release
   }
 
   /**
