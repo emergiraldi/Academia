@@ -204,17 +204,20 @@ async function toletusDisconnectDevice({ ip, type }) {
 async function toletusReleaseEntry({ device, message }) {
   log('info', `Toletus: Liberando entrada - ${device.name} (${device.ip}) - Msg: "${message}"`);
 
-  // IMPORTANTE: Descobrir e conectar ao dispositivo primeiro antes de liberar
+  // IMPORTANTE: Descobrir dispositivos primeiro (Connect é automático no Discover)
   try {
-    // 1. Descobrir dispositivos na rede
-    log('info', `Toletus: Descobrindo dispositivos antes de conectar...`);
-    await toletusDiscoverDevices();
+    log('info', `Toletus: Descobrindo dispositivos na rede...`);
+    const devices = await toletusDiscoverDevices();
 
-    // 2. Conectar ao dispositivo específico
-    log('info', `Toletus: Conectando ao dispositivo ${device.ip} (${device.type})...`);
-    await toletusConnectDevice({ ip: device.ip, type: device.type });
-  } catch (connectError) {
-    log('warn', `Toletus: Erro ao descobrir/conectar (${connectError.message}), tentando liberar mesmo assim...`);
+    // Verificar se o dispositivo foi encontrado e já está conectado
+    const found = devices.some(d => d.ip === device.ip);
+    if (!found) {
+      log('warn', `Toletus: Dispositivo ${device.ip} não encontrado no discover`);
+    } else {
+      log('success', `Toletus: Dispositivo ${device.ip} encontrado e conectado automaticamente`);
+    }
+  } catch (discoverError) {
+    log('warn', `Toletus: Erro ao descobrir dispositivos (${discoverError.message}), tentando liberar mesmo assim...`);
   }
 
   // Criar payload com PascalCase conforme esperado pelo C#
@@ -255,17 +258,20 @@ async function toletusReleaseEntry({ device, message }) {
 async function toletusReleaseExit({ device, message }) {
   log('info', `Toletus: Liberando saída - ${device.name} (${device.ip}) - Msg: "${message}"`);
 
-  // IMPORTANTE: Descobrir e conectar ao dispositivo primeiro antes de liberar
+  // IMPORTANTE: Descobrir dispositivos primeiro (Connect é automático no Discover)
   try {
-    // 1. Descobrir dispositivos na rede
-    log('info', `Toletus: Descobrindo dispositivos antes de conectar...`);
-    await toletusDiscoverDevices();
+    log('info', `Toletus: Descobrindo dispositivos na rede...`);
+    const devices = await toletusDiscoverDevices();
 
-    // 2. Conectar ao dispositivo específico
-    log('info', `Toletus: Conectando ao dispositivo ${device.ip} (${device.type})...`);
-    await toletusConnectDevice({ ip: device.ip, type: device.type });
-  } catch (connectError) {
-    log('warn', `Toletus: Erro ao descobrir/conectar (${connectError.message}), tentando liberar mesmo assim...`);
+    // Verificar se o dispositivo foi encontrado e já está conectado
+    const found = devices.some(d => d.ip === device.ip);
+    if (!found) {
+      log('warn', `Toletus: Dispositivo ${device.ip} não encontrado no discover`);
+    } else {
+      log('success', `Toletus: Dispositivo ${device.ip} encontrado e conectado automaticamente`);
+    }
+  } catch (discoverError) {
+    log('warn', `Toletus: Erro ao descobrir dispositivos (${discoverError.message}), tentando liberar mesmo assim...`);
   }
 
   // Criar payload com PascalCase conforme esperado pelo C#
@@ -306,17 +312,20 @@ async function toletusReleaseExit({ device, message }) {
 async function toletusReleaseEntryAndExit({ device, message }) {
   log('info', `Toletus: Liberando entrada/saída - ${device.name} (${device.ip}) - Msg: "${message}"`);
 
-  // IMPORTANTE: Descobrir e conectar ao dispositivo primeiro antes de liberar
+  // IMPORTANTE: Descobrir dispositivos primeiro (Connect é automático no Discover)
   try {
-    // 1. Descobrir dispositivos na rede
-    log('info', `Toletus: Descobrindo dispositivos antes de conectar...`);
-    await toletusDiscoverDevices();
+    log('info', `Toletus: Descobrindo dispositivos na rede...`);
+    const devices = await toletusDiscoverDevices();
 
-    // 2. Conectar ao dispositivo específico
-    log('info', `Toletus: Conectando ao dispositivo ${device.ip} (${device.type})...`);
-    await toletusConnectDevice({ ip: device.ip, type: device.type });
-  } catch (connectError) {
-    log('warn', `Toletus: Erro ao descobrir/conectar (${connectError.message}), tentando liberar mesmo assim...`);
+    // Verificar se o dispositivo foi encontrado e já está conectado
+    const found = devices.some(d => d.ip === device.ip);
+    if (!found) {
+      log('warn', `Toletus: Dispositivo ${device.ip} não encontrado no discover`);
+    } else {
+      log('success', `Toletus: Dispositivo ${device.ip} encontrado e conectado automaticamente`);
+    }
+  } catch (discoverError) {
+    log('warn', `Toletus: Erro ao descobrir dispositivos (${discoverError.message}), tentando liberar mesmo assim...`);
   }
 
   // Criar payload com PascalCase conforme esperado pelo C#
