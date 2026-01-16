@@ -501,6 +501,47 @@ async function toletusSetWebhook({ endpoint }) {
   return true;
 }
 
+async function toletusSetEntryClockwise({ device, entryClockwise }) {
+  log('info', `Toletus: Configurando direção de entrada no sentido ${entryClockwise ? 'HORÁRIO' : 'ANTI-HORÁRIO'} - ${device.name} (${device.ip})`);
+
+  // Criar payload do dispositivo
+  const payload = {
+    Id: device.id,
+    Name: device.name,
+    Ip: device.ip,
+    SerialNumber: device.serialNumber || '',
+    Port: device.port,
+    Type: device.type,
+    Connected: true
+  };
+
+  // Usar endpoint específico para LiteNet2
+  const endpoint = `/LiteNet2Commands/SetEntryClockwise?entryClockwise=${entryClockwise}`;
+
+  try {
+    const response = await axios.post(
+      getToletusUrl(endpoint),
+      payload,
+      {
+        headers: { 'Content-Type': 'application/json' },
+        httpsAgent,
+        timeout: 10000
+      }
+    );
+
+    const success = response.data?.response?.success || false;
+    if (success) {
+      log('success', `Toletus: Direção configurada para ${entryClockwise ? 'HORÁRIO (sentido correto)' : 'ANTI-HORÁRIO'}`);
+    } else {
+      log('error', `Toletus: Falha ao configurar direção`);
+    }
+    return success;
+  } catch (error) {
+    log('error', `Toletus: Erro HTTP ${error.response?.status}: ${JSON.stringify(error.response?.data)}`);
+    throw error;
+  }
+}
+
 async function toletusCheckStatus() {
   try {
     log('info', 'Toletus: Verificando status do HUB...');
@@ -584,6 +625,9 @@ async function executarAcao(action, data) {
 
     case 'toletus_setWebhook':
       return await toletusSetWebhook(data);
+
+    case 'toletus_setEntryClockwise':
+      return await toletusSetEntryClockwise(data);
 
     case 'toletus_checkStatus':
       return await toletusCheckStatus();

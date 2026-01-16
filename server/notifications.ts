@@ -734,15 +734,25 @@ export async function syncAccessLogsFromControlId() {
                     const devicePayload = createToletusDevicePayload(targetDevice);
                     const message = `Bem-vindo, ${student.name}!`;
 
-                    console.log(`[CRON] 🚪 Enviando comando de liberação para dispositivo ${targetDevice.name} (${targetDevice.deviceIp})`);
-                    console.log(`[CRON] 🔑 Tipo de acesso detectado: ${accessType} - Liberando ENTRADA E SAÍDA`);
+                    console.log(`[CRON] 🚪 Configurando direção da catraca ${targetDevice.name} para SENTIDO HORÁRIO...`);
 
-                    // Liberar ENTRADA E SAÍDA (libera ambos os sentidos da catraca)
-                    // Isso resolve o problema de catracas instaladas em qualquer orientação
-                    const released = await toletusService.releaseEntryAndExit(devicePayload, message);
+                    // PRIMEIRO: Configurar a direção da catraca para HORÁRIO (clockwise)
+                    // Isso resolve o problema da catraca instalada ao contrário
+                    try {
+                      await toletusService.setEntryClockwise(devicePayload, true);
+                      console.log(`[CRON] ✅ Direção configurada para HORÁRIO`);
+                    } catch (err) {
+                      console.log(`[CRON] ⚠️  Erro ao configurar direção (continuando mesmo assim):`, err);
+                    }
+
+                    console.log(`[CRON] 🚪 Enviando comando de liberação para dispositivo ${targetDevice.name} (${targetDevice.deviceIp})`);
+                    console.log(`[CRON] 🔑 Tipo de acesso: ${accessType} - Liberando ENTRADA no sentido HORÁRIO`);
+
+                    // SEGUNDO: Liberar a ENTRADA (agora que a direção está configurada)
+                    const released = await toletusService.releaseEntry(devicePayload, message);
 
                     if (released) {
-                      console.log(`[CRON] ✅ Catraca Toletus liberada com sucesso para ${student.name}`);
+                      console.log(`[CRON] ✅ Catraca Toletus liberada com sucesso para ${student.name} (girando no sentido horário)`);
                     } else {
                       console.log(`[CRON] ⚠️  Falha ao liberar catraca Toletus para ${student.name}`);
                     }

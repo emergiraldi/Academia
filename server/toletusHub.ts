@@ -131,6 +131,18 @@ export class ToletusHubService {
   }
 
   /**
+   * Configurar direção da entrada (sentido horário ou anti-horário)
+   * IMPORTANTE: Só funciona para dispositivos LiteNet2
+   */
+  async setEntryClockwise(device: ToletusDevice, entryClockwise: boolean): Promise<boolean> {
+    console.log(`[ToletusHub] Configurando direção da entrada no dispositivo ${device.name} (${device.ip}) para ${entryClockwise ? 'HORÁRIO' : 'ANTI-HORÁRIO'}`);
+    return await this.sendToAgent('toletus_setEntryClockwise', {
+      device,
+      entryClockwise
+    }, 30000); // 30 segundos para configurar
+  }
+
+  /**
    * Configurar endpoint de webhook
    */
   async setWebhook(endpoint: string): Promise<void> {
