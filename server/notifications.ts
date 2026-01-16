@@ -735,12 +735,11 @@ export async function syncAccessLogsFromControlId() {
                     const message = `Bem-vindo, ${student.name}!`;
 
                     console.log(`[CRON] 🚪 Enviando comando de liberação para dispositivo ${targetDevice.name} (${targetDevice.deviceIp})`);
-                    console.log(`[CRON] 🔑 Tipo de acesso detectado: ${accessType} - Sempre liberando SAÍDA (catraca invertida)`);
+                    console.log(`[CRON] 🔑 Tipo de acesso detectado: ${accessType} - Liberando ENTRADA E SAÍDA`);
 
-                    // SEMPRE liberar SAÍDA (catraca instalada ao contrário fisicamente)
-                    // A catraca física está invertida, então o que deveria ser entrada virou saída
-                    // e o que deveria ser saída virou entrada
-                    const released = await toletusService.releaseExit(devicePayload, message);
+                    // Liberar ENTRADA E SAÍDA (libera ambos os sentidos da catraca)
+                    // Isso resolve o problema de catracas instaladas em qualquer orientação
+                    const released = await toletusService.releaseEntryAndExit(devicePayload, message);
 
                     if (released) {
                       console.log(`[CRON] ✅ Catraca Toletus liberada com sucesso para ${student.name}`);
