@@ -728,12 +728,12 @@ export async function syncAccessLogsFromControlId() {
                     const message = `Bem-vindo, ${student.name}!`;
 
                     console.log(`[CRON] 🚪 Enviando comando de liberação para dispositivo ${targetDevice.name} (${targetDevice.deviceIp})`);
-                    console.log(`[CRON] 🔑 Tipo de acesso: ${accessType} - Chamando release${accessType === "entry" ? "Entry" : "Exit"}`);
+                    console.log(`[CRON] 🔑 Tipo de acesso detectado: ${accessType} - Sempre liberando ENTRADA`);
 
-                    // Chamar a função correta baseado no tipo de acesso detectado
-                    const released = accessType === "entry"
-                      ? await toletusService.releaseEntry(devicePayload, message)
-                      : await toletusService.releaseExit(devicePayload, message);
+                    // SEMPRE liberar entrada (independente do tipo de acesso do Control ID)
+                    // Isso é necessário porque o Control ID pode estar configurado incorretamente
+                    // ou a catraca física sempre precisa de ReleaseEntry para abrir
+                    const released = await toletusService.releaseEntry(devicePayload, message);
 
                     if (released) {
                       console.log(`[CRON] ✅ Catraca Toletus liberada com sucesso para ${student.name}`);
