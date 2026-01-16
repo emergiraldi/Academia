@@ -207,14 +207,14 @@ async function toletusReleaseEntry({ device, message }) {
     log('warn', `Toletus: Erro ao descobrir/conectar (${connectError.message}), tentando liberar mesmo assim...`);
   }
 
-  // Criar payload com tipo como STRING (LiteNet1, LiteNet2, LiteNet3)
+  // Criar payload com PascalCase conforme esperado pelo C#
   const payload = {
-    id: device.id,
-    name: device.name,
-    ip: device.ip,
-    port: device.port,
-    type: device.type, // STRING: "LiteNet1", "LiteNet2", ou "LiteNet3"
-    connected: true
+    Id: device.id,
+    Name: device.name,
+    Ip: device.ip,
+    Port: device.port,
+    Type: device.type, // STRING: "LiteNet1", "LiteNet2", ou "LiteNet3"
+    Connected: true
   };
 
   // Usar endpoint específico baseado no tipo de dispositivo
@@ -258,14 +258,14 @@ async function toletusReleaseExit({ device, message }) {
     log('warn', `Toletus: Erro ao descobrir/conectar (${connectError.message}), tentando liberar mesmo assim...`);
   }
 
-  // Criar payload com tipo como STRING (LiteNet1, LiteNet2, LiteNet3)
+  // Criar payload com PascalCase conforme esperado pelo C#
   const payload = {
-    id: device.id,
-    name: device.name,
-    ip: device.ip,
-    port: device.port,
-    type: device.type, // STRING: "LiteNet1", "LiteNet2", ou "LiteNet3"
-    connected: true
+    Id: device.id,
+    Name: device.name,
+    Ip: device.ip,
+    Port: device.port,
+    Type: device.type, // STRING: "LiteNet1", "LiteNet2", ou "LiteNet3"
+    Connected: true
   };
 
   // Usar endpoint específico baseado no tipo de dispositivo
@@ -309,14 +309,14 @@ async function toletusReleaseEntryAndExit({ device, message }) {
     log('warn', `Toletus: Erro ao descobrir/conectar (${connectError.message}), tentando liberar mesmo assim...`);
   }
 
-  // Criar payload com tipo como STRING (LiteNet1, LiteNet2, LiteNet3)
+  // Criar payload com PascalCase conforme esperado pelo C#
   const payload = {
-    id: device.id,
-    name: device.name,
-    ip: device.ip,
-    port: device.port,
-    type: device.type, // STRING: "LiteNet1", "LiteNet2", ou "LiteNet3"
-    connected: true
+    Id: device.id,
+    Name: device.name,
+    Ip: device.ip,
+    Port: device.port,
+    Type: device.type, // STRING: "LiteNet1", "LiteNet2", ou "LiteNet3"
+    Connected: true
   };
 
   // Usar endpoint específico baseado no tipo de dispositivo
