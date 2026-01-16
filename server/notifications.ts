@@ -704,6 +704,8 @@ export async function syncAccessLogsFromControlId() {
 
             // 🔄 INTEGRAÇÃO HÍBRIDA: Control ID + Toletus HUB
             // Se a academia usa Toletus HUB e o acesso foi aprovado (entrada), liberar a catraca Toletus
+            console.log(`[CRON] 🔍 Verificando liberação automática: accessType=${accessType}, gym.turnstileType=${gym.turnstileType}`);
+
             if (accessType === "entry" && gym.turnstileType === "toletus_hub") {
               try {
                 console.log(`[CRON] 🔓 Academia ${gym.name} usa Toletus HUB - Liberando catraca para ${student.name}...`);
