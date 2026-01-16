@@ -204,29 +204,30 @@ async function toletusDisconnectDevice({ ip, type }) {
 async function toletusReleaseEntry({ device, message }) {
   log('info', `Toletus: Liberando entrada - ${device.name} (${device.ip}) - Msg: "${message}"`);
 
-  // IMPORTANTE: Descobrir dispositivos primeiro (Connect é automático no Discover)
+  // IMPORTANTE: Descobrir dispositivos primeiro e obter ID correto do Toletus HUB
+  let discoveredDevice = null;
   try {
     log('info', `Toletus: Descobrindo dispositivos na rede...`);
     const devices = await toletusDiscoverDevices();
 
-    // Verificar se o dispositivo foi encontrado e já está conectado
-    const found = devices.some(d => d.ip === device.ip);
-    if (!found) {
+    // Encontrar o dispositivo específico pelo IP
+    discoveredDevice = devices.find(d => d.ip === device.ip);
+    if (!discoveredDevice) {
       log('warn', `Toletus: Dispositivo ${device.ip} não encontrado no discover`);
     } else {
-      log('success', `Toletus: Dispositivo ${device.ip} encontrado e conectado automaticamente`);
+      log('success', `Toletus: Dispositivo ${device.ip} encontrado (ID Toletus: ${discoveredDevice.id})`);
     }
   } catch (discoverError) {
-    log('warn', `Toletus: Erro ao descobrir dispositivos (${discoverError.message}), tentando liberar mesmo assim...`);
+    log('warn', `Toletus: Erro ao descobrir (${discoverError.message}), tentando liberar mesmo assim...`);
   }
 
-  // Criar payload com PascalCase conforme esperado pelo C#
+  // Criar payload usando ID do Toletus HUB (obrigatório!)
   const payload = {
-    Id: device.id,
-    Name: device.name,
+    Id: discoveredDevice?.id || device.id,
+    Name: discoveredDevice?.name || device.name,
     Ip: device.ip,
     Port: device.port,
-    Type: device.type, // STRING: "LiteNet1", "LiteNet2", ou "LiteNet3"
+    Type: device.type,
     Connected: true
   };
 
@@ -258,29 +259,30 @@ async function toletusReleaseEntry({ device, message }) {
 async function toletusReleaseExit({ device, message }) {
   log('info', `Toletus: Liberando saída - ${device.name} (${device.ip}) - Msg: "${message}"`);
 
-  // IMPORTANTE: Descobrir dispositivos primeiro (Connect é automático no Discover)
+  // IMPORTANTE: Descobrir dispositivos primeiro e obter ID correto do Toletus HUB
+  let discoveredDevice = null;
   try {
     log('info', `Toletus: Descobrindo dispositivos na rede...`);
     const devices = await toletusDiscoverDevices();
 
-    // Verificar se o dispositivo foi encontrado e já está conectado
-    const found = devices.some(d => d.ip === device.ip);
-    if (!found) {
+    // Encontrar o dispositivo específico pelo IP
+    discoveredDevice = devices.find(d => d.ip === device.ip);
+    if (!discoveredDevice) {
       log('warn', `Toletus: Dispositivo ${device.ip} não encontrado no discover`);
     } else {
-      log('success', `Toletus: Dispositivo ${device.ip} encontrado e conectado automaticamente`);
+      log('success', `Toletus: Dispositivo ${device.ip} encontrado (ID Toletus: ${discoveredDevice.id})`);
     }
   } catch (discoverError) {
-    log('warn', `Toletus: Erro ao descobrir dispositivos (${discoverError.message}), tentando liberar mesmo assim...`);
+    log('warn', `Toletus: Erro ao descobrir (${discoverError.message}), tentando liberar mesmo assim...`);
   }
 
-  // Criar payload com PascalCase conforme esperado pelo C#
+  // Criar payload usando ID do Toletus HUB (obrigatório!)
   const payload = {
-    Id: device.id,
-    Name: device.name,
+    Id: discoveredDevice?.id || device.id,
+    Name: discoveredDevice?.name || device.name,
     Ip: device.ip,
     Port: device.port,
-    Type: device.type, // STRING: "LiteNet1", "LiteNet2", ou "LiteNet3"
+    Type: device.type,
     Connected: true
   };
 
@@ -312,29 +314,30 @@ async function toletusReleaseExit({ device, message }) {
 async function toletusReleaseEntryAndExit({ device, message }) {
   log('info', `Toletus: Liberando entrada/saída - ${device.name} (${device.ip}) - Msg: "${message}"`);
 
-  // IMPORTANTE: Descobrir dispositivos primeiro (Connect é automático no Discover)
+  // IMPORTANTE: Descobrir dispositivos primeiro e obter ID correto do Toletus HUB
+  let discoveredDevice = null;
   try {
     log('info', `Toletus: Descobrindo dispositivos na rede...`);
     const devices = await toletusDiscoverDevices();
 
-    // Verificar se o dispositivo foi encontrado e já está conectado
-    const found = devices.some(d => d.ip === device.ip);
-    if (!found) {
+    // Encontrar o dispositivo específico pelo IP
+    discoveredDevice = devices.find(d => d.ip === device.ip);
+    if (!discoveredDevice) {
       log('warn', `Toletus: Dispositivo ${device.ip} não encontrado no discover`);
     } else {
-      log('success', `Toletus: Dispositivo ${device.ip} encontrado e conectado automaticamente`);
+      log('success', `Toletus: Dispositivo ${device.ip} encontrado (ID Toletus: ${discoveredDevice.id})`);
     }
   } catch (discoverError) {
-    log('warn', `Toletus: Erro ao descobrir dispositivos (${discoverError.message}), tentando liberar mesmo assim...`);
+    log('warn', `Toletus: Erro ao descobrir (${discoverError.message}), tentando liberar mesmo assim...`);
   }
 
-  // Criar payload com PascalCase conforme esperado pelo C#
+  // Criar payload usando ID do Toletus HUB (obrigatório!)
   const payload = {
-    Id: device.id,
-    Name: device.name,
+    Id: discoveredDevice?.id || device.id,
+    Name: discoveredDevice?.name || device.name,
     Ip: device.ip,
     Port: device.port,
-    Type: device.type, // STRING: "LiteNet1", "LiteNet2", ou "LiteNet3"
+    Type: device.type,
     Connected: true
   };
 
