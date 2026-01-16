@@ -154,6 +154,8 @@ async function toletusGetDevices() {
 
 async function toletusConnectDevice({ ip, type }) {
   log('info', `Toletus: Conectando ao dispositivo ${ip} (${type})...`);
+
+  // IMPORTANTE: Toletus HUB espera o tipo como STRING (LiteNet1, LiteNet2, LiteNet3), não como número!
   const response = await axios.post(
     getToletusUrl(`/DeviceConnection/Connect?ip=${ip}&type=${type}`),
     {},
@@ -165,6 +167,8 @@ async function toletusConnectDevice({ ip, type }) {
 
 async function toletusDisconnectDevice({ ip, type }) {
   log('info', `Toletus: Desconectando do dispositivo ${ip} (${type})...`);
+
+  // IMPORTANTE: Toletus HUB espera o tipo como STRING (LiteNet1, LiteNet2, LiteNet3), não como número!
   const response = await axios.post(
     getToletusUrl(`/DeviceConnection/Disconnect?ip=${ip}&type=${type}`),
     {},
@@ -177,15 +181,22 @@ async function toletusDisconnectDevice({ ip, type }) {
 async function toletusReleaseEntry({ device, message }) {
   log('info', `Toletus: Liberando entrada - ${device.name} (${device.ip}) - Msg: "${message}"`);
 
-  // Converter tipo para número conforme esperado pelo Toletus HUB
-  const typeMap = { 'LiteNet1': 0, 'LiteNet2': 1, 'LiteNet3': 2 };
+  // IMPORTANTE: Conectar ao dispositivo primeiro antes de liberar
+  try {
+    log('info', `Toletus: Conectando ao dispositivo ${device.ip} (${device.type}) antes de liberar...`);
+    await toletusConnectDevice({ ip: device.ip, type: device.type });
+  } catch (connectError) {
+    log('warn', `Toletus: Erro ao conectar (${connectError.message}), tentando liberar mesmo assim...`);
+  }
+
+  // Criar payload com tipo como STRING (LiteNet1, LiteNet2, LiteNet3)
   const payload = {
     id: device.id,
     name: device.name,
     ip: device.ip,
     port: device.port,
-    type: typeMap[device.type] || 1,
-    connected: device.connected
+    type: device.type, // STRING: "LiteNet1", "LiteNet2", ou "LiteNet3"
+    connected: true
   };
 
   const response = await axios.post(
@@ -210,14 +221,22 @@ async function toletusReleaseEntry({ device, message }) {
 async function toletusReleaseExit({ device, message }) {
   log('info', `Toletus: Liberando saída - ${device.name} (${device.ip}) - Msg: "${message}"`);
 
-  const typeMap = { 'LiteNet1': 0, 'LiteNet2': 1, 'LiteNet3': 2 };
+  // IMPORTANTE: Conectar ao dispositivo primeiro antes de liberar
+  try {
+    log('info', `Toletus: Conectando ao dispositivo ${device.ip} (${device.type}) antes de liberar...`);
+    await toletusConnectDevice({ ip: device.ip, type: device.type });
+  } catch (connectError) {
+    log('warn', `Toletus: Erro ao conectar (${connectError.message}), tentando liberar mesmo assim...`);
+  }
+
+  // Criar payload com tipo como STRING (LiteNet1, LiteNet2, LiteNet3)
   const payload = {
     id: device.id,
     name: device.name,
     ip: device.ip,
     port: device.port,
-    type: typeMap[device.type] || 1,
-    connected: device.connected
+    type: device.type, // STRING: "LiteNet1", "LiteNet2", ou "LiteNet3"
+    connected: true
   };
 
   const response = await axios.post(
@@ -242,14 +261,22 @@ async function toletusReleaseExit({ device, message }) {
 async function toletusReleaseEntryAndExit({ device, message }) {
   log('info', `Toletus: Liberando entrada/saída - ${device.name} (${device.ip}) - Msg: "${message}"`);
 
-  const typeMap = { 'LiteNet1': 0, 'LiteNet2': 1, 'LiteNet3': 2 };
+  // IMPORTANTE: Conectar ao dispositivo primeiro antes de liberar
+  try {
+    log('info', `Toletus: Conectando ao dispositivo ${device.ip} (${device.type}) antes de liberar...`);
+    await toletusConnectDevice({ ip: device.ip, type: device.type });
+  } catch (connectError) {
+    log('warn', `Toletus: Erro ao conectar (${connectError.message}), tentando liberar mesmo assim...`);
+  }
+
+  // Criar payload com tipo como STRING (LiteNet1, LiteNet2, LiteNet3)
   const payload = {
     id: device.id,
     name: device.name,
     ip: device.ip,
     port: device.port,
-    type: typeMap[device.type] || 1,
-    connected: device.connected
+    type: device.type, // STRING: "LiteNet1", "LiteNet2", ou "LiteNet3"
+    connected: true
   };
 
   const response = await axios.post(
