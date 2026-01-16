@@ -709,11 +709,12 @@ export async function syncAccessLogsFromControlId() {
             // 🔄 INTEGRAÇÃO HÍBRIDA: Control ID + Toletus HUB
             // Se a academia usa Toletus HUB e o acesso foi aprovado, liberar a catraca Toletus
             // A leitora facial apenas reconhece a pessoa, a catraca física determina o sentido (entrada/saída)
-            console.log(`[CRON] 🔍 Verificando liberação automática: accessType=${accessType}, gym.turnstileType=${gym.turnstileType}, student.status=${student.status}`);
+            console.log(`[CRON] 🔍 Verificando liberação automática: accessType=${accessType}, gym.turnstileType=${gym.turnstileType}, student.membershipStatus=${student.membershipStatus}`);
 
-            // LIBERACAO SEMPRE ATIVA PARA TESTE
+            // IMPORTANTE: Só liberar se o aluno está ATIVO e o acesso foi aprovado (não negado)
             const shouldRelease = (accessType === "entry" || accessType === "exit") &&
-                                   gym.turnstileType === "toletus_hub";
+                                   gym.turnstileType === "toletus_hub" &&
+                                   student.membershipStatus === "active";
 
             if (shouldRelease) {
               try {
