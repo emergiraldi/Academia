@@ -168,9 +168,19 @@ async function toletusDiscoverDevices() {
 async function toletusConnectDevice({ ip, type }) {
   log('info', `Toletus: Conectando ao dispositivo ${ip} (${type})...`);
 
-  // IMPORTANTE: Toletus HUB espera o tipo como STRING (LiteNet1, LiteNet2, LiteNet3), não como número!
+  // LiteNet3 requer parâmetro network (rede do dispositivo, ex: 192.168.0.0)
+  let url = `/DeviceConnection/Connect?ip=${ip}&type=${type}`;
+  if (type === 'LiteNet3') {
+    // Calcular network a partir do IP (ex: 192.168.0.100 -> 192.168.0.0)
+    const networkParts = ip.split('.');
+    networkParts[3] = '0';
+    const network = networkParts.join('.');
+    url += `&network=${network}`;
+    log('info', `Toletus: LiteNet3 detectado, usando network: ${network}`);
+  }
+
   const response = await axios.post(
-    getToletusUrl(`/DeviceConnection/Connect?ip=${ip}&type=${type}`),
+    getToletusUrl(url),
     {},
     { httpsAgent, timeout: 10000 }
   );
