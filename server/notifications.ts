@@ -629,14 +629,16 @@ export async function syncAccessLogsFromControlId() {
         console.log(`[CRON] Syncing access logs for gym ${gym.name} (ID ${gym.id})...`);
 
         // Load access logs from Control ID device
+        console.log(`[CRON] 📡 Chamando service.loadAccessLogs() para academia ${gym.id}...`);
         const logs = await service.loadAccessLogs();
+        console.log(`[CRON] 📊 Resultado de loadAccessLogs():`, logs ? `${logs.length} logs` : 'null/undefined');
 
         if (!logs || logs.length === 0) {
-          console.log(`[CRON] No access logs found for gym ${gym.id}`);
+          console.log(`[CRON] ⚠️  Nenhum log de acesso encontrado para academia ${gym.id}`);
           continue;
         }
 
-        console.log(`[CRON] Found ${logs.length} access logs from Control ID for gym ${gym.id}`);
+        console.log(`[CRON] ✅ Encontrados ${logs.length} logs do Control ID para academia ${gym.id}`);
 
         // Process and save each log
         let newLogs = 0;
@@ -753,7 +755,10 @@ export async function syncAccessLogsFromControlId() {
         console.log(`[CRON] ✅ Synced ${newLogs} new access logs for gym ${gym.id}`);
 
       } catch (gymError) {
-        console.error(`[CRON] Error syncing access logs for gym ${gym.id}:`, gymError);
+        console.error(`[CRON] ❌ Erro ao sincronizar logs da academia ${gym.id} (${gym.name}):`, gymError);
+        if (gymError instanceof Error) {
+          console.error(`[CRON] Stack trace:`, gymError.stack);
+        }
       }
     }
 
