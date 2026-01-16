@@ -711,10 +711,9 @@ export async function syncAccessLogsFromControlId() {
             // A leitora facial apenas reconhece a pessoa, a catraca física determina o sentido (entrada/saída)
             console.log(`[CRON] 🔍 Verificando liberação automática: accessType=${accessType}, gym.turnstileType=${gym.turnstileType}, student.status=${student.status}`);
 
-            // IMPORTANTE: Só liberar se o aluno está ATIVO e o acesso foi aprovado (não negado)
+            // LIBERACAO SEMPRE ATIVA PARA TESTE
             const shouldRelease = (accessType === "entry" || accessType === "exit") &&
-                                   gym.turnstileType === "toletus_hub" &&
-                                   student.status === "active";
+                                   gym.turnstileType === "toletus_hub";
 
             if (shouldRelease) {
               try {
