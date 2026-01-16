@@ -1,0 +1,170 @@
+================================================================================
+                    CHECKLIST DE INSTALAÇÃO - CLIENTE
+                         Sistema Academia + Toletus HUB
+================================================================================
+
+Cliente: _________________________    Data: ___/___/______
+Técnico: _________________________    Hora início: _____:_____
+
+================================================================================
+PRÉ-REQUISITOS
+================================================================================
+
+□ Catraca Toletus LiteNet instalada fisicamente
+□ Catraca ligada na energia
+□ Catraca conectada na rede (cabo RJ45)
+□ Leitora Control ID funcionando (se integração híbrida)
+□ Computador Windows disponível
+□ Acesso à internet no computador
+□ Acesso ao roteador/switch da rede
+
+IP da Leitora Control ID: ___.___.___.___
+IP da Catraca Toletus:    ___.___.___.___  (descobrir depois)
+
+================================================================================
+INSTALAÇÃO
+================================================================================
+
+PASSO 1: Instalar Softwares Base
+□ .NET 9 SDK instalado
+  Comando teste: dotnet --version
+  Versão: _____________
+
+□ Node.js LTS instalado
+  Comando teste: node --version
+  Versão: _____________
+
+PASSO 2: Copiar Arquivos
+□ Pasta "Academia" copiada para C:\
+□ Estrutura verificada:
+  C:\Academia\hub-main\
+  C:\Academia\agent\
+  C:\Academia\RODAR_TOLETUS_HUB.ps1
+
+PASSO 3: Configurar Agent
+□ Executado: C:\Academia\agent\CONFIGURAR_AGENT.bat
+□ AGENT_ID configurado: ________________
+□ AUTH_TOKEN configurado
+□ IP Control ID configurado: ___.___.___.___
+□ npm install executado com sucesso
+
+PASSO 4: Iniciar Toletus HUB
+□ Executado: RODAR_TOLETUS_HUB.ps1
+□ Mensagem "Now listening on: https://localhost:7067" apareceu
+□ Janela deixada aberta (minimizada)
+
+PASSO 5: Iniciar Agent
+□ Executado: npm start (em C:\Academia\agent)
+□ Mensagem "WebSocket conectado!" apareceu
+□ Conexão com VPS estabelecida
+
+PASSO 6: Configurar Painel Web
+□ Acessado: https://www.sysfitpro.com.br/admin
+□ Login efetuado
+□ Parâmetros → Sistema de Catraca = "Toletus HUB"
+□ Configuração salva
+
+PASSO 7: Descobrir e Cadastrar Catracas
+□ Menu → Toletus HUB acessado
+□ "Verificar Status do HUB" → Status: Online
+□ "Descobrir Dispositivos" clicado
+□ Dispositivos encontrados: _____ unidade(s)
+
+Para cada catraca encontrada:
+  Catraca 1:
+  □ Nome: _______________________
+  □ Localização: ________________
+  □ IP: ___.___.___.___ Porta: ______
+  □ Tipo: LiteNet____
+  □ Ativa: Sim
+  □ Cadastrada
+
+  Catraca 2:
+  □ Nome: _______________________
+  □ Localização: ________________
+  □ IP: ___.___.___.___ Porta: ______
+  □ Tipo: LiteNet____
+  □ Ativa: Sim
+  □ Cadastrada
+
+================================================================================
+TESTES
+================================================================================
+
+TESTE 1: Liberação Manual
+□ Menu Alunos acessado
+□ Ícone 🚪 clicado em aluno ativo
+□ Catraca selecionada
+□ Botão "Liberar Entrada" clicado
+□ ✅ CATRACA ABRIU!
+
+TESTE 2: Liberação Automática (Híbrido)
+□ Aluno passou na Control ID
+□ Rosto reconhecido pela Control ID
+□ ✅ CATRACA TOLETUS ABRIU AUTOMATICAMENTE!
+□ Log de acesso registrado no sistema
+
+================================================================================
+CONFIGURAÇÃO AUTOMÁTICA
+================================================================================
+
+OPÇÃO 1: PM2 (Recomendado)
+□ PM2 instalado: npm install -g pm2
+□ PM2 Windows Startup: npm install -g pm2-windows-startup
+□ Startup configurado: pm2-startup install
+□ Agent adicionado: pm2 start agent.js --name academia-agent
+□ Configuração salva: pm2 save
+□ Testado reinicialização
+
+OPÇÃO 2: Tarefa Agendada Windows
+□ taskschd.msc aberto
+□ Tarefa "Academia Agent" criada
+□ Gatilho: Ao iniciar o sistema
+□ Ação configurada
+□ Privilégios elevados: Sim
+□ Testado reinicialização
+
+TOLETUS HUB - Tarefa Agendada
+□ Tarefa "Toletus HUB" criada
+□ Programa: powershell.exe
+□ Argumentos: -ExecutionPolicy Bypass -File "C:\Academia\RODAR_TOLETUS_HUB.ps1"
+□ Iniciar ao boot: Sim
+□ Testado reinicialização
+
+================================================================================
+VERIFICAÇÃO FINAL
+================================================================================
+
+□ Sistema funcionando sem erros
+□ Logs sem erros críticos
+□ Cliente treinado para uso básico
+□ Documentação entregue ao cliente
+□ Contatos de suporte informados
+□ Garantia/suporte acordado
+
+================================================================================
+OBSERVAÇÕES/PROBLEMAS
+================================================================================
+
+_______________________________________________________________________________
+
+_______________________________________________________________________________
+
+_______________________________________________________________________________
+
+_______________________________________________________________________________
+
+_______________________________________________________________________________
+
+================================================================================
+ASSINATURAS
+================================================================================
+
+Técnico: ________________________    Data: ___/___/______
+
+Cliente: ________________________    Data: ___/___/______
+
+================================================================================
+                            Instalação Concluída!
+                         Tempo total: _____ minutos
+================================================================================

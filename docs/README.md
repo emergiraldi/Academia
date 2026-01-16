@@ -144,6 +144,14 @@ npm run check
 ## 📚 Documentação
 
 ### Documentação Principal
+
+**Para Usuários:**
+- **[COMECANDO.md](COMECANDO.md)** - 🚀 Guia de início rápido (comece por aqui!)
+- **[MANUAL-USUARIO.md](MANUAL-USUARIO.md)** - 📖 Manual completo do usuário (alunos, gestores, professores)
+- **[GUIA-RAPIDO.md](GUIA-RAPIDO.md)** - ⚡ Referência rápida para tarefas comuns
+- **[COMO-GERAR-SCREENSHOTS.md](COMO-GERAR-SCREENSHOTS.md)** - 📸 Como capturar screenshots do sistema
+
+**Para Desenvolvedores:**
 - **[FLUXO-COMPLETO.md](FLUXO-COMPLETO.md)** - Como funciona todo o sistema
 - **[DEPLOY-VPS.md](DEPLOY-VPS.md)** - Guia de deploy em VPS
 - **[AGENT-LOCAL.md](AGENT-LOCAL.md)** - Instalação do agent local
@@ -155,7 +163,13 @@ npm run check
 ```
 docs/
 ├── README.md                              # Este arquivo
-├── *.md                                   # Documentação principal
+├── MANUAL-USUARIO.md                      # 📖 Manual completo do usuário
+├── GUIA-RAPIDO.md                         # ⚡ Referência rápida
+├── COMO-GERAR-SCREENSHOTS.md              # 📸 Guia de screenshots
+├── *.md                                   # Outras documentações
+├── _screenshots/                          # 📸 Screenshots do sistema
+│   ├── README.md                          # Índice de screenshots
+│   └── *.png                              # Imagens (62 screenshots)
 ├── deployment/                            # Scripts de deploy
 │   ├── *.bat                              # Scripts Windows
 │   └── *.ps1                              # PowerShell scripts
@@ -177,6 +191,12 @@ docs/
 ```
 
 ### Navegação Rápida
+
+**Manuais do Usuário:**
+- [COMECANDO.md](COMECANDO.md) - 🚀 Comece por aqui! Guia de primeiros passos
+- [MANUAL-USUARIO.md](MANUAL-USUARIO.md) - Manual completo com todas as funcionalidades
+- [GUIA-RAPIDO.md](GUIA-RAPIDO.md) - Cheat sheet para tarefas do dia a dia
+- [_screenshots/](_screenshots/) - Screenshots de todas as telas
 
 **Deploy e Produção:**
 - [deployment/](deployment/) - Scripts de deploy automático

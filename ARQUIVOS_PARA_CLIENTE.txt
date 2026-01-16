@@ -1,0 +1,103 @@
+================================================================================
+  ARQUIVOS PARA COPIAR PARA O CLIENTE
+================================================================================
+
+Criar uma pasta "Academia" no cliente e copiar:
+
+📁 C:\Academia\
+│
+├── 📁 hub-main\                           (PASTA COMPLETA)
+│   └── Código fonte do Toletus HUB
+│
+├── 📁 agent\                              (PASTA COMPLETA)
+│   ├── agent.js
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── node_modules\                      (se já instalou)
+│   ├── .env.example
+│   └── CONFIGURAR_AGENT.bat              ⭐ USAR ESTE!
+│
+├── 📄 RODAR_TOLETUS_HUB.ps1              ⭐ DUPLO CLIQUE PARA INICIAR HUB
+├── 📄 README_INSTALACAO_RAPIDA.md         📖 Ler primeiro!
+├── 📄 INSTALACAO_CLIENTE_TOLETUS.md       📖 Guia completo
+├── 📄 GUIA_TOLETUS_HUB.md                 📖 Como usar após instalar
+└── 📄 ARQUIVOS_PARA_CLIENTE.txt          📋 Esta lista
+
+================================================================================
+
+⚠️ NÃO COPIAR (são apenas para desenvolvimento):
+❌ .git\
+❌ client\
+❌ server\
+❌ drizzle\
+❌ docs\
+❌ node_modules\ (da raiz do projeto)
+
+================================================================================
+
+🔧 INSTALADORES NECESSÁRIOS:
+
+Baixar e levar junto:
+
+1. .NET 9 SDK
+   📥 https://dotnet.microsoft.com/download/dotnet/9.0
+   Arquivo: dotnet-sdk-9.0.xxx-win-x64.exe
+
+2. Node.js LTS (v20 ou superior)
+   📥 https://nodejs.org
+   Arquivo: node-v20.x.x-x64.msi
+
+3. Toletus Gerenciador (opcional, mas útil)
+   📥 https://downloads.toletus.com/toletusgerenciador2
+   Para descobrir IP das catracas
+
+================================================================================
+
+📋 CHECKLIST PRE-INSTALAÇÃO:
+
+No cliente, verificar:
+□ Catraca Toletus LiteNet está instalada fisicamente
+□ Catraca está ligada na energia
+□ Catraca está conectada na rede (cabo RJ45)
+□ Computador Windows (pode ser o mesmo do Control ID)
+□ Computador tem acesso à internet (para conectar ao VPS)
+□ Leitora Control ID funcionando (se usar integração híbrida)
+
+================================================================================
+
+🎯 ORDEM DE INSTALAÇÃO NO CLIENTE:
+
+1. Instalar .NET 9 SDK
+2. Instalar Node.js
+3. Copiar pasta "Academia" para C:\
+4. Executar: C:\Academia\agent\CONFIGURAR_AGENT.bat
+5. Executar: C:\Academia\RODAR_TOLETUS_HUB.ps1
+6. Executar: cd C:\Academia\agent && npm start
+7. Configurar no painel web
+8. Testar!
+
+Tempo total: ~30-45 minutos
+
+================================================================================
+
+📞 INFORMAÇÕES QUE VOCÊ VAI PRECISAR DO CLIENTE:
+
+Antes de ir, pegue no painel admin:
+✅ AGENT_ID da academia (ex: academia-5)
+✅ AUTH_TOKEN da academia
+
+No local do cliente, você vai descobrir:
+🔍 IP da leitora Control ID (ex: 192.168.1.142)
+🔍 IP da catraca Toletus (o discovery encontra automaticamente)
+
+================================================================================
+
+💡 DICA PROFISSIONAL:
+
+Use um pendrive com:
+✔️ Pasta Academia completa
+✔️ Instaladores (.NET 9 + Node.js)
+✔️ Toletus Gerenciador
+✔️ Este checklist impresso
+
+================================================================================

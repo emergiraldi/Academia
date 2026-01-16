@@ -669,7 +669,9 @@ export async function syncAccessLogsFromControlId() {
             }
 
             // Parse timestamp (Control ID usa Unix timestamp em segundos)
+            console.log(`[CRON] 🔍 RAW log.time value:`, log.time, `type: ${typeof log.time}`);
             const timestamp = new Date(log.time * 1000);
+            console.log(`[CRON] 📅 Converted timestamp:`, timestamp.toISOString());
 
             console.log(`[CRON] Processing log: user_id=${log.user_id}, event=${log.event}, accessType=${accessType}, time=${timestamp.toLocaleString('pt-BR')}`);
 
