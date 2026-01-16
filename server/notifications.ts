@@ -705,10 +705,11 @@ export async function syncAccessLogsFromControlId() {
             console.log(`[CRON] ✅ Saved ${accessType} log for student ${student.id} at ${timestamp.toLocaleString('pt-BR')}`);
 
             // 🔄 INTEGRAÇÃO HÍBRIDA: Control ID + Toletus HUB
-            // Se a academia usa Toletus HUB e o acesso foi aprovado (entrada), liberar a catraca Toletus
+            // Se a academia usa Toletus HUB e o acesso foi aprovado, liberar a catraca Toletus
+            // A leitora facial apenas reconhece a pessoa, a catraca física determina o sentido (entrada/saída)
             console.log(`[CRON] 🔍 Verificando liberação automática: accessType=${accessType}, gym.turnstileType=${gym.turnstileType}`);
 
-            if (accessType === "entry" && gym.turnstileType === "toletus_hub") {
+            if ((accessType === "entry" || accessType === "exit") && gym.turnstileType === "toletus_hub") {
               try {
                 console.log(`[CRON] 🔓 Academia ${gym.name} usa Toletus HUB - Liberando catraca para ${student.name}...`);
 
