@@ -668,9 +668,9 @@ export async function syncAccessLogsFromControlId() {
               denialReason = `Evento ${log.event} - Acesso não autorizado`;
             }
 
-            // Parse timestamp (Control ID usa Unix timestamp em segundos)
+            // Parse timestamp (pode vir como Unix timestamp em segundos OU string formatada)
             console.log(`[CRON] 🔍 RAW log.time value:`, log.time, `type: ${typeof log.time}`);
-            const timestamp = new Date(log.time * 1000);
+            const timestamp = typeof log.time === 'number' ? new Date(log.time * 1000) : new Date(log.time);
             console.log(`[CRON] 📅 Converted timestamp:`, timestamp.toISOString());
 
             console.log(`[CRON] Processing log: user_id=${log.user_id}, event=${log.event}, accessType=${accessType}, time=${timestamp.toLocaleString('pt-BR')}`);
