@@ -14,7 +14,14 @@
       "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"curl -X POST http://localhost:3000/api/toletus/test-flow-control/33/3 -H ''Content-Type: application/json'' -s -o /tmp/resp.txt -w ''%{http_code}\\n'' && cat /tmp/resp.txt && echo ''''\")",
       "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"curl -X POST http://localhost:3000/api/toletus/test-flow-control/33/7 -H ''Content-Type: application/json'' -w ''\\n'' 2>&1\")",
       "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"cd /var/www/academia && git pull origin main && npm run build && pm2 restart academia-api && echo '''' && echo ''✅ Deploy da correção concluído!''\")",
-      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"curl -X POST http://localhost:3000/api/toletus/test-flow-control/33/7 -H ''Content-Type: application/json'' -w ''\\n'' 2>&1 | tail -20\")"
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"curl -X POST http://localhost:3000/api/toletus/test-flow-control/33/7 -H ''Content-Type: application/json'' -w ''\\n'' 2>&1 | tail -20\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"cd /var/www/academia && git pull origin main && npm run build && pm2 restart academia-api && echo '''' && echo ''✅ Deploy final concluído! Endpoint corrigido.''\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"pm2 logs academia-api --nostream --lines 100 | grep -E ''ToletusTest|FlowControl|status code 400'' | tail -30\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"pm2 flush academia-api && echo ''✅ Logs limpos'' && echo '''' && echo ''🧪 Executando teste Mode 7...'' && curl -X POST http://localhost:3000/api/toletus/test-flow-control/33/7 -H ''Content-Type: application/json'' -w ''\\n'' 2>&1 && echo '''' && echo ''📋 Últimos logs:'' && pm2 logs academia-api --nostream --lines 30 | tail -30\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"grep -r ''enum ControlledFlow'' /var/www/academia/hub-main/ 2>/dev/null | head -5\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"curl -X POST http://localhost:3000/api/toletus/test-flow-control/33/3 -H ''Content-Type: application/json'' -w ''\\n'' 2>&1\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"grep -A 30 ''Verificando liberação.*Toletus'' /var/www/academia/server/notifications.ts | head -40\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"grep -B 5 -A 20 ''releaseEntry'' /var/www/academia/server/notifications.ts | grep -A 20 ''Academia.*usa Toletus'' | head -30\")"
     ],
     "deny": [],
     "ask": []
