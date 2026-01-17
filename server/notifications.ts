@@ -734,12 +734,12 @@ export async function syncAccessLogsFromControlId() {
                     const devicePayload = createToletusDevicePayload(targetDevice);
                     const message = `Bem-vindo, ${student.name}!`;
 
-                    console.log(`[CRON] 🚪 Configurando FlowControl Mode 3 (Entrada Livre, Saída Controlada)...`);
+                    console.log(`[CRON] 🚪 Configurando FlowControl Mode 0 (Entrada Controlada, Saída Livre)...`);
 
-                    // Configurar FlowControl Mode 3: Entrada Livre + Saída Controlada
+                    // Configurar FlowControl Mode 0: Entrada Controlada + Saída Livre
                     try {
-                      await toletusService.setFlowControl(devicePayload, 3);
-                      console.log(`[CRON] ✅ FlowControl Mode 3 configurado com sucesso`);
+                      await toletusService.setFlowControl(devicePayload, 0);
+                      console.log(`[CRON] ✅ FlowControl Mode 0 configurado com sucesso`);
                     } catch (err) {
                       console.log(`[CRON] ⚠️  Erro ao configurar FlowControl:`, err);
                     }
