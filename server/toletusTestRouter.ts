@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getDb } from "./db";
+import { getActiveToletusDevices } from "./db";
 import { ToletusHubService } from "./toletusHub";
 
 const router = Router();
@@ -47,32 +47,19 @@ router.post("/api/toletus/test-flow-control/:gymId/:mode", async (req, res) => {
   try {
     console.log(`[ToletusTest] 🧪 Testando FlowControl mode=${modeNum} para academia ${gymIdNum}`);
 
-    // Obter instância do banco
-    const db = await getDb();
-    if (!db) {
-      console.error("[ToletusTest] ❌ Database not available");
-      return res.status(500).json({
-        success: false,
-        error: "Database not available"
-      });
-    }
+    // Buscar dispositivos Toletus ativos da academia
+    const devices = await getActiveToletusDevices(gymIdNum);
 
-    // Buscar dispositivo Toletus da academia
-    const device = await db.query.toletusDevices.findFirst({
-      where: (toletusDevices, { eq, and }) =>
-        and(
-          eq(toletusDevices.gymId, gymIdNum),
-          eq(toletusDevices.active, true)
-        ),
-    });
-
-    if (!device) {
+    if (!devices || devices.length === 0) {
       console.log(`[ToletusTest] ❌ Nenhum dispositivo Toletus ativo encontrado para academia ${gymIdNum}`);
       return res.status(404).json({
         success: false,
         error: `Nenhum dispositivo Toletus ativo encontrado para academia ${gymIdNum}`
       });
     }
+
+    // Pegar o primeiro dispositivo ativo
+    const device = devices[0];
 
     console.log(`[ToletusTest] 📡 Dispositivo encontrado: ${device.name} (${device.deviceIp})`);
 

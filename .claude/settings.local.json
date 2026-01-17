@@ -4,7 +4,15 @@
       "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"pm2 logs academia-api --nostream --lines 30\")",
       "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"pm2 flush academia-api && echo ''✅ Logs limpos!'' && echo '''' && echo ''👤 PASSE O ROSTO NA LEITORA AGORA'' && echo ''''\")",
       "Bash(node:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"cd /var/www/academia && git pull origin main && npm run build && pm2 restart academia-api && echo '''' && echo ''✅ Deploy concluído! Endpoint /api/toletus/test-flow-control criado.''\")",
+      "Bash(curl:*)",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"curl -X POST http://localhost:3003/api/toletus/test-flow-control/33/3 -H ''Content-Type: application/json'' -s\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"pm2 logs academia-api --nostream --lines 50 | grep -E ''Server|PORT|listening|started'' | tail -10\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"pm2 logs academia-api --nostream --lines 30 | tail -30\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"pm2 logs academia-api --nostream --lines 200 | grep -i ''listening\\|server\\|port'' | head -10\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"curl -X POST http://localhost:3000/api/toletus/test-flow-control/33/3 -H ''Content-Type: application/json'' -s -o /tmp/resp.txt -w ''%{http_code}\\n'' && cat /tmp/resp.txt && echo ''''\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"curl -X POST http://localhost:3000/api/toletus/test-flow-control/33/7 -H ''Content-Type: application/json'' -w ''\\n'' 2>&1\")"
     ],
     "deny": [],
     "ask": []
