@@ -1,0 +1,182 @@
+Arquivo: configurar_sysfit_agent.ps1
+# ====================================
+# Configurar SysFit Agent - Auto-Start
+# ====================================
+
+Write-Host "🚀 Configurando SysFit Agent para auto-start..." -ForegroundColor Cyan
+Write-Host ""
+
+# Ir para o diretório
+cd C:\SysFit\agent
+
+# Limpar PM2 (se já existir)
+pm2 delete all
+
+# Iniciar com PM2
+pm2 start agent.js --name "sysfit-agent"
+
+# Salvar configuração para auto-start
+pm2 save
+
+# Verificar status
+Write-Host ""
+Write-Host "📊 Status:" -ForegroundColor Yellow
+pm2 list
+
+Write-Host ""
+Write-Host "✅ SysFit Agent configurado para iniciar automaticamente!" -ForegroundColor Green
+
+_________________________________________________________________________________________________
+
+Arquivo: configurar_toletus_hub.ps1
+# ====================================
+# Configurar Toletus Hub - Auto-Start
+# EXECUTAR COMO ADMINISTRADOR
+# ====================================
+
+Write-Host "🚀 Configurando Toletus Hub para auto-start..." -ForegroundColor Cyan
+Write-Host ""
+
+# 1. Criar script BAT para iniciar o Toletus Hub
+Write-Host "📝 Criando script de inicialização..." -ForegroundColor Yellow
+$batContent = @'
+@echo off
+cd /d C:\SysFit\agent\hub-main\src\Toletus.Hub.API
+dotnet run --urls "https://localhost:7067"
+'@
+
+Set-Content -Path "C:\SysFit\agent\START_TOLETUS_HUB.bat" -Value $batContent
+
+# 2. Criar VBScript para executar invisível (sem janela)
+Write-Host "🔒 Criando launcher invisível..." -ForegroundColor Yellow
+$vbsContent = @'
+Set WshShell = CreateObject("WScript.Shell")
+WshShell.Run "C:\SysFit\agent\START_TOLETUS_HUB.bat", 0, False
+'@
+
+Set-Content -Path "C:\SysFit\agent\START_TOLETUS_INVISIBLE.vbs" -Value $vbsContent
+
+# 3. Remover tarefa antiga se existir
+Write-Host "🗑️ Removendo configurações antigas..." -ForegroundColor Yellow
+Unregister-ScheduledTask -TaskName "Toletus Hub AutoStart" -Confirm:$false -ErrorAction SilentlyContinue
+
+# 4. Criar tarefa agendada para auto-start
+Write-Host "⚙️ Criando tarefa agendada..." -ForegroundColor Yellow
+$action = New-ScheduledTaskAction -Execute "wscript.exe" -Argument '"C:\SysFit\agent\START_TOLETUS_INVISIBLE.vbs"' -WorkingDirectory "C:\SysFit\agent"
+
+$trigger = New-ScheduledTaskTrigger -AtStartup
+
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit 0
+
+Register-ScheduledTask -TaskName "Toletus Hub AutoStart" -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description "Inicia o Toletus Hub automaticamente no boot"
+
+# 5. Verificar
+Write-Host ""
+Write-Host "📊 Status da tarefa:" -ForegroundColor Yellow
+Get-ScheduledTask -TaskName "Toletus Hub AutoStart"
+
+Write-Host ""
+Write-Host "✅ Toletus Hub configurado para iniciar automaticamente!" -ForegroundColor Green
+
+__________________________________________________________________________________________________
+
+Arquivo: verificar_servicos.ps1
+# ====================================
+# Verificar Status dos Serviços
+# ====================================
+
+Write-Host "======================================" -ForegroundColor Cyan
+Write-Host "📊 VERIFICAÇÃO DE SERVIÇOS" -ForegroundColor Cyan
+Write-Host "======================================" -ForegroundColor Cyan
+Write-Host ""
+
+Write-Host "1️⃣ SysFit Agent (PM2):" -ForegroundColor Yellow
+pm2 list
+
+Write-Host ""
+Write-Host "2️⃣ Toletus Hub:" -ForegroundColor Yellow
+Get-Process -Name "Toletus.Hub.API" -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, StartTime, @{Name="Memory(MB)";Expression={[math]::Round($_.WorkingSet64 / 1MB, 2)}}
+
+Write-Host ""
+Write-Host "3️⃣ Tarefa Agendada:" -ForegroundColor Yellow
+Get-ScheduledTask -TaskName "Toletus Hub AutoStart" -ErrorAction SilentlyContinue | Select-Object TaskName, State
+
+Write-Host ""
+Write-Host "4️⃣ Teste de Conectividade (Porta 7067):" -ForegroundColor Yellow
+Test-NetConnection -ComputerName localhost -Port 7067 -WarningAction SilentlyContinue | Select-Object RemotePort, TcpTestSucceeded
+
+Write-Host ""
+Write-Host "======================================" -ForegroundColor Cyan
+
+_________________________________________________________________________________________________________________________________
+
+Arquivo: parar_servicos.ps1
+# ====================================
+# Parar Todos os Serviços
+# ====================================
+
+Write-Host "🛑 Parando todos os serviços..." -ForegroundColor Yellow
+Write-Host ""
+
+# 1. Parar PM2
+Write-Host "1️⃣ Parando SysFit Agent (PM2)..." -ForegroundColor Cyan
+pm2 stop all
+
+# 2. Matar Toletus Hub
+Write-Host "2️⃣ Parando Toletus Hub..." -ForegroundColor Cyan
+Get-Process -Name "Toletus.Hub.API" -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# 3. Verificar
+Write-Host ""
+Write-Host "✅ Verificando processos..." -ForegroundColor Green
+Write-Host ""
+pm2 list
+Get-Process -Name "Toletus.Hub.API" -ErrorAction SilentlyContinue
+
+Write-Host ""
+Write-Host "🎯 Serviços parados!" -ForegroundColor Green
+5️⃣ Reiniciar Todos os Serviços
+Arquivo: reiniciar_servicos.ps1
+# ====================================
+# Reiniciar Todos os Serviços
+# ====================================
+
+Write-Host "🔄 Reiniciando todos os serviços..." -ForegroundColor Cyan
+Write-Host ""
+
+# 1. Reiniciar SysFit Agent
+Write-Host "1️⃣ Reiniciando SysFit Agent..." -ForegroundColor Yellow
+pm2 restart sysfit-agent
+
+# 2. Reiniciar Toletus Hub
+Write-Host "2️⃣ Reiniciando Toletus Hub..." -ForegroundColor Yellow
+Get-Process -Name "Toletus.Hub.API" -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Seconds 3
+Start-ScheduledTask -TaskName "Toletus Hub AutoStart"
+
+# 3. Aguardar
+Write-Host ""
+Write-Host "⏳ Aguardando serviços iniciarem..." -ForegroundColor Yellow
+Start-Sleep -Seconds 10
+
+# 4. Verificar
+Write-Host ""
+Write-Host "✅ Verificando status..." -ForegroundColor Green
+pm2 list
+Get-Process -Name "Toletus.Hub.API" -ErrorAction SilentlyContinue
+Test-NetConnection -ComputerName localhost -Port 7067 -WarningAction SilentlyContinue | Select-Object TcpTestSucceeded
+
+Write-Host ""
+Write-Host "🎯 Serviços reiniciados!" -ForegroundColor Green
+6️⃣ Ver Logs do SysFit Agent
+Arquivo: ver_logs_agent.ps1
+# ====================================
+# Ver Logs do SysFit Agent
+# ====================================
+
+Write-Host "📋 Logs do SysFit Agent:" -ForegroundColor Cyan
+Write-Host ""
+
+pm2 logs sysfit-agent --lines 50

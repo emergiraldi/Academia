@@ -12,6 +12,7 @@ import wellhubWebhookRouter from "../wellhubWebhook";
 import pixWebhookRouter from "../pixWebhookRouter";
 import { initializeAgentWebSocket } from "../agentWebSocket";
 import uploadRouter from "../uploadRouter";
+import toletusTestRouter from "../toletusTestRouter";
 
 async function startServer() {
   const app = express();
@@ -29,6 +30,8 @@ async function startServer() {
   app.use(pixWebhookRouter);
   // Upload endpoint
   app.use(uploadRouter);
+  // Toletus test endpoint
+  app.use(toletusTestRouter);
   // Serve uploaded files statically
   app.use("/uploads", express.static("uploads"));
   // tRPC API

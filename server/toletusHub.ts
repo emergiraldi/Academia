@@ -143,6 +143,27 @@ export class ToletusHubService {
   }
 
   /**
+   * Configurar modo de controle de fluxo (Flow Control)
+   * IMPORTANTE: Só funciona para dispositivos LiteNet2
+   * Modos disponíveis:
+   * - 0: Entrada Controlada, Saída Livre
+   * - 1: Entrada Controlada, Saída Bloqueada
+   * - 2: Entrada Controlada, Saída Controlada
+   * - 3: Entrada Livre, Saída Controlada
+   * - 5: Ambos Livres
+   * - 6: Entrada Livre, Saída Bloqueada
+   * - 7: Entrada Bloqueada, Saída Livre
+   * - 8: Ambos Bloqueados
+   */
+  async setFlowControl(device: ToletusDevice, controlledFlow: number): Promise<boolean> {
+    console.log(`[ToletusHub] Configurando FlowControl mode=${controlledFlow} no dispositivo ${device.name} (${device.ip})`);
+    return await this.sendToAgent('toletus_setFlowControl', {
+      device,
+      controlledFlow
+    }, 30000); // 30 segundos para configurar
+  }
+
+  /**
    * Configurar endpoint de webhook
    */
   async setWebhook(endpoint: string): Promise<void> {
