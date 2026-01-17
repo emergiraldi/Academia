@@ -747,9 +747,10 @@ export async function syncAccessLogsFromControlId() {
                     console.log(`[CRON] 🔄 Configurando direção do giro para DIREITA (horário)...`);
 
                     // Configurar direção da entrada para girar à DIREITA (sentido horário)
+                    // Parâmetro FALSE (0) = entrada HORÁRIO (direita), saída ANTI-HORÁRIO
                     try {
-                      await toletusService.setEntryClockwise(devicePayload, true);
-                      console.log(`[CRON] ✅ Direção configurada: entrada gira para DIREITA`);
+                      await toletusService.setEntryClockwise(devicePayload, false);
+                      console.log(`[CRON] ✅ Direção configurada: entrada HORÁRIO (direita), saída ANTI-HORÁRIO`);
                     } catch (err) {
                       console.log(`[CRON] ⚠️  Erro ao configurar direção:`, err);
                     }
