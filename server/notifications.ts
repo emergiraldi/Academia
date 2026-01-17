@@ -734,14 +734,24 @@ export async function syncAccessLogsFromControlId() {
                     const devicePayload = createToletusDevicePayload(targetDevice);
                     const message = `Bem-vindo, ${student.name}!`;
 
-                    console.log(`[CRON] 🚪 Configurando FlowControl Mode 0 (Entrada Controlada, Saída Livre)...`);
+                    console.log(`[CRON] 🚪 Configurando FlowControl Mode 1 (Entrada Controlada, Saída Livre)...`);
 
-                    // Configurar FlowControl Mode 0: Entrada Controlada + Saída Livre
+                    // Configurar FlowControl Mode 1: Entrada Controlada + Saída Livre
                     try {
-                      await toletusService.setFlowControl(devicePayload, 0);
-                      console.log(`[CRON] ✅ FlowControl Mode 0 configurado com sucesso`);
+                      await toletusService.setFlowControl(devicePayload, 1);
+                      console.log(`[CRON] ✅ FlowControl Mode 1 configurado com sucesso`);
                     } catch (err) {
                       console.log(`[CRON] ⚠️  Erro ao configurar FlowControl:`, err);
+                    }
+
+                    console.log(`[CRON] 🔄 Configurando direção do giro para DIREITA (horário)...`);
+
+                    // Configurar direção da entrada para girar à DIREITA (sentido horário)
+                    try {
+                      await toletusService.setEntryClockwise(devicePayload, true);
+                      console.log(`[CRON] ✅ Direção configurada: entrada gira para DIREITA`);
+                    } catch (err) {
+                      console.log(`[CRON] ⚠️  Erro ao configurar direção:`, err);
                     }
 
                     console.log(`[CRON] 🚪 Liberando catraca ${targetDevice.name} para ${student.name}`);
