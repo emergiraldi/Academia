@@ -63,8 +63,16 @@ router.post("/api/toletus/test-flow-control/:gymId/:mode", async (req, res) => {
 
     console.log(`[ToletusTest] 📡 Dispositivo encontrado: ${device.name} (${device.deviceIp})`);
 
-    // Criar instância do ToletusHubService
-    const toletusService = new ToletusHubService();
+    // Criar instância do ToletusHubService com configuração correta
+    const hubUrl = device.hubUrl || 'https://localhost:7067';
+    const agentId = `academia-${gymIdNum}`;
+
+    console.log(`[ToletusTest] 🔧 Criando serviço - HubURL: ${hubUrl}, AgentID: ${agentId}`);
+
+    const toletusService = new ToletusHubService({
+      hubUrl,
+      agentId
+    });
 
     // Preparar payload do dispositivo
     const devicePayload = {

@@ -12,7 +12,9 @@
       "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"pm2 logs academia-api --nostream --lines 30 | tail -30\")",
       "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"pm2 logs academia-api --nostream --lines 200 | grep -i ''listening\\|server\\|port'' | head -10\")",
       "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"curl -X POST http://localhost:3000/api/toletus/test-flow-control/33/3 -H ''Content-Type: application/json'' -s -o /tmp/resp.txt -w ''%{http_code}\\n'' && cat /tmp/resp.txt && echo ''''\")",
-      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"curl -X POST http://localhost:3000/api/toletus/test-flow-control/33/7 -H ''Content-Type: application/json'' -w ''\\n'' 2>&1\")"
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"curl -X POST http://localhost:3000/api/toletus/test-flow-control/33/7 -H ''Content-Type: application/json'' -w ''\\n'' 2>&1\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"cd /var/www/academia && git pull origin main && npm run build && pm2 restart academia-api && echo '''' && echo ''✅ Deploy da correção concluído!''\")",
+      "Bash(\"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" -o StrictHostKeyChecking=no root@72.60.2.237 \"curl -X POST http://localhost:3000/api/toletus/test-flow-control/33/7 -H ''Content-Type: application/json'' -w ''\\n'' 2>&1 | tail -20\")"
     ],
     "deny": [],
     "ask": []
