@@ -853,6 +853,192 @@ export async function updatePayment(id: number, gymId: number, data: Partial<Ins
   await db.update(payments).set(data).where(and(eq(payments.id, id), eq(payments.gymId, gymId)));
 }
 
+/**
+ * Calculate late fee and interest for an overdue payment
+ * Returns calculated amounts without updating database
+ */
+export async function calculateLateFeeAndInterest(
+  payment: Payment,
+  gymId: number
+): Promise<{
+  lateFeeInCents: number;
+  interestInCents: number;
+  totalAmountInCents: number;
+  daysOverdue: number;
+}> {
+  // Get gym settings
+  const settings = await getGymSettings(gymId);
+  if (!settings) {
+    return {
+      lateFeeInCents: 0,
+      interestInCents: 0,
+      totalAmountInCents: payment.amountInCents,
+      daysOverdue: 0,
+    };
+  }
+
+  // Only calculate if payment is pending/unpaid
+  if (payment.status !== 'pending') {
+    return {
+      lateFeeInCents: 0,
+      interestInCents: 0,
+      totalAmountInCents: payment.amountInCents,
+      daysOverdue: 0,
+    };
+  }
+
+  // Calculate days overdue
+  const now = Date.now();
+  const dueDate = new Date(payment.dueDate).getTime();
+  const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
+
+  // Not overdue yet
+  if (daysOverdue <= 0) {
+    return {
+      lateFeeInCents: 0,
+      interestInCents: 0,
+      totalAmountInCents: payment.amountInCents,
+      daysOverdue: 0,
+    };
+  }
+
+  // Get original amount (use originalAmountInCents if available, otherwise amountInCents)
+  const originalAmount = payment.originalAmountInCents || payment.amountInCents;
+
+  // Calculate late fee (multa) - applied once
+  const lateFeePercentage = settings.lateFeePercentage || 0;
+  const lateFeeInCents = Math.round((originalAmount * lateFeePercentage) / 100);
+
+  // Calculate interest (juros) - applied daily after grace period
+  const daysToStartInterest = settings.daysToStartInterest || 1;
+  const interestRatePerMonth = settings.interestRatePerMonth || 0;
+
+  let interestInCents = 0;
+  if (daysOverdue >= daysToStartInterest && interestRatePerMonth > 0) {
+    // Convert monthly rate to daily rate
+    const dailyRate = interestRatePerMonth / 30; // Aproximação: 1 mês = 30 dias
+    const daysForInterest = daysOverdue - daysToStartInterest + 1;
+
+    // Calculate compound interest: amount * (1 + rate)^days - amount
+    const interestMultiplier = Math.pow(1 + (dailyRate / 100), daysForInterest);
+    interestInCents = Math.round(originalAmount * (interestMultiplier - 1));
+  }
+
+  const totalAmountInCents = originalAmount + lateFeeInCents + interestInCents;
+
+  return {
+    lateFeeInCents,
+    interestInCents,
+    totalAmountInCents,
+    daysOverdue,
+  };
+}
+
+/**
+ * Apply late fee and interest calculation to a payment and update database
+ */
+export async function applyLateFeeAndInterestToPayment(
+  paymentId: number,
+  gymId: number
+): Promise<boolean> {
+  try {
+    // Get payment
+    const payment = await getPaymentById(paymentId, gymId);
+    if (!payment) {
+      console.error(`[Late Fees] Payment ${paymentId} not found`);
+      return false;
+    }
+
+    // Calculate late fees and interest
+    const calculated = await calculateLateFeeAndInterest(payment, gymId);
+
+    // Update payment with calculated values
+    await updatePayment(paymentId, gymId, {
+      originalAmountInCents: payment.originalAmountInCents || payment.amountInCents,
+      lateFeeInCents: calculated.lateFeeInCents,
+      interestInCents: calculated.interestInCents,
+      totalAmountInCents: calculated.totalAmountInCents,
+      amountInCents: calculated.totalAmountInCents, // Update amount to include fees
+      lastCalculatedAt: new Date(),
+    });
+
+    console.log(
+      `[Late Fees] Payment ${paymentId}: Original R$ ${(payment.amountInCents / 100).toFixed(2)}, ` +
+      `Late Fee R$ ${(calculated.lateFeeInCents / 100).toFixed(2)}, ` +
+      `Interest R$ ${(calculated.interestInCents / 100).toFixed(2)}, ` +
+      `Total R$ ${(calculated.totalAmountInCents / 100).toFixed(2)} ` +
+      `(${calculated.daysOverdue} days overdue)`
+    );
+
+    return true;
+  } catch (error) {
+    console.error(`[Late Fees] Error applying late fees to payment ${paymentId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Calculate and apply late fees and interest to all overdue payments
+ * Should be run daily via cron job
+ */
+export async function calculateAllOverduePayments(): Promise<{
+  processed: number;
+  updated: number;
+  errors: number;
+}> {
+  try {
+    console.log('[Late Fees] Starting calculation for all overdue payments...');
+
+    const db = await getDb();
+    if (!db) {
+      console.error('[Late Fees] Database not available');
+      return { processed: 0, updated: 0, errors: 0 };
+    }
+
+    // Get all pending payments that are overdue
+    const allPayments = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.status, 'pending'));
+
+    const now = Date.now();
+    const overduePayments = allPayments.filter(p => {
+      const dueDate = new Date(p.dueDate).getTime();
+      return dueDate < now;
+    });
+
+    console.log(`[Late Fees] Found ${overduePayments.length} overdue payment(s)`);
+
+    let processed = 0;
+    let updated = 0;
+    let errors = 0;
+
+    for (const payment of overduePayments) {
+      try {
+        processed++;
+        const success = await applyLateFeeAndInterestToPayment(payment.id, payment.gymId);
+        if (success) {
+          updated++;
+        } else {
+          errors++;
+        }
+      } catch (error) {
+        console.error(`[Late Fees] Error processing payment ${payment.id}:`, error);
+        errors++;
+      }
+    }
+
+    console.log(
+      `[Late Fees] Completed: ${processed} processed, ${updated} updated, ${errors} errors`
+    );
+
+    return { processed, updated, errors };
+  } catch (error) {
+    console.error('[Late Fees] Error in calculateAllOverduePayments:', error);
+    return { processed: 0, updated: 0, errors: 0 };
+  }
+}
+
 export async function generateMonthlyPayments(
   gymId: number,
   referenceMonth: Date,

@@ -1477,14 +1477,57 @@ export const appRouter = router({
       if (!student) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Aluno não encontrado" });
       }
-      return await db.getPaymentsByStudent(student.id, ctx.user.gymId);
+
+      // Get payments
+      const payments = await db.getPaymentsByStudent(student.id, ctx.user.gymId);
+
+      // Calculate late fees and interest for each pending payment in real-time
+      const paymentsWithCalculations = await Promise.all(
+        payments.map(async (payment) => {
+          if (payment.status === 'pending') {
+            const calculated = await db.calculateLateFeeAndInterest(payment, ctx.user.gymId!);
+            return {
+              ...payment,
+              originalAmountInCents: payment.originalAmountInCents || payment.amountInCents,
+              lateFeeInCents: calculated.lateFeeInCents,
+              interestInCents: calculated.interestInCents,
+              totalAmountInCents: calculated.totalAmountInCents,
+              daysOverdue: calculated.daysOverdue,
+            };
+          }
+          return payment;
+        })
+      );
+
+      return paymentsWithCalculations;
     }),
 
     list: gymAdminProcedure.query(async ({ ctx }) => {
       if (!ctx.user.gymId) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
       }
-      return await db.listPayments(ctx.user.gymId);
+
+      const payments = await db.listPayments(ctx.user.gymId);
+
+      // Calculate late fees and interest for pending payments
+      const paymentsWithCalculations = await Promise.all(
+        payments.map(async (payment) => {
+          if (payment.status === 'pending') {
+            const calculated = await db.calculateLateFeeAndInterest(payment, ctx.user.gymId!);
+            return {
+              ...payment,
+              originalAmountInCents: payment.originalAmountInCents || payment.amountInCents,
+              lateFeeInCents: calculated.lateFeeInCents,
+              interestInCents: calculated.interestInCents,
+              totalAmountInCents: calculated.totalAmountInCents,
+              daysOverdue: calculated.daysOverdue,
+            };
+          }
+          return payment;
+        })
+      );
+
+      return paymentsWithCalculations;
     }),
 
     listAll: gymAdminProcedure
@@ -1512,21 +1555,39 @@ export const appRouter = router({
         const subscriptionMap = new Map(subscriptions.map(s => [s.id, s]));
         const planMap = new Map(plans.map(p => [p.id, p]));
 
-        // Join student, subscription and plan info with payments
-        const result = payments.map(payment => {
-          const student = studentMap.get(payment.studentId);
-          const subscription = payment.subscriptionId ? subscriptionMap.get(payment.subscriptionId) : undefined;
-          const plan = subscription?.planId ? planMap.get(subscription.planId) : undefined;
+        // Calculate late fees and interest for pending payments, then join with other data
+        const paymentsWithCalculations = await Promise.all(
+          payments.map(async (payment) => {
+            let calculatedPayment = payment;
 
-          return {
-            ...payment,
-            student: student || undefined,
-            subscription: subscription || undefined,
-            plan: plan || undefined,
-          };
-        });
+            // Calculate late fees for pending payments
+            if (payment.status === 'pending') {
+              const calculated = await db.calculateLateFeeAndInterest(payment, ctx.user.gymId!);
+              calculatedPayment = {
+                ...payment,
+                originalAmountInCents: payment.originalAmountInCents || payment.amountInCents,
+                lateFeeInCents: calculated.lateFeeInCents,
+                interestInCents: calculated.interestInCents,
+                totalAmountInCents: calculated.totalAmountInCents,
+                daysOverdue: calculated.daysOverdue,
+              };
+            }
 
-        return result;
+            // Join with student, subscription and plan
+            const student = studentMap.get(payment.studentId);
+            const subscription = payment.subscriptionId ? subscriptionMap.get(payment.subscriptionId) : undefined;
+            const plan = subscription?.planId ? planMap.get(subscription.planId) : undefined;
+
+            return {
+              ...calculatedPayment,
+              student: student || undefined,
+              subscription: subscription || undefined,
+              plan: plan || undefined,
+            };
+          })
+        );
+
+        return paymentsWithCalculations;
       }),
 
     getByStudent: gymAdminProcedure
@@ -1554,7 +1615,25 @@ export const appRouter = router({
           console.log(`[DEBUG getByStudent] First payment:`, JSON.stringify(payments[0], null, 2));
         }
 
-        return payments;
+        // Calculate late fees and interest for pending payments
+        const paymentsWithCalculations = await Promise.all(
+          payments.map(async (payment) => {
+            if (payment.status === 'pending') {
+              const calculated = await db.calculateLateFeeAndInterest(payment, ctx.user.gymId!);
+              return {
+                ...payment,
+                originalAmountInCents: payment.originalAmountInCents || payment.amountInCents,
+                lateFeeInCents: calculated.lateFeeInCents,
+                interestInCents: calculated.interestInCents,
+                totalAmountInCents: calculated.totalAmountInCents,
+                daysOverdue: calculated.daysOverdue,
+              };
+            }
+            return payment;
+          })
+        );
+
+        return paymentsWithCalculations;
       }),
 
     generateMonthlyPayments: gymAdminProcedure

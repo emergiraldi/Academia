@@ -1,5 +1,6 @@
 import cron from "node-cron";
 import { sendDailyPaymentReminders, sendDailyMedicalExamReminders, checkAndBlockDefaulters, syncAccessLogsFromControlId, checkTrialExpirations, pollGymPixPayments, generateMonthlyBillingCycles, sendBillingNotifications, blockOverdueGyms } from "./notifications";
+import { calculateAllOverduePayments } from "./db";
 
 /**
  * Cron job scheduler for automated notifications
@@ -25,6 +26,16 @@ export function startCronJobs() {
       await sendDailyMedicalExamReminders();
     } catch (error) {
       console.error("Error in medical exam reminders cron job:", error);
+    }
+  });
+
+  // Run daily at 2:00 AM - Calculate late fees and interest for overdue payments
+  cron.schedule("0 2 * * *", async () => {
+    console.log("Running late fee and interest calculation job...");
+    try {
+      await calculateAllOverduePayments();
+    } catch (error) {
+      console.error("Error in late fee calculation cron job:", error);
     }
   });
 
@@ -100,6 +111,7 @@ export function startCronJobs() {
 
   console.log("✅ Cron jobs started successfully");
   console.log("  - Monthly billing generation: TESTE - Every minute");
+  console.log("  - Late fees & interest calculation: Daily at 2:00 AM");
   console.log("  - Overdue gym blocking: Daily at 5:00 AM");
   console.log("  - Defaulter blocking: Daily at 6:00 AM");
   console.log("  - Trial expiration check: Daily at 8:00 AM");
