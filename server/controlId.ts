@@ -119,7 +119,7 @@ export class ControlIdService {
     save = true,
     sync = true,
     auto = true,
-    countdown = 3
+    countdown = 5
   ): Promise<EnrollFaceResponse> {
     if (this.useAgent) {
       return await this.sendToAgent('enrollFace', {
