@@ -461,7 +461,7 @@ export default function AdminProfessors() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                      {!professor.faceEnrolled && (
+                      {!professor.faceEnrolled ? (
                         <Button
                           variant="default"
                           size="sm"
@@ -470,6 +470,16 @@ export default function AdminProfessors() {
                         >
                           <Camera className="h-4 w-4 mr-2" />
                           Cadastrar Facial
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenFaceEnroll(professor)}
+                          className="w-full"
+                        >
+                          <Camera className="h-4 w-4 mr-2" />
+                          Recadastrar Facial
                         </Button>
                       )}
                       <Select

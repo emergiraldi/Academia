@@ -3311,6 +3311,17 @@ export const appRouter = router({
               'base64'
             );
 
+            // Se já tinha facial cadastrada, deletar primeiro para recadastrar
+            if (professor.faceEnrolled && controlIdUserId) {
+              try {
+                console.log('[uploadFaceImage-Professor] 🗑️  Deletando foto facial antiga...');
+                await controlIdService.deleteFaceImages(controlIdUserId);
+                console.log('[uploadFaceImage-Professor] ✅ Foto antiga deletada');
+              } catch (deleteError) {
+                console.log('[uploadFaceImage-Professor] ⚠️  Erro ao deletar foto antiga (continuando):', deleteError);
+              }
+            }
+
             let result;
             try {
               result = await controlIdService.uploadFaceImage(controlIdUserId, imageBuffer);
@@ -3669,6 +3680,17 @@ export const appRouter = router({
               input.faceImageBase64.replace(/^data:image\/\w+;base64,/, ''),
               'base64'
             );
+
+            // Se já tinha facial cadastrada, deletar primeiro para recadastrar
+            if (staffMember.faceEnrolled && controlIdUserId) {
+              try {
+                console.log('[uploadFaceImage-Staff] 🗑️  Deletando foto facial antiga...');
+                await controlIdService.deleteFaceImages(controlIdUserId);
+                console.log('[uploadFaceImage-Staff] ✅ Foto antiga deletada');
+              } catch (deleteError) {
+                console.log('[uploadFaceImage-Staff] ⚠️  Erro ao deletar foto antiga (continuando):', deleteError);
+              }
+            }
 
             let result;
             try {

@@ -526,7 +526,7 @@ export default function AdminStaff() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                      {!member.faceEnrolled && (
+                      {!member.faceEnrolled ? (
                         <Button
                           variant="default"
                           size="sm"
@@ -535,6 +535,16 @@ export default function AdminStaff() {
                         >
                           <Camera className="h-4 w-4 mr-2" />
                           Cadastrar Facial
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenFaceEnroll(member)}
+                          className="w-full"
+                        >
+                          <Camera className="h-4 w-4 mr-2" />
+                          Recadastrar Facial
                         </Button>
                       )}
                       <Select
