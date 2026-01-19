@@ -515,21 +515,13 @@ export default function AdminPayments() {
               </DialogDescription>
             </DialogHeader>
             {selectedPayment && (
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-4">
+              <div className="space-y-4">
+                {/* Informações do Aluno */}
                 <div className="p-4 bg-muted rounded-lg">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Aluno:</span>
                       <p className="font-medium">{selectedPayment.student?.registrationNumber || "N/A"}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Valor:</span>
-                      <p className="font-medium">
-                        {(selectedPayment.amountInCents / 100).toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })}
-                      </p>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Vencimento:</span>
@@ -538,6 +530,73 @@ export default function AdminPayments() {
                       </p>
                     </div>
                   </div>
+                </div>
+
+                {/* Breakdown de Valores */}
+                <div className="p-4 bg-muted rounded-lg space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Valor Original:</span>
+                    <span className="font-medium">
+                      {((selectedPayment.originalAmountInCents || selectedPayment.amountInCents) / 100).toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
+                    </span>
+                  </div>
+
+                  {(selectedPayment.lateFeeInCents > 0 || selectedPayment.interestInCents > 0) && (
+                    <>
+                      {selectedPayment.lateFeeInCents > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-red-600">Multa ({selectedPayment.daysOverdue || 0} dia(s) de atraso):</span>
+                          <span className="font-medium text-red-600">
+                            +{(selectedPayment.lateFeeInCents / 100).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </span>
+                        </div>
+                      )}
+
+                      {selectedPayment.interestInCents > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-red-600">Juros:</span>
+                          <span className="font-medium text-red-600">
+                            +{(selectedPayment.interestInCents / 100).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="pt-3 border-t">
+                        <div className="flex justify-between text-lg">
+                          <span className="font-bold">Total a Receber:</span>
+                          <span className="font-bold text-red-600">
+                            {((selectedPayment.totalAmountInCents || selectedPayment.amountInCents) / 100).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {!(selectedPayment.lateFeeInCents > 0 || selectedPayment.interestInCents > 0) && (
+                    <div className="pt-3 border-t">
+                      <div className="flex justify-between text-lg">
+                        <span className="font-bold">Total a Receber:</span>
+                        <span className="font-bold">
+                          {(selectedPayment.amountInCents / 100).toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
