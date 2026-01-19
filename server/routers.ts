@@ -982,38 +982,43 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
 
-        // Check if student has financial history
-        const hasFinancialHistory = await db.checkStudentHasFinancialHistory(input.studentId, gym.id);
-
-        if (hasFinancialHistory) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Não é possível excluir alunos com histórico financeiro. Por favor, inative o aluno em vez de excluí-lo."
-          });
-        }
-
         // Get student data before deletion
         const student = await db.getStudentById(input.studentId, gym.id);
 
-        // Delete user from Control ID if enrolled
-        if (student && student.controlIdUserId) {
+        if (!student) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Aluno não encontrado"
+          });
+        }
+
+        console.log(`[Delete Student] 🗑️  Iniciando exclusão do aluno ${student.name} (ID ${student.id})`);
+
+        // 1. Delete user from Control ID if enrolled (remove facial photo)
+        if (student.controlIdUserId) {
           try {
             const { getControlIdServiceForGym } = await import("./controlId");
             const service = await getControlIdServiceForGym(gym.id);
 
             if (service) {
               await service.deleteUser(student.controlIdUserId);
-              console.log(`[Control ID] ✅ Student ${student.name} (ID ${student.id}) deleted from Control ID`);
+              console.log(`[Control ID] ✅ Aluno ${student.name} (ID ${student.id}) deletado do Control ID (foto facial removida)`);
             }
           } catch (error) {
-            console.error(`[Control ID] ❌ Failed to delete student ${student.id} from Control ID:`, error);
+            console.error(`[Control ID] ❌ Falha ao deletar aluno ${student.id} do Control ID:`, error);
             // Continue with database deletion even if Control ID fails
           }
         }
 
-        // Delete from database
-        await db.deleteStudent(input.studentId, gym.id);
-        return { success: true };
+        // 2. Delete completely from database (including all related records)
+        const result = await db.deleteStudentCompletely(input.studentId, gym.id);
+
+        console.log(`[Delete Student] ✅ Aluno ${student.name} deletado completamente do sistema`);
+
+        return {
+          success: true,
+          message: `Aluno ${student.name} deletado completamente, incluindo foto facial e todos os registros vinculados.`
+        };
       }),
 
     updateStatus: gymAdminProcedure

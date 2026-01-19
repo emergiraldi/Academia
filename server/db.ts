@@ -659,6 +659,112 @@ export async function deleteStudent(id: number, gymId: number) {
   await db.delete(students).where(and(eq(students.id, id), eq(students.gymId, gymId)));
 }
 
+/**
+ * Deleta um aluno completamente, incluindo todos os dados relacionados
+ * Use com cuidado! Esta operação é irreversível.
+ */
+export async function deleteStudentCompletely(studentId: number, gymId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Import tables from schema
+  const {
+    students,
+    users,
+    payments,
+    subscriptions,
+    accessLogs,
+    classBookings,
+    medicalExams,
+    personalRecords,
+    physicalAssessments,
+    workoutDayCompletions,
+    workoutLogs,
+    workouts
+  } = await import("../drizzle/schema");
+
+  // Get student data first
+  const student = await db.select().from(students)
+    .where(and(eq(students.id, studentId), eq(students.gymId, gymId)))
+    .limit(1);
+
+  if (student.length === 0) {
+    throw new Error("Student not found");
+  }
+
+  const studentData = student[0];
+  const userId = studentData.userId;
+
+  console.log(`[Delete Student] 🗑️  Iniciando exclusão completa do aluno ID ${studentId}`);
+
+  // Delete all related records in order (child tables first)
+  try {
+    // 1. Delete workout related data
+    await db.delete(workoutDayCompletions).where(eq(workoutDayCompletions.studentId, studentId));
+    console.log(`[Delete Student] ✅ Workout day completions deletados`);
+
+    await db.delete(workoutLogs).where(eq(workoutLogs.studentId, studentId));
+    console.log(`[Delete Student] ✅ Workout logs deletados`);
+
+    await db.delete(workouts).where(eq(workouts.studentId, studentId));
+    console.log(`[Delete Student] ✅ Workouts deletados`);
+
+    // 2. Delete assessments and records
+    await db.delete(physicalAssessments).where(eq(physicalAssessments.studentId, studentId));
+    console.log(`[Delete Student] ✅ Physical assessments deletados`);
+
+    await db.delete(personalRecords).where(eq(personalRecords.studentId, studentId));
+    console.log(`[Delete Student] ✅ Personal records deletados`);
+
+    await db.delete(medicalExams).where(eq(medicalExams.studentId, studentId));
+    console.log(`[Delete Student] ✅ Medical exams deletados`);
+
+    // 3. Delete class bookings
+    await db.delete(classBookings).where(eq(classBookings.studentId, studentId));
+    console.log(`[Delete Student] ✅ Class bookings deletados`);
+
+    // 4. Delete access logs
+    await db.delete(accessLogs).where(eq(accessLogs.studentId, studentId));
+    console.log(`[Delete Student] ✅ Access logs deletados`);
+
+    // 5. Delete financial records (payments and subscriptions)
+    await db.delete(payments).where(and(
+      eq(payments.studentId, studentId),
+      eq(payments.gymId, gymId)
+    ));
+    console.log(`[Delete Student] ✅ Payments deletados`);
+
+    await db.delete(subscriptions).where(and(
+      eq(subscriptions.studentId, studentId),
+      eq(subscriptions.gymId, gymId)
+    ));
+    console.log(`[Delete Student] ✅ Subscriptions deletados`);
+
+    // 6. Delete student record
+    await db.delete(students).where(and(
+      eq(students.id, studentId),
+      eq(students.gymId, gymId)
+    ));
+    console.log(`[Delete Student] ✅ Student record deletado`);
+
+    // 7. Delete user record
+    await db.delete(users).where(eq(users.id, userId));
+    console.log(`[Delete Student] ✅ User record deletado`);
+
+    console.log(`[Delete Student] ✅ Exclusão completa do aluno ID ${studentId} finalizada com sucesso`);
+
+    return {
+      success: true,
+      deletedStudentId: studentId,
+      deletedUserId: userId,
+      controlIdUserId: studentData.controlIdUserId
+    };
+  } catch (error: any) {
+    console.error(`[Delete Student] ❌ Erro ao deletar aluno:`, error);
+    throw new Error(`Erro ao deletar aluno: ${error.message}`);
+  }
+}
+
 // ============ STAFF ============
 
 export async function createStaff(staffData: InsertStaff) {
