@@ -171,21 +171,21 @@ export default function AdminPayments() {
     return matchesSearch && matchesStatus && matchesMethod && matchesPeriod;
   });
 
-  // Calculate totals
+  // Calculate totals - usar totalAmountInCents que inclui juros/multas
   const totalReceived = payments
     .filter((p: any) => p.status === "paid")
     .reduce((sum: number, p: any) => sum + p.amountInCents, 0);
 
   const totalPending = payments
     .filter((p: any) => p.status === "pending")
-    .reduce((sum: number, p: any) => sum + p.amountInCents, 0);
+    .reduce((sum: number, p: any) => sum + (p.totalAmountInCents || p.amountInCents), 0);
 
   const totalOverdue = payments
     .filter((p: any) => {
       if (p.status !== "pending") return false;
       return new Date(p.dueDate) < new Date();
     })
-    .reduce((sum: number, p: any) => sum + p.amountInCents, 0);
+    .reduce((sum: number, p: any) => sum + (p.totalAmountInCents || p.amountInCents), 0);
 
   const handleOpenGenerateModal = () => {
     setSelectedStudents([]);
@@ -1082,7 +1082,9 @@ export default function AdminPayments() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Aluno</TableHead>
-                  <TableHead>Valor</TableHead>
+                  <TableHead>Valor Original</TableHead>
+                  <TableHead>Acréscimos</TableHead>
+                  <TableHead>Total</TableHead>
                   <TableHead>Método</TableHead>
                   <TableHead>Vencimento</TableHead>
                   <TableHead>Pagamento</TableHead>
@@ -1093,73 +1095,122 @@ export default function AdminPayments() {
               <TableBody>
                 {filteredPayments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={9} className="text-center py-8">
                       <DollarSign className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">Nenhum pagamento encontrado</p>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredPayments.map((payment: any) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex flex-col">
-                          <span>{payment.student?.name || "N/A"}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {payment.student?.registrationNumber || "N/A"}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span>
-                            {(payment.amountInCents / 100).toLocaleString("pt-BR", {
+                  filteredPayments.map((payment: any) => {
+                    const originalAmount = payment.originalAmountInCents || payment.amountInCents;
+                    const lateFee = payment.lateFeeInCents || 0;
+                    const interest = payment.interestInCents || 0;
+                    const total = payment.totalAmountInCents || payment.amountInCents;
+                    const hasLateFees = lateFee > 0 || interest > 0;
+                    const daysOverdue = payment.daysOverdue || 0;
+
+                    return (
+                      <TableRow
+                        key={payment.id}
+                        className={hasLateFees ? "bg-red-50 dark:bg-red-950/10" : ""}
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex flex-col">
+                            <span>{payment.student?.name || "N/A"}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {payment.student?.registrationNumber || "N/A"}
+                            </span>
+                            {daysOverdue > 0 && (
+                              <span className="text-xs text-red-600 font-semibold mt-1">
+                                {daysOverdue} dia(s) de atraso
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-semibold">
+                              {(originalAmount / 100).toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              })}
+                            </span>
+                            {payment.isInstallment && (
+                              <Badge variant="outline" className="w-fit text-xs">
+                                Parcela {payment.installmentNumber}/{payment.totalInstallments}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {hasLateFees ? (
+                            <div className="text-sm space-y-1">
+                              {lateFee > 0 && (
+                                <div className="text-red-600">
+                                  Multa: +{(lateFee / 100).toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL",
+                                  })}
+                                </div>
+                              )}
+                              {interest > 0 && (
+                                <div className="text-red-600">
+                                  Juros: +{(interest / 100).toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL",
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`font-bold text-lg ${hasLateFees ? "text-red-600" : ""}`}>
+                            {(total / 100).toLocaleString("pt-BR", {
                               style: "currency",
                               currency: "BRL",
                             })}
                           </span>
-                          {payment.isInstallment && (
-                            <Badge variant="outline" className="w-fit text-xs">
-                              Parcela {payment.installmentNumber}/{payment.totalInstallments}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getMethodBadge(payment.paymentMethod)}</TableCell>
-                      <TableCell>
-                        {new Date(payment.dueDate).toLocaleDateString("pt-BR")}
-                      </TableCell>
-                      <TableCell>
-                        {payment.paidAt
-                          ? new Date(payment.paidAt).toLocaleDateString("pt-BR")
-                          : "-"}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(payment.status, payment.dueDate)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {payment.status === "pending" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenPayment(payment)}
-                            >
-                              <DollarSign className="w-4 h-4 mr-1" />
-                              Dar Baixa
-                            </Button>
-                          )}
-                          {payment.status === "paid" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewReceipt(payment)}
-                            >
-                              <FileText className="w-4 h-4 mr-1" />
-                              Ver Recibo
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell>{getMethodBadge(payment.paymentMethod)}</TableCell>
+                        <TableCell>
+                          {new Date(payment.dueDate).toLocaleDateString("pt-BR")}
+                        </TableCell>
+                        <TableCell>
+                          {payment.paidAt
+                            ? new Date(payment.paidAt).toLocaleDateString("pt-BR")
+                            : "-"}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(payment.status, payment.dueDate)}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {payment.status === "pending" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenPayment(payment)}
+                              >
+                                <DollarSign className="w-4 h-4 mr-1" />
+                                Dar Baixa
+                              </Button>
+                            )}
+                            {payment.status === "paid" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewReceipt(payment)}
+                              >
+                                <FileText className="w-4 h-4 mr-1" />
+                                Ver Recibo
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

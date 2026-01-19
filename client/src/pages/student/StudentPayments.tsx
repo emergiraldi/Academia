@@ -26,17 +26,30 @@ import {
   QrCode,
   Copy,
   CreditCard,
+  FileText,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import PaymentReceipt from "@/components/PaymentReceipt";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useGym } from "@/_core/hooks/useGym";
 
 export default function StudentPayments() {
   const [pixModalOpen, setPixModalOpen] = useState(false);
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [pixData, setPixData] = useState<any>(null);
 
+  // Auth and Gym context
+  const { user } = useAuth();
+  const { gymSlug } = useGym();
+
   // Queries
   const { data: payments = [], refetch } = trpc.payments.myPayments.useQuery();
+  const { data: gym } = trpc.gyms.getBySlug.useQuery(
+    { slug: gymSlug || "" },
+    { enabled: !!gymSlug }
+  );
 
   // Mutations
   const generatePixMutation = trpc.payments.generatePixQrCode.useMutation({
@@ -95,7 +108,7 @@ export default function StudentPayments() {
 
   const totalPending = payments
     .filter((p: any) => p.status === "pending")
-    .reduce((sum: number, p: any) => sum + p.amountInCents, 0);
+    .reduce((sum: number, p: any) => sum + (p.totalAmountInCents || p.amountInCents), 0);
 
   const totalPaid = payments
     .filter((p: any) => p.status === "paid")
@@ -194,6 +207,8 @@ export default function StudentPayments() {
                 <TableRow>
                   <TableHead>Vencimento</TableHead>
                   <TableHead>Valor</TableHead>
+                  <TableHead>Acréscimos</TableHead>
+                  <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Pagamento</TableHead>
                   <TableHead>Ações</TableHead>
@@ -208,45 +223,110 @@ export default function StudentPayments() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  payments.map((payment: any) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>
-                        {new Date(payment.dueDate).toLocaleDateString("pt-BR")}
-                      </TableCell>
-                      <TableCell className="font-semibold">
-                        {(payment.amountInCents / 100).toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(payment.status, payment.dueDate)}</TableCell>
-                      <TableCell>
-                        {payment.paidAt
-                          ? new Date(payment.paidAt).toLocaleDateString("pt-BR")
-                          : "-"}
-                      </TableCell>
-                      <TableCell>
-                        {payment.status === "pending" && (
-                          <Button
-                            onClick={() => handleGeneratePix(payment)}
-                            size="sm"
-                            className="bg-gradient-to-r from-teal-500 to-cyan-600"
-                          >
-                            <QrCode className="w-4 h-4 mr-1" />
-                            Pagar com PIX
-                          </Button>
-                        )}
-                        {payment.status === "paid" && (
-                          <span className="text-sm text-muted-foreground">
-                            {payment.paymentMethod === "pix" && "PIX"}
-                            {payment.paymentMethod === "cash" && "Dinheiro"}
-                            {payment.paymentMethod === "credit_card" && "Cartão de Crédito"}
-                            {payment.paymentMethod === "debit_card" && "Cartão de Débito"}
-                          </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  payments.map((payment: any) => {
+                    const originalAmount = payment.originalAmountInCents || payment.amountInCents;
+                    const lateFee = payment.lateFeeInCents || 0;
+                    const interest = payment.interestInCents || 0;
+                    const total = payment.totalAmountInCents || payment.amountInCents;
+                    const hasLateFees = lateFee > 0 || interest > 0;
+                    const daysOverdue = payment.daysOverdue || 0;
+
+                    return (
+                      <TableRow key={payment.id} className={hasLateFees ? "bg-red-50 dark:bg-red-950/10" : ""}>
+                        <TableCell>
+                          <div>
+                            {new Date(payment.dueDate).toLocaleDateString("pt-BR")}
+                            {daysOverdue > 0 && (
+                              <div className="text-xs text-red-600 mt-1">
+                                {daysOverdue} dia(s) de atraso
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-semibold">
+                            {(originalAmount / 100).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {hasLateFees ? (
+                            <div className="text-sm">
+                              {lateFee > 0 && (
+                                <div className="text-red-600">
+                                  Multa: +{(lateFee / 100).toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL",
+                                  })}
+                                </div>
+                              )}
+                              {interest > 0 && (
+                                <div className="text-red-600">
+                                  Juros: +{(interest / 100).toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL",
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className={`font-bold ${hasLateFees ? "text-red-600 text-lg" : ""}`}>
+                            {(total / 100).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </div>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(payment.status, payment.dueDate)}</TableCell>
+                        <TableCell>
+                          {payment.paidAt
+                            ? new Date(payment.paidAt).toLocaleDateString("pt-BR")
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {payment.status === "pending" && (
+                              <Button
+                                onClick={() => handleGeneratePix(payment)}
+                                size="sm"
+                                className="bg-gradient-to-r from-teal-500 to-cyan-600"
+                              >
+                                <QrCode className="w-4 h-4 mr-1" />
+                                Pagar com PIX
+                              </Button>
+                            )}
+                            {payment.status === "paid" && (
+                              <>
+                                <span className="text-sm text-muted-foreground flex items-center">
+                                  {payment.paymentMethod === "pix" && "PIX"}
+                                  {payment.paymentMethod === "cash" && "Dinheiro"}
+                                  {payment.paymentMethod === "credit_card" && "Cartão de Crédito"}
+                                  {payment.paymentMethod === "debit_card" && "Cartão de Débito"}
+                                </span>
+                                <Button
+                                  onClick={() => {
+                                    setSelectedPayment(payment);
+                                    setReceiptModalOpen(true);
+                                  }}
+                                  size="sm"
+                                  variant="outline"
+                                >
+                                  <FileText className="w-4 h-4 mr-1" />
+                                  Comprovante
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -277,14 +357,63 @@ export default function StudentPayments() {
 
             {pixData && selectedPayment && (
               <div className="space-y-4">
-                <div className="p-4 bg-muted rounded-lg text-center">
-                  <p className="text-sm text-muted-foreground">Valor a pagar</p>
-                  <p className="text-3xl font-bold text-primary">
-                    {(selectedPayment.amountInCents / 100).toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </p>
+                <div className="p-4 bg-muted rounded-lg">
+                  {selectedPayment.lateFeeInCents > 0 || selectedPayment.interestInCents > 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Mensalidade</span>
+                        <span className="font-medium">
+                          {((selectedPayment.originalAmountInCents || selectedPayment.amountInCents) / 100).toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          })}
+                        </span>
+                      </div>
+                      {selectedPayment.lateFeeInCents > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-red-600">Multa por atraso</span>
+                          <span className="font-medium text-red-600">
+                            + {(selectedPayment.lateFeeInCents / 100).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </span>
+                        </div>
+                      )}
+                      {selectedPayment.interestInCents > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-red-600">Juros ({selectedPayment.daysOverdue} dias)</span>
+                          <span className="font-medium text-red-600">
+                            + {(selectedPayment.interestInCents / 100).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </span>
+                        </div>
+                      )}
+                      <div className="border-t pt-2 mt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">Total a pagar</span>
+                          <span className="text-3xl font-bold text-primary">
+                            {((selectedPayment.totalAmountInCents || selectedPayment.amountInCents) / 100).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">Valor a pagar</p>
+                      <p className="text-3xl font-bold text-primary">
+                        {(selectedPayment.amountInCents / 100).toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        })}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* QR Code */}
@@ -327,6 +456,29 @@ export default function StudentPayments() {
                   Fechar
                 </Button>
               </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Receipt Modal */}
+        <Dialog open={receiptModalOpen} onOpenChange={setReceiptModalOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            {selectedPayment && user && gym && (
+              <PaymentReceipt
+                payment={selectedPayment}
+                student={{
+                  name: user.name,
+                  email: user.email,
+                  cpf: user.cpf || undefined,
+                }}
+                gym={{
+                  name: gym.name,
+                  cnpj: gym.cnpj || undefined,
+                  address: gym.address || undefined,
+                  phone: gym.phone || undefined,
+                  email: gym.email || undefined,
+                }}
+              />
             )}
           </DialogContent>
         </Dialog>
