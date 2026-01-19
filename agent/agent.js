@@ -516,9 +516,8 @@ async function toletusSetEntryClockwise({ device, entryClockwise }) {
   };
 
   // Usar endpoint específico baseado no tipo de dispositivo
+  // IMPORTANTE: LiteNet3 usa LiteNet2Commands (LiteNet3Commands não existe no Toletus HUB)
   const endpoint = device.type === 'LiteNet1' ? `/LiteNet1Commands/SetEntryClockwise?entryClockwise=${entryClockwise}` :
-                   device.type === 'LiteNet2' ? `/LiteNet2Commands/SetEntryClockwise?entryClockwise=${entryClockwise}` :
-                   device.type === 'LiteNet3' ? `/LiteNet3Commands/SetEntryClockwise?entryClockwise=${entryClockwise}` :
                    `/LiteNet2Commands/SetEntryClockwise?entryClockwise=${entryClockwise}`;
 
   try {
@@ -560,9 +559,8 @@ async function toletusSetFlowControl({ device, controlledFlow }) {
   };
 
   // Usar endpoint específico baseado no tipo de dispositivo
+  // IMPORTANTE: LiteNet3 usa LiteNet2Commands (LiteNet3Commands não existe no Toletus HUB)
   const endpoint = device.type === 'LiteNet1' ? `/LiteNet1Commands/SetFlowControl?controlledFlow=${controlledFlow}` :
-                   device.type === 'LiteNet2' ? `/LiteNet2Commands/SetFlowControl?controlledFlow=${controlledFlow}` :
-                   device.type === 'LiteNet3' ? `/LiteNet3Commands/SetFlowControl?controlledFlow=${controlledFlow}` :
                    `/LiteNet2Commands/SetFlowControl?controlledFlow=${controlledFlow}`;
 
   try {
