@@ -259,6 +259,89 @@ export type Student = typeof students.$inferSelect;
 export type InsertStudent = typeof students.$inferInsert;
 
 /**
+ * Staff table - gym employees
+ */
+export const staff = mysqlTable("staff", {
+  id: int("id").autoincrement().primaryKey(),
+  gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  registrationNumber: varchar("registrationNumber", { length: 50 }).notNull(),
+  cpf: varchar("cpf", { length: 14 }).notNull(),
+  phone: varchar("phone", { length: 20 }),
+  birthDate: timestamp("birthDate"),
+
+  // Address fields
+  address: text("address"),
+  number: varchar("number", { length: 20 }),
+  complement: varchar("complement", { length: 100 }),
+  neighborhood: varchar("neighborhood", { length: 100 }),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 2 }),
+  zipCode: varchar("zipCode", { length: 10 }),
+
+  // Employment info
+  position: varchar("position", { length: 100 }), // Cargo/Função
+  department: varchar("department", { length: 100 }), // Departamento
+  hireDate: timestamp("hireDate"), // Data de admissão
+  salary: decimal("salary", { precision: 10, scale: 2 }), // Salário (opcional)
+
+  // Access control
+  accessStatus: mysqlEnum("accessStatus", ["active", "inactive", "suspended", "blocked"]).default("inactive").notNull(),
+  controlIdUserId: int("controlIdUserId"),
+  faceEnrolled: boolean("faceEnrolled").default(false).notNull(),
+  faceImageUrl: text("faceImageUrl"),
+  photoUrl: text("photoUrl"),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Staff = typeof staff.$inferSelect;
+export type InsertStaff = typeof staff.$inferInsert;
+
+/**
+ * Professors table - gym instructors/personal trainers
+ */
+export const professors = mysqlTable("professors", {
+  id: int("id").autoincrement().primaryKey(),
+  gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  registrationNumber: varchar("registrationNumber", { length: 50 }).notNull(),
+  cpf: varchar("cpf", { length: 14 }).notNull(),
+  phone: varchar("phone", { length: 20 }),
+  birthDate: timestamp("birthDate"),
+
+  // Address fields
+  address: text("address"),
+  number: varchar("number", { length: 20 }),
+  complement: varchar("complement", { length: 100 }),
+  neighborhood: varchar("neighborhood", { length: 100 }),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 2 }),
+  zipCode: varchar("zipCode", { length: 10 }),
+
+  // Professional info
+  specialty: varchar("specialty", { length: 100 }), // Especialidade
+  certifications: text("certifications"), // Certificações/Formações
+  hireDate: timestamp("hireDate"), // Data de admissão
+  cref: varchar("cref", { length: 20 }), // Registro CREF
+  bio: text("bio"), // Biografia/Apresentação
+
+  // Access control
+  accessStatus: mysqlEnum("accessStatus", ["active", "inactive", "suspended", "blocked"]).default("inactive").notNull(),
+  controlIdUserId: int("controlIdUserId"),
+  faceEnrolled: boolean("faceEnrolled").default(false).notNull(),
+  faceImageUrl: text("faceImageUrl"),
+  photoUrl: text("photoUrl"),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Professor = typeof professors.$inferSelect;
+export type InsertProfessor = typeof professors.$inferInsert;
+
+/**
  * Plans table - membership plans
  */
 export const plans = mysqlTable("plans", {
