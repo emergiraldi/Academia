@@ -515,8 +515,11 @@ async function toletusSetEntryClockwise({ device, entryClockwise }) {
     Connected: true
   };
 
-  // Usar endpoint específico para LiteNet2
-  const endpoint = `/LiteNet2Commands/SetEntryClockwise?entryClockwise=${entryClockwise}`;
+  // Usar endpoint específico baseado no tipo de dispositivo
+  const endpoint = device.type === 'LiteNet1' ? `/LiteNet1Commands/SetEntryClockwise?entryClockwise=${entryClockwise}` :
+                   device.type === 'LiteNet2' ? `/LiteNet2Commands/SetEntryClockwise?entryClockwise=${entryClockwise}` :
+                   device.type === 'LiteNet3' ? `/LiteNet3Commands/SetEntryClockwise?entryClockwise=${entryClockwise}` :
+                   `/LiteNet2Commands/SetEntryClockwise?entryClockwise=${entryClockwise}`;
 
   try {
     const response = await axios.post(
@@ -556,8 +559,11 @@ async function toletusSetFlowControl({ device, controlledFlow }) {
     Connected: true
   };
 
-  // Usar endpoint específico para LiteNet2
-  const endpoint = `/LiteNet2Commands/SetFlowControl?controlledFlow=${controlledFlow}`;
+  // Usar endpoint específico baseado no tipo de dispositivo
+  const endpoint = device.type === 'LiteNet1' ? `/LiteNet1Commands/SetFlowControl?controlledFlow=${controlledFlow}` :
+                   device.type === 'LiteNet2' ? `/LiteNet2Commands/SetFlowControl?controlledFlow=${controlledFlow}` :
+                   device.type === 'LiteNet3' ? `/LiteNet3Commands/SetFlowControl?controlledFlow=${controlledFlow}` :
+                   `/LiteNet2Commands/SetFlowControl?controlledFlow=${controlledFlow}`;
 
   try {
     const response = await axios.post(
