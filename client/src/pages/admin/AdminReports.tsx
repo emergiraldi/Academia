@@ -154,16 +154,28 @@ export default function AdminReports() {
 
   const filteredStudents = getFilteredStudents();
   const filteredPayments = getFilteredPayments();
-  const defaulters = filteredStudents.filter((student: any) => student.membershipStatus === "inactive");
 
-  // Calculate totals
+  // Calculate defaulters: students with overdue payments
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const overduePayments = payments.filter((payment: any) => {
+    const dueDate = new Date(payment.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
+    return payment.status === "pending" && dueDate < today;
+  });
+
+  const defaulterIds = new Set(overduePayments.map((p: any) => p.studentId));
+  const defaulters = filteredStudents.filter((student: any) => defaulterIds.has(student.id));
+
+  // Calculate totals (using totalAmountInCents when available for late fees/interest)
   const totalReceived = filteredPayments
     .filter((p: any) => p.status === "paid")
-    .reduce((sum: number, p: any) => sum + p.amountInCents, 0) / 100;
+    .reduce((sum: number, p: any) => sum + (p.totalAmountInCents || p.amountInCents), 0) / 100;
 
   const totalPending = filteredPayments
     .filter((p: any) => p.status === "pending" || p.status === "overdue")
-    .reduce((sum: number, p: any) => sum + p.amountInCents, 0) / 100;
+    .reduce((sum: number, p: any) => sum + (p.totalAmountInCents || p.amountInCents), 0) / 100;
 
   // Generate Students List Report (PDF)
   const generateStudentsReportPDF = () => {
@@ -231,29 +243,60 @@ export default function AdminReports() {
   const generateDefaultersReport = () => {
     setGenerating("defaulters");
     try {
-      const doc = new jsPDF();
+      const doc = new jsPDF('landscape');
       const startY = addPDFHeader(doc, "Relatório de Inadimplência", `Total de inadimplentes: ${defaulters.length}`);
 
-      // Table
-      const tableData = defaulters.map((student: any) => [
-        student.registrationNumber,
-        student.name || "Sem Nome",
-        student.email,
-        student.phone || "-",
-        student.membershipStatus === "inactive" ? "Inativo" : "Bloqueado",
-      ]);
+      // Calculate total overdue amount with late fees/interest
+      const totalOverdue = overduePayments.reduce((sum: number, p: any) =>
+        sum + (p.totalAmountInCents || p.amountInCents), 0) / 100;
+
+      // Summary box
+      doc.setFillColor(220, 38, 38);
+      doc.roundedRect(14, startY + 5, 100, 20, 3, 3, 'F');
+      doc.setFontSize(10);
+      doc.setTextColor(255, 255, 255);
+      doc.text("Total em Atraso (com juros/multas)", 18, startY + 12);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`R$ ${totalOverdue.toFixed(2)}`, 18, startY + 20);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+
+      // Table with payment details
+      const tableData = defaulters.map((student: any) => {
+        // Get overdue payments for this student
+        const studentOverduePayments = overduePayments.filter((p: any) => p.studentId === student.id);
+        const totalDebt = studentOverduePayments.reduce((sum: number, p: any) =>
+          sum + (p.totalAmountInCents || p.amountInCents), 0) / 100;
+        const latestDueDate = studentOverduePayments.length > 0
+          ? new Date(Math.min(...studentOverduePayments.map((p: any) => new Date(p.dueDate).getTime())))
+          : null;
+
+        return [
+          student.registrationNumber,
+          student.name || "Sem Nome",
+          student.email,
+          student.phone || "-",
+          studentOverduePayments.length,
+          latestDueDate ? latestDueDate.toLocaleDateString("pt-BR") : "-",
+          `R$ ${totalDebt.toFixed(2)}`,
+        ];
+      });
 
       autoTable(doc, {
-        head: [["Matrícula", "Nome", "Email", "Telefone", "Status"]],
+        head: [["Matrícula", "Nome", "Email", "Telefone", "Qtd Atrasos", "Atraso Mais Antigo", "Total Devido"]],
         body: tableData,
-        startY: startY + 5,
-        styles: { fontSize: 9, cellPadding: 3 },
+        startY: startY + 30,
+        styles: { fontSize: 8, cellPadding: 2 },
         headStyles: {
           fillColor: [220, 38, 38],
           textColor: [255, 255, 255],
           fontStyle: 'bold'
         },
         alternateRowStyles: { fillColor: [254, 242, 242] },
+        columnStyles: {
+          6: { halign: 'right', fontStyle: 'bold' }
+        }
       });
 
       addPDFFooter(doc);
@@ -311,22 +354,32 @@ export default function AdminReports() {
       doc.setFont('helvetica', 'normal');
 
       // Table
-      const tableData = filteredPayments.map((payment: any) => [
-        new Date(payment.dueDate).toLocaleDateString("pt-BR"),
-        payment.student?.name || "-",
-        `R$ ${(payment.amountInCents / 100).toFixed(2)}`,
-        payment.status === "paid" ? "Pago" :
-        payment.status === "pending" ? "Pendente" :
-        payment.status === "overdue" ? "Vencido" : "Cancelado",
-        payment.paidAt ? new Date(payment.paidAt).toLocaleDateString("pt-BR") : "-",
-        payment.paymentMethod || "-",
-      ]);
+      const tableData = filteredPayments.map((payment: any) => {
+        const originalAmount = (payment.originalAmountInCents || payment.amountInCents) / 100;
+        const lateFee = (payment.lateFeeInCents || 0) / 100;
+        const interest = (payment.interestInCents || 0) / 100;
+        const total = (payment.totalAmountInCents || payment.amountInCents) / 100;
+        const hasLateFees = lateFee > 0 || interest > 0;
+
+        return [
+          new Date(payment.dueDate).toLocaleDateString("pt-BR"),
+          payment.student?.name || "-",
+          `R$ ${originalAmount.toFixed(2)}`,
+          hasLateFees ? `R$ ${(lateFee + interest).toFixed(2)}` : "-",
+          hasLateFees ? `R$ ${total.toFixed(2)}` : `R$ ${originalAmount.toFixed(2)}`,
+          payment.status === "paid" ? "Pago" :
+          payment.status === "pending" ? "Pendente" :
+          payment.status === "overdue" ? "Vencido" : "Cancelado",
+          payment.paidAt ? new Date(payment.paidAt).toLocaleDateString("pt-BR") : "-",
+          payment.paymentMethod || "-",
+        ];
+      });
 
       autoTable(doc, {
-        head: [["Vencimento", "Aluno", "Valor", "Status", "Pago em", "Método"]],
+        head: [["Vencimento", "Aluno", "Valor", "Juros/Multa", "Total", "Status", "Pago em", "Método"]],
         body: tableData,
         startY: startY + 30,
-        styles: { fontSize: 9, cellPadding: 3 },
+        styles: { fontSize: 8, cellPadding: 2 },
         headStyles: {
           fillColor: [59, 130, 246],
           textColor: [255, 255, 255],
@@ -335,7 +388,9 @@ export default function AdminReports() {
         alternateRowStyles: { fillColor: [245, 247, 250] },
         columnStyles: {
           2: { halign: 'right' },
-          3: { halign: 'center' },
+          3: { halign: 'right', textColor: [220, 38, 38] },
+          4: { halign: 'right', fontStyle: 'bold' },
+          5: { halign: 'center' },
         },
       });
 
@@ -473,17 +528,27 @@ export default function AdminReports() {
   const exportPaymentsExcel = () => {
     setGenerating("payments-excel");
     try {
-      const data = filteredPayments.map((payment: any) => ({
-        Vencimento: new Date(payment.dueDate).toLocaleDateString("pt-BR"),
-        Aluno: payment.student?.name || "-",
-        Valor: `R$ ${(payment.amountInCents / 100).toFixed(2)}`,
-        Status: payment.status === "paid" ? "Pago" :
-                payment.status === "pending" ? "Pendente" :
-                payment.status === "overdue" ? "Vencido" : "Cancelado",
-        "Pago em": payment.paidAt ? new Date(payment.paidAt).toLocaleDateString("pt-BR") : "-",
-        "Método": payment.paymentMethod || "-",
-        "ID Transação": payment.txId || "-",
-      }));
+      const data = filteredPayments.map((payment: any) => {
+        const originalAmount = (payment.originalAmountInCents || payment.amountInCents) / 100;
+        const lateFee = (payment.lateFeeInCents || 0) / 100;
+        const interest = (payment.interestInCents || 0) / 100;
+        const total = (payment.totalAmountInCents || payment.amountInCents) / 100;
+
+        return {
+          Vencimento: new Date(payment.dueDate).toLocaleDateString("pt-BR"),
+          Aluno: payment.student?.name || "-",
+          "Valor Original": `R$ ${originalAmount.toFixed(2)}`,
+          Multa: lateFee > 0 ? `R$ ${lateFee.toFixed(2)}` : "-",
+          Juros: interest > 0 ? `R$ ${interest.toFixed(2)}` : "-",
+          "Total com Acréscimos": `R$ ${total.toFixed(2)}`,
+          Status: payment.status === "paid" ? "Pago" :
+                  payment.status === "pending" ? "Pendente" :
+                  payment.status === "overdue" ? "Vencido" : "Cancelado",
+          "Pago em": payment.paidAt ? new Date(payment.paidAt).toLocaleDateString("pt-BR") : "-",
+          Método: payment.paymentMethod || "-",
+          "ID Transação": payment.txId || "-",
+        };
+      });
 
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
