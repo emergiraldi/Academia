@@ -667,40 +667,24 @@ export async function deleteStudentCompletely(studentId: number, gymId: number) 
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Import tables from schema
-  const {
-    students,
-    users,
-    payments,
-    subscriptions,
-    accessLogs,
-    classBookings,
-    medicalExams,
-    personalRecords,
-    physicalAssessments,
-    workoutDayCompletions,
-    workoutLogs,
-    workouts
-  } = await import("../drizzle/schema");
-
   // Get student data first
-  const student = await db.select().from(students)
+  const studentResult = await db.select().from(students)
     .where(and(eq(students.id, studentId), eq(students.gymId, gymId)))
     .limit(1);
 
-  if (student.length === 0) {
+  if (studentResult.length === 0) {
     throw new Error("Student not found");
   }
 
-  const studentData = student[0];
+  const studentData = studentResult[0];
   const userId = studentData.userId;
 
   console.log(`[Delete Student] 🗑️  Iniciando exclusão completa do aluno ID ${studentId}`);
 
   // Delete all related records in order (child tables first)
   try {
-    // 1. Delete workout related data
-    await db.delete(workoutDayCompletions).where(eq(workoutDayCompletions.studentId, studentId));
+    // 1. Delete workout related data (using raw SQL for workout_day_completions)
+    await db.execute(sql`DELETE FROM workout_day_completions WHERE studentId = ${studentId}`);
     console.log(`[Delete Student] ✅ Workout day completions deletados`);
 
     await db.delete(workoutLogs).where(eq(workoutLogs.studentId, studentId));
