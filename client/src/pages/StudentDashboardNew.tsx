@@ -205,11 +205,16 @@ export default function StudentDashboardNew() {
                       >
                         <div>
                           <p className="font-medium text-gray-900 dark:text-gray-100">
-                            R$ {(payment.amountInCents / 100).toFixed(2)}
+                            R$ {((payment.totalAmountInCents || payment.amountInCents) / 100).toFixed(2)}
                           </p>
                           <p className="text-xs text-gray-600 dark:text-gray-400">
                             {new Date(payment.dueDate).toLocaleDateString("pt-BR")}
                           </p>
+                          {(payment.lateFeeInCents > 0 || payment.interestInCents > 0) && (
+                            <p className="text-xs text-red-600 font-semibold">
+                              +R$ {(((payment.lateFeeInCents || 0) + (payment.interestInCents || 0)) / 100).toFixed(2)} acréscimos
+                            </p>
+                          )}
                         </div>
                         <div className="text-xs px-2 py-1 rounded-full">
                           {payment.status === "paid" ? (

@@ -13,6 +13,7 @@ import {
   DollarSign,
   Copy,
   X,
+  FileText,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import PaymentReceipt from "@/components/PaymentReceipt";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useGym } from "@/_core/hooks/useGym";
 
 interface StudentPaymentsProps {
   onBack: () => void;
@@ -36,9 +40,19 @@ export default function StudentPayments({ onBack }: StudentPaymentsProps) {
   const [pixData, setPixData] = useState<any>(null);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [pixConfirmed, setPixConfirmed] = useState(false);
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+
+  // Auth and Gym context
+  const { user } = useAuth();
+  const { gymSlug } = useGym();
 
   // Busca pagamentos do aluno
   const { data: payments = [], isLoading, refetch } = trpc.payments.myPayments.useQuery();
+  const { data: gym } = trpc.gyms.getBySlug.useQuery(
+    { slug: gymSlug || "" },
+    { enabled: !!gymSlug }
+  );
+  const { data: student } = trpc.students.me.useQuery();
 
   // Mutations
   const generatePixMutation = trpc.payments.generatePixQrCode.useMutation();
@@ -55,13 +69,13 @@ export default function StudentPayments({ onBack }: StudentPaymentsProps) {
     }).length,
     totalPending: payments
       .filter(p => p.status === "pending")
-      .reduce((sum, p) => sum + (p.amountInCents / 100), 0),
+      .reduce((sum, p) => sum + ((p.totalAmountInCents || p.amountInCents) / 100), 0),
     totalOverdue: payments
       .filter(p => {
         if (p.status === "paid") return false;
         return new Date(p.dueDate) < new Date();
       })
-      .reduce((sum, p) => sum + (p.amountInCents / 100), 0),
+      .reduce((sum, p) => sum + ((p.totalAmountInCents || p.amountInCents) / 100), 0),
   };
 
   // Filtra pagamentos
@@ -379,9 +393,23 @@ export default function StudentPayments({ onBack }: StudentPaymentsProps) {
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-bold text-gray-800">
-                          {formatCurrency(payment.amountInCents / 100)}
-                        </p>
+                        {payment.lateFeeInCents > 0 || payment.interestInCents > 0 ? (
+                          <div>
+                            <p className="text-sm text-gray-500 line-through">
+                              {formatCurrency((payment.originalAmountInCents || payment.amountInCents) / 100)}
+                            </p>
+                            <p className="text-xl font-bold text-red-600">
+                              {formatCurrency((payment.totalAmountInCents || payment.amountInCents) / 100)}
+                            </p>
+                            <p className="text-xs text-red-600">
+                              +{formatCurrency(((payment.lateFeeInCents || 0) + (payment.interestInCents || 0)) / 100)} juros/multa
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-xl font-bold text-gray-800">
+                            {formatCurrency(payment.amountInCents / 100)}
+                          </p>
+                        )}
                       </div>
                     </div>
                     {payment.status !== "paid" && (
@@ -471,7 +499,7 @@ export default function StudentPayments({ onBack }: StudentPaymentsProps) {
                   className={`border-2 ${getStatusBg(payment)} shadow-md`}
                 >
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           {getStatusIcon(payment)}
@@ -481,15 +509,26 @@ export default function StudentPayments({ onBack }: StudentPaymentsProps) {
                         </div>
                         <p className="text-sm text-gray-600 flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5" />
-                          Pago em: {formatDate(payment.dueDate)}
+                          Pago em: {formatDate(payment.paidAt || payment.dueDate)}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-xl font-bold text-gray-800">
-                          {formatCurrency(payment.amountInCents / 100)}
+                          {formatCurrency((payment.totalAmountInCents || payment.amountInCents) / 100)}
                         </p>
                       </div>
                     </div>
+                    <Button
+                      onClick={() => {
+                        setSelectedPayment(payment);
+                        setReceiptModalOpen(true);
+                      }}
+                      variant="outline"
+                      className="w-full mt-2"
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Ver Comprovante
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
@@ -620,6 +659,19 @@ export default function StudentPayments({ onBack }: StudentPaymentsProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Receipt Modal */}
+      {selectedPayment && student && gym && (
+        <Dialog open={receiptModalOpen} onOpenChange={setReceiptModalOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <PaymentReceipt
+              payment={selectedPayment}
+              student={student}
+              gym={gym}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
