@@ -321,6 +321,13 @@ export const payments = mysqlTable("payments", {
   totalInstallments: int("totalInstallments"),
   originalPaymentIds: text("originalPaymentIds"),
   interestForgiven: boolean("interestForgiven").default(false),
+
+  // Late fees and interest calculation fields
+  originalAmountInCents: int("originalAmountInCents"), // Valor original sem acréscimos
+  lateFeeInCents: int("lateFeeInCents").default(0).notNull(), // Multa por atraso
+  interestInCents: int("interestInCents").default(0).notNull(), // Juros acumulados
+  totalAmountInCents: int("totalAmountInCents"), // Valor total com acréscimos
+  lastCalculatedAt: timestamp("lastCalculatedAt"), // Última atualização de juros
 });
 
 export type Payment = typeof payments.$inferSelect;
@@ -781,6 +788,11 @@ export const bankAccounts = mysqlTable("bank_accounts", {
   pixTipoAutenticacao: varchar("pix_tipo_autenticacao", { length: 30 }).default("N"),
   pixUrlBase: varchar("pix_url_base", { length: 255 }),
   pixUrlToken: varchar("pix_url_token", { length: 255 }),
+  // PIX Provider selection
+  pixProvedor: varchar("pix_provedor", { length: 50 }).default("sicoob"), // 'sicoob', 'mercadopago', 'efi'
+  // Mercado Pago credentials
+  mpAccessToken: varchar("mp_access_token", { length: 500 }), // Mercado Pago Access Token
+  mpPublicKey: varchar("mp_public_key", { length: 500 }), // Mercado Pago Public Key
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
