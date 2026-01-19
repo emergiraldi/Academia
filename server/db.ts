@@ -26,6 +26,7 @@ import {
   workoutLogExercises, InsertWorkoutLogExercise,
   personalRecords, InsertPersonalRecord,
   accessLogs, InsertAccessLog,
+  classBookings, InsertClassBooking,
   controlIdDevices, InsertControlIdDevice,
   toletusDevices, InsertToletusDevice,
   pixWebhooks, InsertPixWebhook,
