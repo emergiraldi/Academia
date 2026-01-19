@@ -3593,6 +3593,127 @@ export const appRouter = router({
         await db.enrollStaffFace(input.staffId, ctx.user.gymId, input.controlIdUserId, input.faceImageUrl);
         return { success: true };
       }),
+
+    uploadFaceImage: gymAdminProcedure
+      .input(z.object({
+        gymSlug: z.string(),
+        staffId: z.number(),
+        faceImageBase64: z.string(), // base64
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
+
+        const staffMember = await db.getStaffById(input.staffId, ctx.user.gymId);
+        if (!staffMember) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Funcionário não encontrado" });
+        }
+
+        // Store image as base64 in database
+        const base64Image = input.faceImageBase64.startsWith('data:')
+          ? input.faceImageBase64
+          : `data:image/jpeg;base64,${input.faceImageBase64}`;
+
+        await db.updateStaff(input.staffId, ctx.user.gymId, {
+          faceImageUrl: base64Image,
+          faceEnrolled: false,
+        });
+
+        // Upload to Control ID
+        console.log('[uploadFaceImage-Staff] 🚀 Iniciando upload para Control ID...');
+
+        try {
+          const { getControlIdServiceForGym } = await import('./controlId');
+          const controlIdService = await getControlIdServiceForGym(ctx.user.gymId);
+
+          if (controlIdService) {
+            let controlIdUserId = staffMember.controlIdUserId;
+
+            if (!controlIdUserId) {
+              console.log('[uploadFaceImage-Staff] 👤 Criando usuário no Control ID...');
+
+              controlIdUserId = await controlIdService.createUser(
+                staffMember.userName || 'Funcionário',
+                staffMember.registrationNumber || String(staffMember.id)
+              );
+
+              await db.updateStaff(input.staffId, ctx.user.gymId, {
+                controlIdUserId: controlIdUserId,
+              });
+            }
+
+            // Upload face image
+            const imageBuffer = Buffer.from(
+              input.faceImageBase64.replace(/^data:image\/\w+;base64,/, ''),
+              'base64'
+            );
+
+            let result;
+            try {
+              result = await controlIdService.uploadFaceImage(controlIdUserId, imageBuffer);
+            } catch (uploadError: any) {
+              if (uploadError.message && uploadError.message.includes('User does not exist')) {
+                console.log('[uploadFaceImage-Staff] ⚠️  Usuário não existe, recriando...');
+
+                await db.updateStaff(input.staffId, ctx.user.gymId, {
+                  controlIdUserId: null,
+                  faceEnrolled: false,
+                });
+
+                controlIdUserId = await controlIdService.createUser(
+                  staffMember.userName || 'Funcionário',
+                  staffMember.registrationNumber || String(staffMember.id)
+                );
+
+                await db.updateStaff(input.staffId, ctx.user.gymId, {
+                  controlIdUserId: controlIdUserId,
+                });
+
+                result = await controlIdService.uploadFaceImage(controlIdUserId, imageBuffer);
+              } else {
+                throw uploadError;
+              }
+            }
+
+            if (result.success) {
+              await db.updateStaff(input.staffId, ctx.user.gymId, {
+                faceEnrolled: true,
+              });
+
+              // Unblock access if status is active
+              if (staffMember.accessStatus === 'active') {
+                await controlIdService.unblockUserAccess(controlIdUserId, 1);
+                console.log('[uploadFaceImage-Staff] 🔓 Acesso desbloqueado');
+              }
+
+              return {
+                success: true,
+                imageUrl: base64Image,
+                controlIdStatus: 'uploaded',
+                quality: result.scores
+              };
+            } else {
+              return {
+                success: true,
+                imageUrl: base64Image,
+                controlIdStatus: 'failed',
+                error: result.errors
+              };
+            }
+          } else {
+            return {
+              success: true,
+              imageUrl: base64Image,
+              controlIdStatus: 'no_device',
+            };
+          }
+        } catch (error: any) {
+          console.error('[uploadFaceImage-Staff] ❌ Erro:', error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Erro ao enviar foto: " + error.message
+          });
+        }
+      }),
   }),
 
   // ============ CONTROL ID FACIAL RECOGNITION ============
