@@ -1822,10 +1822,14 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Payment already paid" });
         }
 
+        // Calculate late fees and interest for the payment
+        const calculated = await db.calculateLateFeeAndInterest(payment, ctx.user.gymId!);
+        const totalAmount = calculated.totalAmountInCents;
+
         try {
           const pixService = await getPixServiceFromBankAccount(ctx.user.gymId!);
           const pixCharge = await pixService.createImmediateCharge({
-            valor: payment.amountInCents,
+            valor: totalAmount, // Use total amount with late fees and interest
             pagador: {
               documento: student.cpf,
               nome: ctx.user.name || "Aluno",

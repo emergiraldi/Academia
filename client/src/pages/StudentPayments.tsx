@@ -600,13 +600,38 @@ export default function StudentPayments({ onBack }: StudentPaymentsProps) {
               <>
                 {/* Informações do Pagamento */}
                 <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-4 border border-blue-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600">Valor a pagar:</span>
-                    <span className="text-2xl font-bold text-gray-900">
-                      {formatCurrency((selectedPayment?.amountInCents || 0) / 100)}
-                    </span>
+                  <div className="space-y-2">
+                    {selectedPayment && (selectedPayment.lateFeeInCents > 0 || selectedPayment.interestInCents > 0) && (
+                      <>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Valor original:</span>
+                          <span className="text-gray-600 line-through">
+                            {formatCurrency((selectedPayment.originalAmountInCents || selectedPayment.amountInCents) / 100)}
+                          </span>
+                        </div>
+                        {selectedPayment.lateFeeInCents > 0 && (
+                          <div className="flex items-center justify-between text-sm text-red-600">
+                            <span>Multa:</span>
+                            <span>+{formatCurrency(selectedPayment.lateFeeInCents / 100)}</span>
+                          </div>
+                        )}
+                        {selectedPayment.interestInCents > 0 && (
+                          <div className="flex items-center justify-between text-sm text-red-600">
+                            <span>Juros ({selectedPayment.daysOverdue || 0} dias):</span>
+                            <span>+{formatCurrency(selectedPayment.interestInCents / 100)}</span>
+                          </div>
+                        )}
+                        <div className="border-t pt-2"></div>
+                      </>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600 font-semibold">Total a pagar:</span>
+                      <span className="text-2xl font-bold text-gray-900">
+                        {formatCurrency((selectedPayment?.totalAmountInCents || selectedPayment?.amountInCents || 0) / 100)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center justify-between text-xs text-gray-500 mt-3 pt-3 border-t">
                     <span>Vencimento:</span>
                     <span>{selectedPayment ? formatDate(selectedPayment.dueDate) : "-"}</span>
                   </div>
