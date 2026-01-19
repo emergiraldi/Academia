@@ -1,0 +1,9 @@
+# 1. Iniciar
+cd C:\Projeto\Academia
+npm start
+
+# 2. Parar
+Ctrl + C (na janela que está rodando)
+
+# 3. Logs
+npm start

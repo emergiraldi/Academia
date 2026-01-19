@@ -3343,10 +3343,13 @@ export const appRouter = router({
                 faceEnrolled: true,
               });
 
-              // Unblock access if status is active
+              // Control access based on status
               if (professor.accessStatus === 'active') {
                 await controlIdService.unblockUserAccess(controlIdUserId, 1);
-                console.log('[uploadFaceImage-Professor] 🔓 Acesso desbloqueado');
+                console.log('[uploadFaceImage-Professor] 🔓 Acesso desbloqueado (ATIVO)');
+              } else {
+                await controlIdService.blockUserAccess(controlIdUserId, 1);
+                console.log('[uploadFaceImage-Professor] 🔒 Acesso bloqueado (INATIVO)');
               }
 
               return {
@@ -3699,10 +3702,13 @@ export const appRouter = router({
                 faceEnrolled: true,
               });
 
-              // Unblock access if status is active
+              // Control access based on status
               if (staffMember.accessStatus === 'active') {
                 await controlIdService.unblockUserAccess(controlIdUserId, 1);
-                console.log('[uploadFaceImage-Staff] 🔓 Acesso desbloqueado');
+                console.log('[uploadFaceImage-Staff] 🔓 Acesso desbloqueado (ATIVO)');
+              } else {
+                await controlIdService.blockUserAccess(controlIdUserId, 1);
+                console.log('[uploadFaceImage-Staff] 🔒 Acesso bloqueado (INATIVO)');
               }
 
               return {

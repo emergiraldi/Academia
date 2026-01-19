@@ -1075,7 +1075,7 @@ export default function AdminStaff() {
 
         {/* Face Enrollment Dialog */}
         <Dialog open={isFaceEnrollOpen} onOpenChange={setIsFaceEnrollOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Cadastrar Reconhecimento Facial</DialogTitle>
               <DialogDescription>
