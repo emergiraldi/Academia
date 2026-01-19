@@ -589,11 +589,25 @@ export const appRouter = router({
           return { success: true, message: "Se o email existir, você receberá um código de recuperação." };
         }
 
+        // Validar que o email fornecido é exatamente o mesmo cadastrado
+        if (user.email?.toLowerCase() !== input.email.toLowerCase()) {
+          return { success: true, message: "Se o email existir, você receberá um código de recuperação." };
+        }
+
         // Verificar se o usuário tem academia associada
         if (!user.gymId) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Usuário sem academia associada"
+          });
+        }
+
+        // Buscar informações da academia
+        const gym = await db.getGymById(user.gymId);
+        if (!gym) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Academia não encontrada"
           });
         }
 
@@ -627,7 +641,8 @@ export const appRouter = router({
             user.email!,
             user.name || "Usuário",
             code,
-            15
+            15,
+            gym.name // Passar o nome da academia
           );
 
           if (!result.success) {

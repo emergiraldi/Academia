@@ -84,7 +84,8 @@ export class EmailService {
     toEmail: string,
     userName: string,
     code: string,
-    validityMinutes: number = 15
+    validityMinutes: number = 15,
+    gymName?: string
   ): Promise<{ success: boolean; message: string }> {
     try {
       if (!this.config) {
@@ -92,12 +93,13 @@ export class EmailService {
       }
 
       const transporter = this.createTransporter();
+      const academyName = gymName || this.config.smtpFromName || 'Academia';
 
-      const htmlContent = this.getResetCodeTemplate(userName, code, validityMinutes);
+      const htmlContent = this.getResetCodeTemplate(userName, code, validityMinutes, academyName);
       const textContent = `
 Olá ${userName},
 
-Recebemos uma solicitação de recuperação de senha para sua conta na academia.
+Recebemos uma solicitação de recuperação de senha para sua conta na ${academyName}.
 
 Seu código de recuperação é: ${code}
 
@@ -106,12 +108,12 @@ Este código expira em ${validityMinutes} minutos.
 Se você não solicitou esta recuperação, ignore este e-mail e sua senha permanecerá inalterada.
 
 ---
-© 2026 ${this.config.smtpFromName}. Todos os direitos reservados.
+© 2026 ${academyName}. Todos os direitos reservados.
 Este é um e-mail automático, por favor não responda.
       `.trim();
 
       const mailOptions = {
-        from: `${this.config.smtpFromName} <${this.config.smtpFromEmail}>`,
+        from: `${academyName} <${this.config.smtpFromEmail}>`,
         to: toEmail,
         subject: 'Código de Recuperação de Senha',
         text: textContent,
@@ -131,7 +133,7 @@ Este é um e-mail automático, por favor não responda.
   /**
    * Template HTML para e-mail de recuperação de senha
    */
-  private getResetCodeTemplate(name: string, code: string, validity: number): string {
+  private getResetCodeTemplate(name: string, code: string, validity: number, gymName: string = 'Academia'): string {
     return `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -161,7 +163,7 @@ Este é um e-mail automático, por favor não responda.
                             </p>
 
                             <p style="font-size: 14px; color: #666666; margin-bottom: 30px;">
-                                Recebemos uma solicitação de recuperação de senha para sua conta na academia.
+                                Recebemos uma solicitação de recuperação de senha para sua conta na <strong>${gymName}</strong>.
                                 Use o código abaixo para criar uma nova senha:
                             </p>
 
@@ -197,7 +199,7 @@ Este é um e-mail automático, por favor não responda.
                     <tr>
                         <td style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
                             <p style="margin: 0; font-size: 12px; color: #6c757d;">
-                                © 2026 ${this.config?.smtpFromName || 'Academia'}. Todos os direitos reservados.<br>
+                                © 2026 ${gymName}. Todos os direitos reservados.<br>
                                 Este é um e-mail automático, por favor não responda.
                             </p>
                         </td>
@@ -1462,14 +1464,7 @@ Seu acesso à academia está liberado! Bons treinos!
 Este é um e-mail automático, por favor não responda.
     `.trim();
 
-    const result = await emailService.sendResetCodeEmail(
-      studentEmail,
-      studentName,
-      '', // Não precisamos do código aqui
-      0    // Não precisamos de validade
-    );
-
-    // Como sendResetCodeEmail não é apropriado, vou usar o transporter diretamente
+    // Usar o transporter diretamente para envio de confirmação de pagamento
     const config = (emailService as any).config;
     if (!config) {
       return false;
