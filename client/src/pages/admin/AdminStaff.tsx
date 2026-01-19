@@ -12,9 +12,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Users,
@@ -27,6 +34,14 @@ import {
   UserPlus,
   Shield,
   CheckCircle,
+  Phone,
+  MapPin,
+  Briefcase,
+  Camera,
+  Lock,
+  LockOpen,
+  Ban,
+  Pause,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -52,6 +67,13 @@ const PERMISSION_LABELS: Record<keyof Permissions, string> = {
   managePlans: "Gerenciar Planos",
 };
 
+const ACCESS_STATUS_LABELS = {
+  active: { label: "Ativo", variant: "default" as const, icon: LockOpen },
+  inactive: { label: "Inativo", variant: "secondary" as const, icon: Lock },
+  suspended: { label: "Suspenso", variant: "outline" as const, icon: Pause },
+  blocked: { label: "Bloqueado", variant: "destructive" as const, icon: Ban },
+};
+
 export default function AdminStaff() {
   const { gymSlug } = useGym();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -65,6 +87,22 @@ export default function AdminStaff() {
     name: "",
     email: "",
     password: "",
+    cpf: "",
+    phone: "",
+    birthDate: "",
+    address: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    position: "",
+    department: "",
+    hireDate: "",
+    salary: "",
+    photoUrl: "",
+    accessStatus: "inactive" as "active" | "inactive" | "suspended" | "blocked",
   });
 
   const [permissions, setPermissions] = useState<Permissions>({
@@ -81,6 +119,22 @@ export default function AdminStaff() {
     name: "",
     email: "",
     password: "",
+    cpf: "",
+    phone: "",
+    birthDate: "",
+    address: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    position: "",
+    department: "",
+    hireDate: "",
+    salary: "",
+    photoUrl: "",
+    accessStatus: "inactive" as "active" | "inactive" | "suspended" | "blocked",
   });
 
   const [editPermissions, setEditPermissions] = useState<Permissions>({
@@ -131,11 +185,37 @@ export default function AdminStaff() {
     },
   });
 
+  const updateAccessStatusMutation = trpc.staff.updateAccessStatus.useMutation({
+    onSuccess: () => {
+      toast.success("Status de acesso atualizado!");
+      utils.staff.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao atualizar status");
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       name: "",
       email: "",
       password: "",
+      cpf: "",
+      phone: "",
+      birthDate: "",
+      address: "",
+      number: "",
+      complement: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      position: "",
+      department: "",
+      hireDate: "",
+      salary: "",
+      photoUrl: "",
+      accessStatus: "inactive",
     });
     setPermissions({
       viewStudents: false,
@@ -150,8 +230,8 @@ export default function AdminStaff() {
   };
 
   const handleCreate = () => {
-    if (!formData.name || !formData.email || !formData.password) {
-      toast.error("Preencha todos os campos obrigatórios");
+    if (!formData.name || !formData.email || !formData.password || !formData.cpf) {
+      toast.error("Preencha todos os campos obrigatórios (Nome, Email, Senha, CPF)");
       return;
     }
 
@@ -162,9 +242,7 @@ export default function AdminStaff() {
 
     createMutation.mutate({
       gymSlug,
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
+      ...formData,
       permissions,
     });
   };
@@ -172,37 +250,37 @@ export default function AdminStaff() {
   const handleEdit = (staffMember: any) => {
     setSelectedStaff(staffMember);
     setEditFormData({
-      name: staffMember.name || "",
-      email: staffMember.email || "",
+      name: staffMember.userName || "",
+      email: staffMember.userEmail || "",
       password: "",
+      cpf: staffMember.cpf || "",
+      phone: staffMember.phone || "",
+      birthDate: staffMember.birthDate ? new Date(staffMember.birthDate).toISOString().split('T')[0] : "",
+      address: staffMember.address || "",
+      number: staffMember.number || "",
+      complement: staffMember.complement || "",
+      neighborhood: staffMember.neighborhood || "",
+      city: staffMember.city || "",
+      state: staffMember.state || "",
+      zipCode: staffMember.zipCode || "",
+      position: staffMember.position || "",
+      department: staffMember.department || "",
+      hireDate: staffMember.hireDate ? new Date(staffMember.hireDate).toISOString().split('T')[0] : "",
+      salary: staffMember.salary || "",
+      photoUrl: staffMember.photoUrl || "",
+      accessStatus: staffMember.accessStatus || "inactive",
     });
-    
-    // Parse permissions from JSON string
-    try {
-      const parsedPermissions = staffMember.permissions 
-        ? JSON.parse(staffMember.permissions)
-        : {
-            viewStudents: false,
-            editStudents: false,
-            viewPayments: false,
-            editPayments: false,
-            viewReports: false,
-            manageAccess: false,
-            managePlans: false,
-          };
-      setEditPermissions(parsedPermissions);
-    } catch (e) {
-      setEditPermissions({
-        viewStudents: false,
-        editStudents: false,
-        viewPayments: false,
-        editPayments: false,
-        viewReports: false,
-        manageAccess: false,
-        managePlans: false,
-      });
-    }
-    
+
+    setEditPermissions({
+      viewStudents: false,
+      editStudents: false,
+      viewPayments: false,
+      editPayments: false,
+      viewReports: false,
+      manageAccess: false,
+      managePlans: false,
+    });
+
     setIsEditOpen(true);
     setShowEditPassword(false);
   };
@@ -219,11 +297,12 @@ export default function AdminStaff() {
       gymSlug,
       staffId: selectedStaff.id,
       permissions: editPermissions,
+      ...editFormData,
     };
 
-    if (editFormData.name) updates.name = editFormData.name;
-    if (editFormData.email) updates.email = editFormData.email;
-    if (editFormData.password) updates.password = editFormData.password;
+    if (!editFormData.password) {
+      delete updates.password;
+    }
 
     updateMutation.mutate(updates);
   };
@@ -241,6 +320,18 @@ export default function AdminStaff() {
     }
   };
 
+  const handleUpdateAccessStatus = (staffId: number, status: "active" | "inactive" | "suspended" | "blocked") => {
+    if (!gymSlug) {
+      toast.error("Academia não identificada");
+      return;
+    }
+    updateAccessStatusMutation.mutate({
+      gymSlug,
+      staffId,
+      accessStatus: status,
+    });
+  };
+
   const togglePermission = (key: keyof Permissions, isEdit: boolean = false) => {
     if (isEdit) {
       setEditPermissions(prev => ({ ...prev, [key]: !prev[key] }));
@@ -249,19 +340,11 @@ export default function AdminStaff() {
     }
   };
 
-  const getActivePermissionsCount = (perms: string | null) => {
-    if (!perms) return 0;
-    try {
-      const parsed = JSON.parse(perms);
-      return Object.values(parsed).filter(v => v === true).length;
-    } catch {
-      return 0;
-    }
-  };
-
   const filteredStaff = staff?.filter(member =>
-    member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    member.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.cpf?.includes(searchTerm) ||
+    member.position?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   if (isLoading) {
@@ -280,7 +363,7 @@ export default function AdminStaff() {
       <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
         <PageHeader
           title="Gestão de Funcionários"
-          description="Cadastre funcionários e defina permissões de acesso"
+          description="Cadastre funcionários com dados completos e controle de acesso"
           action={
             <Button onClick={() => setIsCreateOpen(true)} size="lg">
               <UserPlus className="mr-2 h-5 w-5" />
@@ -289,267 +372,641 @@ export default function AdminStaff() {
           }
         />
 
-        {/* Search Bar */}
-      <Card className="p-4 shadow-md">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </Card>
+        <Card className="p-4 shadow-md">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, email, CPF ou cargo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </Card>
 
-      {/* Staff Grid */}
-      <div className="grid gap-4">
-        {filteredStaff.length === 0 ? (
-          <Card className="p-12 text-center shadow-md">
-            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhum funcionário cadastrado</h3>
-            <p className="text-muted-foreground mb-4">
-              Comece cadastrando o primeiro funcionário da academia
-            </p>
-            <Button onClick={() => setIsCreateOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Cadastrar Primeiro Funcionário
-            </Button>
-          </Card>
-        ) : (
-          filteredStaff.map((member) => (
-            <Card key={member.id} className="p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                      <Shield className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold">{member.name}</h3>
-                      <Badge variant="secondary">Funcionário</Badge>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                    <span>{member.email}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="gap-1">
-                      <CheckCircle className="h-3 w-3" />
-                      {getActivePermissionsCount(member.permissions)} permissões ativas
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(member)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(member.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))
-        )}
-      </div>
-
-      {/* Create Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Cadastrar Novo Funcionário</DialogTitle>
-            <DialogDescription>
-              Preencha os dados e selecione as permissões de acesso
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-6 py-4">
-            <div className="max-w-7xl mx-auto px-8 py-8 space-y-4">
-              <h3 className="font-semibold text-sm">Dados Pessoais</h3>
-              
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                <Label htmlFor="name">Nome Completo *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="João da Silva"
-                />
-              </div>
-
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="funcionario@email.com"
-                />
-              </div>
-
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                <Label htmlFor="password">Senha *</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Mínimo 6 caracteres"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="max-w-7xl mx-auto px-8 py-8 space-y-4">
-              <h3 className="font-semibold text-sm">Permissões de Acesso</h3>
-              <p className="text-sm text-muted-foreground">
-                Selecione as permissões que este funcionário terá no sistema
+        <div className="grid gap-4">
+          {filteredStaff.length === 0 ? (
+            <Card className="p-12 text-center shadow-md">
+              <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nenhum funcionário cadastrado</h3>
+              <p className="text-muted-foreground mb-4">
+                Comece cadastrando o primeiro funcionário da academia
               </p>
-              
-              <div className="grid gap-3">
-                {(Object.keys(PERMISSION_LABELS) as Array<keyof Permissions>).map((key) => (
-                  <div key={key} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
-                    <Checkbox
-                      id={key}
-                      checked={permissions[key]}
-                      onCheckedChange={() => togglePermission(key)}
-                    />
-                    <Label
-                      htmlFor={key}
-                      className="flex-1 cursor-pointer font-normal"
-                    >
-                      {PERMISSION_LABELS[key]}
-                    </Label>
+              <Button onClick={() => setIsCreateOpen(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Cadastrar Primeiro Funcionário
+              </Button>
+            </Card>
+          ) : (
+            filteredStaff.map((member) => {
+              const statusInfo = ACCESS_STATUS_LABELS[member.accessStatus as keyof typeof ACCESS_STATUS_LABELS];
+              const StatusIcon = statusInfo.icon;
+
+              return (
+                <Card key={member.id} className="p-6 hover:shadow-lg transition-shadow">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                          <Shield className="h-6 w-6 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-xl font-semibold">{member.userName}</h3>
+                            <Badge variant={statusInfo.variant} className="gap-1">
+                              <StatusIcon className="h-3 w-3" />
+                              {statusInfo.label}
+                            </Badge>
+                            {member.faceEnrolled && (
+                              <Badge variant="outline" className="gap-1">
+                                <Camera className="h-3 w-3" />
+                                Facial OK
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{member.registrationNumber}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Mail className="h-4 w-4" />
+                          <span>{member.userEmail}</span>
+                        </div>
+                        {member.phone && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Phone className="h-4 w-4" />
+                            <span>{member.phone}</span>
+                          </div>
+                        )}
+                        {member.position && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Briefcase className="h-4 w-4" />
+                            <span>{member.position}</span>
+                            {member.department && ` - ${member.department}`}
+                          </div>
+                        )}
+                        {member.city && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <MapPin className="h-4 w-4" />
+                            <span>{member.city}, {member.state}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(member)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(member.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Select
+                        value={member.accessStatus}
+                        onValueChange={(value: any) => handleUpdateAccessStatus(member.id, value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(ACCESS_STATUS_LABELS).map(([key, value]) => (
+                            <SelectItem key={key} value={key}>
+                              {value.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
+                </Card>
+              );
+            })
+          )}
+        </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCreate} disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Cadastrando..." : "Cadastrar Funcionário"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* Create Dialog */}
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Cadastrar Novo Funcionário</DialogTitle>
+              <DialogDescription>
+                Preencha os dados completos do funcionário
+              </DialogDescription>
+            </DialogHeader>
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Funcionário</DialogTitle>
-            <DialogDescription>
-              Atualize os dados e permissões (deixe a senha em branco para manter a atual)
-            </DialogDescription>
-          </DialogHeader>
+            <Tabs defaultValue="personal" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="personal">Pessoal</TabsTrigger>
+                <TabsTrigger value="address">Endereço</TabsTrigger>
+                <TabsTrigger value="employment">Emprego</TabsTrigger>
+                <TabsTrigger value="permissions">Permissões</TabsTrigger>
+              </TabsList>
 
-          <div className="grid gap-6 py-4">
-            <div className="max-w-7xl mx-auto px-8 py-8 space-y-4">
-              <h3 className="font-semibold text-sm">Dados Pessoais</h3>
-              
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                <Label htmlFor="edit-name">Nome Completo</Label>
-                <Input
-                  id="edit-name"
-                  value={editFormData.name}
-                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                />
-              </div>
+              <TabsContent value="personal" className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label htmlFor="name">Nome Completo *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="João da Silva"
+                    />
+                  </div>
 
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                <Label htmlFor="edit-email">Email</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={editFormData.email}
-                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="cpf">CPF *</Label>
+                    <Input
+                      id="cpf"
+                      value={formData.cpf}
+                      onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                      placeholder="000.000.000-00"
+                    />
+                  </div>
 
-              <div className="max-w-7xl mx-auto px-8 py-8 space-y-2">
-                <Label htmlFor="edit-password">Nova Senha (opcional)</Label>
-                <div className="relative">
-                  <Input
-                    id="edit-password"
-                    type={showEditPassword ? "text" : "password"}
-                    value={editFormData.password}
-                    onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
-                    placeholder="Deixe em branco para manter"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setShowEditPassword(!showEditPassword)}
-                  >
-                    {showEditPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
+                  <div>
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="birthDate">Data de Nascimento</Label>
+                    <Input
+                      id="birthDate"
+                      type="date"
+                      value={formData.birthDate}
+                      onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="funcionario@email.com"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label htmlFor="password">Senha *</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        placeholder="Mínimo 6 caracteres"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </TabsContent>
 
-            <div className="max-w-7xl mx-auto px-8 py-8 space-y-4">
-              <h3 className="font-semibold text-sm">Permissões de Acesso</h3>
-              
-              <div className="grid gap-3">
-                {(Object.keys(PERMISSION_LABELS) as Array<keyof Permissions>).map((key) => (
-                  <div key={key} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
-                    <Checkbox
-                      id={`edit-${key}`}
-                      checked={editPermissions[key]}
-                      onCheckedChange={() => togglePermission(key, true)}
+              <TabsContent value="address" className="space-y-4 mt-4">
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="col-span-3">
+                    <Label htmlFor="address">Endereço</Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="Rua, Avenida..."
                     />
-                    <Label
-                      htmlFor={`edit-${key}`}
-                      className="flex-1 cursor-pointer font-normal"
-                    >
-                      {PERMISSION_LABELS[key]}
-                    </Label>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                  <div>
+                    <Label htmlFor="number">Número</Label>
+                    <Input
+                      id="number"
+                      value={formData.number}
+                      onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                      placeholder="123"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label htmlFor="complement">Complemento</Label>
+                    <Input
+                      id="complement"
+                      value={formData.complement}
+                      onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                      placeholder="Apto, Bloco..."
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label htmlFor="neighborhood">Bairro</Label>
+                    <Input
+                      id="neighborhood"
+                      value={formData.neighborhood}
+                      onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                      placeholder="Centro, Jardim..."
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label htmlFor="city">Cidade</Label>
+                    <Input
+                      id="city"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="São Paulo"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="state">Estado</Label>
+                    <Input
+                      id="state"
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      placeholder="SP"
+                      maxLength={2}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="zipCode">CEP</Label>
+                    <Input
+                      id="zipCode"
+                      value={formData.zipCode}
+                      onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                      placeholder="00000-000"
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="employment" className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="position">Cargo</Label>
+                    <Input
+                      id="position"
+                      value={formData.position}
+                      onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                      placeholder="Recepcionista, Limpeza..."
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="department">Departamento</Label>
+                    <Input
+                      id="department"
+                      value={formData.department}
+                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                      placeholder="Administrativo, Operacional..."
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="hireDate">Data de Admissão</Label>
+                    <Input
+                      id="hireDate"
+                      type="date"
+                      value={formData.hireDate}
+                      onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="salary">Salário (opcional)</Label>
+                    <Input
+                      id="salary"
+                      value={formData.salary}
+                      onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                      placeholder="R$ 0,00"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label htmlFor="accessStatus">Status de Acesso</Label>
+                    <Select
+                      value={formData.accessStatus}
+                      onValueChange={(value: any) => setFormData({ ...formData, accessStatus: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(ACCESS_STATUS_LABELS).map(([key, value]) => (
+                          <SelectItem key={key} value={key}>
+                            {value.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="permissions" className="space-y-4 mt-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Selecione as permissões que este funcionário terá no sistema
+                </p>
+                <div className="grid gap-3">
+                  {(Object.keys(PERMISSION_LABELS) as Array<keyof Permissions>).map((key) => (
+                    <div key={key} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+                      <Checkbox
+                        id={key}
+                        checked={permissions[key]}
+                        onCheckedChange={() => togglePermission(key)}
+                      />
+                      <Label htmlFor={key} className="flex-1 cursor-pointer font-normal">
+                        {PERMISSION_LABELS[key]}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleCreate} disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Cadastrando..." : "Cadastrar Funcionário"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Dialog - Similar structure to Create */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Editar Funcionário</DialogTitle>
+              <DialogDescription>
+                Atualize os dados do funcionário (deixe a senha em branco para manter a atual)
+              </DialogDescription>
+            </DialogHeader>
+
+            <Tabs defaultValue="personal" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="personal">Pessoal</TabsTrigger>
+                <TabsTrigger value="address">Endereço</TabsTrigger>
+                <TabsTrigger value="employment">Emprego</TabsTrigger>
+                <TabsTrigger value="permissions">Permissões</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="personal" className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label htmlFor="edit-name">Nome Completo</Label>
+                    <Input
+                      id="edit-name"
+                      value={editFormData.name}
+                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-cpf">CPF</Label>
+                    <Input
+                      id="edit-cpf"
+                      value={editFormData.cpf}
+                      onChange={(e) => setEditFormData({ ...editFormData, cpf: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-phone">Telefone</Label>
+                    <Input
+                      id="edit-phone"
+                      value={editFormData.phone}
+                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-birthDate">Data de Nascimento</Label>
+                    <Input
+                      id="edit-birthDate"
+                      type="date"
+                      value={editFormData.birthDate}
+                      onChange={(e) => setEditFormData({ ...editFormData, birthDate: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-email">Email</Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label htmlFor="edit-password">Nova Senha (opcional)</Label>
+                    <div className="relative">
+                      <Input
+                        id="edit-password"
+                        type={showEditPassword ? "text" : "password"}
+                        value={editFormData.password}
+                        onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
+                        placeholder="Deixe em branco para manter"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowEditPassword(!showEditPassword)}
+                      >
+                        {showEditPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="address" className="space-y-4 mt-4">
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="col-span-3">
+                    <Label htmlFor="edit-address">Endereço</Label>
+                    <Input
+                      id="edit-address"
+                      value={editFormData.address}
+                      onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-number">Número</Label>
+                    <Input
+                      id="edit-number"
+                      value={editFormData.number}
+                      onChange={(e) => setEditFormData({ ...editFormData, number: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label htmlFor="edit-complement">Complemento</Label>
+                    <Input
+                      id="edit-complement"
+                      value={editFormData.complement}
+                      onChange={(e) => setEditFormData({ ...editFormData, complement: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label htmlFor="edit-neighborhood">Bairro</Label>
+                    <Input
+                      id="edit-neighborhood"
+                      value={editFormData.neighborhood}
+                      onChange={(e) => setEditFormData({ ...editFormData, neighborhood: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label htmlFor="edit-city">Cidade</Label>
+                    <Input
+                      id="edit-city"
+                      value={editFormData.city}
+                      onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-state">Estado</Label>
+                    <Input
+                      id="edit-state"
+                      value={editFormData.state}
+                      onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })}
+                      maxLength={2}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-zipCode">CEP</Label>
+                    <Input
+                      id="edit-zipCode"
+                      value={editFormData.zipCode}
+                      onChange={(e) => setEditFormData({ ...editFormData, zipCode: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="employment" className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-position">Cargo</Label>
+                    <Input
+                      id="edit-position"
+                      value={editFormData.position}
+                      onChange={(e) => setEditFormData({ ...editFormData, position: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-department">Departamento</Label>
+                    <Input
+                      id="edit-department"
+                      value={editFormData.department}
+                      onChange={(e) => setEditFormData({ ...editFormData, department: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-hireDate">Data de Admissão</Label>
+                    <Input
+                      id="edit-hireDate"
+                      type="date"
+                      value={editFormData.hireDate}
+                      onChange={(e) => setEditFormData({ ...editFormData, hireDate: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-salary">Salário</Label>
+                    <Input
+                      id="edit-salary"
+                      value={editFormData.salary}
+                      onChange={(e) => setEditFormData({ ...editFormData, salary: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label htmlFor="edit-accessStatus">Status de Acesso</Label>
+                    <Select
+                      value={editFormData.accessStatus}
+                      onValueChange={(value: any) => setEditFormData({ ...editFormData, accessStatus: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(ACCESS_STATUS_LABELS).map(([key, value]) => (
+                          <SelectItem key={key} value={key}>
+                            {value.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="permissions" className="space-y-4 mt-4">
+                <div className="grid gap-3">
+                  {(Object.keys(PERMISSION_LABELS) as Array<keyof Permissions>).map((key) => (
+                    <div key={key} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+                      <Checkbox
+                        id={`edit-${key}`}
+                        checked={editPermissions[key]}
+                        onCheckedChange={() => togglePermission(key, true)}
+                      />
+                      <Label htmlFor={`edit-${key}`} className="flex-1 cursor-pointer font-normal">
+                        {PERMISSION_LABELS[key]}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
