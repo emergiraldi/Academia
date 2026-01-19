@@ -1237,7 +1237,7 @@ export const appRouter = router({
 
               // Add to access group only if has active subscription AND status is active
               if (hasActiveSubscription && student.membershipStatus === 'active') {
-                await controlIdService.unblockUserAccess(controlIdUserId);
+                await controlIdService.unblockUserAccess(controlIdUserId, 1);
                 console.log('[uploadFaceImage] 🔓 Acesso desbloqueado - aluno tem assinatura ativa');
               } else {
                 console.log('[uploadFaceImage] ⚠️  Acesso NÃO desbloqueado - sem assinatura ativa ou status não é "active"');
@@ -1394,7 +1394,7 @@ export const appRouter = router({
               const activeSubscription = await db.getActiveSubscription(student.id, gym.id);
 
               if (activeSubscription) {
-                await service.unblockUserAccess(controlIdUserId);
+                await service.unblockUserAccess(controlIdUserId, 1);
                 console.log(`[enrollFace] ✅ Access unblocked for ${student.name}`);
               } else {
                 console.log(`[enrollFace] ⚠️ Student ${student.name} has no active subscription - access NOT unblocked`);
@@ -3345,7 +3345,7 @@ export const appRouter = router({
 
               // Control access based on status
               if (professor.accessStatus === 'active') {
-                await controlIdService.unblockUserAccess(controlIdUserId);
+                await controlIdService.unblockUserAccess(controlIdUserId, 1);
                 console.log('[uploadFaceImage-Professor] 🔓 Acesso desbloqueado (ATIVO)');
               } else {
                 await controlIdService.blockUserAccess(controlIdUserId);
@@ -3704,7 +3704,7 @@ export const appRouter = router({
 
               // Control access based on status
               if (staffMember.accessStatus === 'active') {
-                await controlIdService.unblockUserAccess(controlIdUserId);
+                await controlIdService.unblockUserAccess(controlIdUserId, 1);
                 console.log('[uploadFaceImage-Staff] 🔓 Acesso desbloqueado (ATIVO)');
               } else {
                 await controlIdService.blockUserAccess(controlIdUserId);
