@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
+import Webcam from "react-webcam";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -57,10 +58,13 @@ export default function AdminProfessors() {
   const { gymSlug } = useGym();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isFaceEnrollOpen, setIsFaceEnrollOpen] = useState(false);
   const [selectedProfessor, setSelectedProfessor] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
+  const [faceImage, setFaceImage] = useState<string>("");
+  const [showWebcam, setShowWebcam] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -155,6 +159,31 @@ export default function AdminProfessors() {
       toast.error(error.message || "Erro ao atualizar status");
     },
   });
+
+  const uploadFaceMutation = trpc.professors.uploadFaceImage.useMutation({
+    onSuccess: () => {
+      toast.success("Foto facial cadastrada com sucesso!");
+      utils.professors.list.invalidate();
+      setIsFaceEnrollOpen(false);
+      setFaceImage("");
+      setShowWebcam(false);
+    },
+    onError: (error) => {
+      toast.error("Erro ao cadastrar foto facial: " + error.message);
+    },
+  });
+
+  // Webcam ref and capture function
+  const webcamRef = useRef<Webcam>(null);
+
+  const capturePhoto = useCallback(() => {
+    const imageSrc = webcamRef.current?.getScreenshot();
+    if (imageSrc) {
+      setFaceImage(imageSrc);
+      setShowWebcam(false);
+      toast.success("Foto capturada com sucesso!");
+    }
+  }, [webcamRef]);
 
   const resetForm = () => {
     setFormData({
@@ -271,6 +300,31 @@ export default function AdminProfessors() {
       gymSlug,
       professorId,
       accessStatus: status,
+    });
+  };
+
+  const handleOpenFaceEnroll = (professor: any) => {
+    setSelectedProfessor(professor);
+    setFaceImage("");
+    setShowWebcam(false);
+    setIsFaceEnrollOpen(true);
+  };
+
+  const handleEnrollFace = async () => {
+    if (!faceImage || !selectedProfessor) {
+      toast.error("Capture uma foto antes de cadastrar");
+      return;
+    }
+
+    if (!gymSlug) {
+      toast.error("Academia não identificada");
+      return;
+    }
+
+    uploadFaceMutation.mutate({
+      gymSlug,
+      professorId: selectedProfessor.id,
+      faceImageBase64: faceImage,
     });
   };
 
@@ -407,6 +461,17 @@ export default function AdminProfessors() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
+                      {!professor.faceEnrolled && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleOpenFaceEnroll(professor)}
+                          className="w-full"
+                        >
+                          <Camera className="h-4 w-4 mr-2" />
+                          Cadastrar Facial
+                        </Button>
+                      )}
                       <Select
                         value={professor.accessStatus}
                         onValueChange={(value: any) => handleUpdateAccessStatus(professor.id, value)}
@@ -922,6 +987,132 @@ export default function AdminProfessors() {
               </Button>
               <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
                 {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Face Enrollment Dialog */}
+        <Dialog open={isFaceEnrollOpen} onOpenChange={setIsFaceEnrollOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Cadastrar Reconhecimento Facial</DialogTitle>
+              <DialogDescription>
+                Capture a foto do professor {selectedProfessor?.userName}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-4">
+                <h4 className="font-semibold">Informações do Professor</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Nome:</span>
+                    <p className="font-medium">{selectedProfessor?.userName}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Matrícula:</span>
+                    <p className="font-medium">{selectedProfessor?.registrationNumber}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">CPF:</span>
+                    <p className="font-medium">{selectedProfessor?.cpf}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Status:</span>
+                    <p className="font-medium">
+                      {ACCESS_STATUS_LABELS[selectedProfessor?.accessStatus as keyof typeof ACCESS_STATUS_LABELS]?.label}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {!showWebcam && !faceImage && (
+                <div className="flex justify-center py-8">
+                  <Button size="lg" onClick={() => setShowWebcam(true)}>
+                    <Camera className="mr-2 h-5 w-5" />
+                    Abrir Câmera
+                  </Button>
+                </div>
+              )}
+
+              {showWebcam && (
+                <div className="space-y-3">
+                  <div className="relative rounded-lg overflow-hidden bg-black">
+                    <Webcam
+                      ref={webcamRef}
+                      audio={false}
+                      screenshotFormat="image/jpeg"
+                      className="w-full"
+                      videoConstraints={{
+                        width: 1280,
+                        height: 720,
+                        facingMode: "user"
+                      }}
+                    />
+                  </div>
+                  <div className="flex gap-2 justify-center">
+                    <Button onClick={capturePhoto} size="lg">
+                      <Camera className="mr-2 h-5 w-5" />
+                      Capturar Foto
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowWebcam(false)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {faceImage && (
+                <div className="space-y-3">
+                  <h4 className="font-semibold">Foto Capturada</h4>
+                  <div className="relative rounded-lg overflow-hidden bg-black">
+                    <img src={faceImage} alt="Foto facial" className="w-full" />
+                  </div>
+                  <div className="flex gap-2 justify-center">
+                    <Button
+                      onClick={handleEnrollFace}
+                      size="lg"
+                      disabled={uploadFaceMutation.isPending}
+                    >
+                      {uploadFaceMutation.isPending ? "Enviando..." : "Enviar para Control ID"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setFaceImage("");
+                        setShowWebcam(true);
+                      }}
+                    >
+                      Tirar Outra Foto
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                <div className="flex gap-3">
+                  <Award className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <div className="space-y-1">
+                    <h4 className="font-semibold text-yellow-900 dark:text-yellow-100">
+                      Importante
+                    </h4>
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      Certifique-se de que o professor está com o status "Ativo" para que o acesso
+                      funcione após o cadastro facial.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setIsFaceEnrollOpen(false);
+                setFaceImage("");
+                setShowWebcam(false);
+              }}>
+                Fechar
               </Button>
             </DialogFooter>
           </DialogContent>
