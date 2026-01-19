@@ -3041,7 +3041,7 @@ export const appRouter = router({
       .input(z.object({ gymSlug: z.string() }))
       .query(async ({ ctx }) => {
         if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
-        return await db.getUsersByRole(ctx.user.gymId, "professor");
+        return await db.listProfessors(ctx.user.gymId);
       }),
 
     create: gymAdminProcedure
@@ -3050,7 +3050,23 @@ export const appRouter = router({
         name: z.string(),
         email: z.string().email(),
         password: z.string().min(6),
+        cpf: z.string(),
         phone: z.string().optional(),
+        birthDate: z.string().optional(),
+        address: z.string().optional(),
+        number: z.string().optional(),
+        complement: z.string().optional(),
+        neighborhood: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        zipCode: z.string().optional(),
+        specialty: z.string().optional(),
+        certifications: z.string().optional(),
+        hireDate: z.string().optional(),
+        cref: z.string().optional(),
+        bio: z.string().optional(),
+        photoUrl: z.string().optional(),
+        accessStatus: z.enum(["active", "inactive", "suspended", "blocked"]).default("inactive"),
       }))
       .mutation(async ({ input, ctx }) => {
         try {
@@ -3071,7 +3087,7 @@ export const appRouter = router({
           const openId = `professor-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
           // Create user with professor role
-          const result = await db.createUser({
+          const userResult = await db.createUser({
             gymId: ctx.user.gymId,
             openId,
             name: input.name,
@@ -3082,7 +3098,35 @@ export const appRouter = router({
             loginMethod: "password",
           });
 
-          return { success: true, userId: result.insertId };
+          // Generate registration number
+          const registrationNumber = `PROF${String(userResult.insertId).padStart(6, "0")}`;
+
+          // Create professor record
+          await db.createProfessor({
+            gymId: ctx.user.gymId,
+            userId: userResult.insertId,
+            registrationNumber,
+            cpf: input.cpf,
+            phone: input.phone || null,
+            birthDate: input.birthDate ? new Date(input.birthDate) : null,
+            address: input.address || null,
+            number: input.number || null,
+            complement: input.complement || null,
+            neighborhood: input.neighborhood || null,
+            city: input.city || null,
+            state: input.state || null,
+            zipCode: input.zipCode || null,
+            specialty: input.specialty || null,
+            certifications: input.certifications || null,
+            hireDate: input.hireDate ? new Date(input.hireDate) : null,
+            cref: input.cref || null,
+            bio: input.bio || null,
+            photoUrl: input.photoUrl || null,
+            accessStatus: input.accessStatus,
+            faceEnrolled: false,
+          });
+
+          return { success: true, userId: userResult.insertId };
         } catch (error: any) {
           console.error("[professors.create] Error:", error);
           if (error instanceof TRPCError) throw error;
@@ -3100,23 +3144,67 @@ export const appRouter = router({
         name: z.string().optional(),
         email: z.string().email().optional(),
         password: z.string().min(6).optional(),
+        cpf: z.string().optional(),
         phone: z.string().optional(),
+        birthDate: z.string().optional(),
+        address: z.string().optional(),
+        number: z.string().optional(),
+        complement: z.string().optional(),
+        neighborhood: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        zipCode: z.string().optional(),
+        specialty: z.string().optional(),
+        certifications: z.string().optional(),
+        hireDate: z.string().optional(),
+        cref: z.string().optional(),
+        bio: z.string().optional(),
+        photoUrl: z.string().optional(),
+        accessStatus: z.enum(["active", "inactive", "suspended", "blocked"]).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const professor = await db.getUserById(input.professorId);
-        if (!professor || professor.gymId !== ctx.user.gymId || professor.role !== "professor") {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
+
+        const professor = await db.getProfessorById(input.professorId, ctx.user.gymId);
+        if (!professor) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Professor não encontrado" });
         }
 
-        const updates: any = {};
-        if (input.name) updates.name = input.name;
-        if (input.email) updates.email = input.email;
-        if (input.phone !== undefined) updates.phone = input.phone;
+        // Update user data if needed
+        const userUpdates: any = {};
+        if (input.name) userUpdates.name = input.name;
+        if (input.email) userUpdates.email = input.email;
         if (input.password) {
-          updates.password = await bcrypt.hash(input.password, 10);
+          userUpdates.password = await bcrypt.hash(input.password, 10);
+        }
+        if (Object.keys(userUpdates).length > 0) {
+          await db.updateUser(professor.userId, userUpdates);
         }
 
-        await db.updateUser(input.professorId, updates);
+        // Update professor data
+        const professorUpdates: any = {};
+        if (input.cpf) professorUpdates.cpf = input.cpf;
+        if (input.phone !== undefined) professorUpdates.phone = input.phone;
+        if (input.birthDate !== undefined) professorUpdates.birthDate = input.birthDate ? new Date(input.birthDate) : null;
+        if (input.address !== undefined) professorUpdates.address = input.address;
+        if (input.number !== undefined) professorUpdates.number = input.number;
+        if (input.complement !== undefined) professorUpdates.complement = input.complement;
+        if (input.neighborhood !== undefined) professorUpdates.neighborhood = input.neighborhood;
+        if (input.city !== undefined) professorUpdates.city = input.city;
+        if (input.state !== undefined) professorUpdates.state = input.state;
+        if (input.zipCode !== undefined) professorUpdates.zipCode = input.zipCode;
+        if (input.specialty !== undefined) professorUpdates.specialty = input.specialty;
+        if (input.certifications !== undefined) professorUpdates.certifications = input.certifications;
+        if (input.hireDate !== undefined) professorUpdates.hireDate = input.hireDate ? new Date(input.hireDate) : null;
+        if (input.cref !== undefined) professorUpdates.cref = input.cref;
+        if (input.bio !== undefined) professorUpdates.bio = input.bio;
+        if (input.photoUrl !== undefined) professorUpdates.photoUrl = input.photoUrl;
+        if (input.accessStatus !== undefined) professorUpdates.accessStatus = input.accessStatus;
+
+        if (Object.keys(professorUpdates).length > 0) {
+          await db.updateProfessor(input.professorId, ctx.user.gymId, professorUpdates);
+        }
+
         return { success: true };
       }),
 
@@ -3126,23 +3214,51 @@ export const appRouter = router({
         professorId: z.number(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const professor = await db.getUserById(input.professorId);
-        if (!professor || professor.gymId !== ctx.user.gymId || professor.role !== "professor") {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
+
+        const professor = await db.getProfessorById(input.professorId, ctx.user.gymId);
+        if (!professor) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Professor não encontrado" });
         }
 
-        await db.deleteUser(input.professorId);
+        // Delete professor record (will also delete user due to FK constraint)
+        await db.deleteProfessor(input.professorId, ctx.user.gymId);
+        return { success: true };
+      }),
+
+    updateAccessStatus: gymAdminProcedure
+      .input(z.object({
+        gymSlug: z.string(),
+        professorId: z.number(),
+        accessStatus: z.enum(["active", "inactive", "suspended", "blocked"]),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
+        await db.updateProfessorAccessStatus(input.professorId, ctx.user.gymId, input.accessStatus);
+        return { success: true };
+      }),
+
+    enrollFace: gymAdminProcedure
+      .input(z.object({
+        gymSlug: z.string(),
+        professorId: z.number(),
+        controlIdUserId: z.number(),
+        faceImageUrl: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
+        await db.enrollProfessorFace(input.professorId, ctx.user.gymId, input.controlIdUserId, input.faceImageUrl);
         return { success: true };
       }),
   }),
 
-  // Staff Management (with permissions)
+  // Staff Management
   staff: router({
     list: gymAdminProcedure
       .input(z.object({ gymSlug: z.string() }))
       .query(async ({ ctx }) => {
         if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
-        return await db.getUsersByRole(ctx.user.gymId, "staff");
+        return await db.listStaff(ctx.user.gymId);
       }),
 
     create: gymAdminProcedure
@@ -3151,7 +3267,22 @@ export const appRouter = router({
         name: z.string(),
         email: z.string().email(),
         password: z.string().min(6),
+        cpf: z.string(),
         phone: z.string().optional(),
+        birthDate: z.string().optional(),
+        address: z.string().optional(),
+        number: z.string().optional(),
+        complement: z.string().optional(),
+        neighborhood: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        zipCode: z.string().optional(),
+        position: z.string().optional(),
+        department: z.string().optional(),
+        hireDate: z.string().optional(),
+        salary: z.string().optional(),
+        photoUrl: z.string().optional(),
+        accessStatus: z.enum(["active", "inactive", "suspended", "blocked"]).default("inactive"),
         permissions: z.object({
           viewStudents: z.boolean().default(false),
           editStudents: z.boolean().default(false),
@@ -3160,7 +3291,7 @@ export const appRouter = router({
           viewReports: z.boolean().default(false),
           manageAccess: z.boolean().default(false),
           managePlans: z.boolean().default(false),
-        }),
+        }).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         try {
@@ -3181,7 +3312,7 @@ export const appRouter = router({
           const openId = `staff-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
           // Create user with staff role
-          const result = await db.createUser({
+          const userResult = await db.createUser({
             gymId: ctx.user.gymId,
             openId,
             name: input.name,
@@ -3190,10 +3321,37 @@ export const appRouter = router({
             phone: input.phone || null,
             role: "staff",
             loginMethod: "password",
-            permissions: JSON.stringify(input.permissions),
+            permissions: input.permissions ? JSON.stringify(input.permissions) : null,
           });
 
-          return { success: true, userId: result.insertId };
+          // Generate registration number
+          const registrationNumber = `FUNC${String(userResult.insertId).padStart(6, "0")}`;
+
+          // Create staff record
+          await db.createStaff({
+            gymId: ctx.user.gymId,
+            userId: userResult.insertId,
+            registrationNumber,
+            cpf: input.cpf,
+            phone: input.phone || null,
+            birthDate: input.birthDate ? new Date(input.birthDate) : null,
+            address: input.address || null,
+            number: input.number || null,
+            complement: input.complement || null,
+            neighborhood: input.neighborhood || null,
+            city: input.city || null,
+            state: input.state || null,
+            zipCode: input.zipCode || null,
+            position: input.position || null,
+            department: input.department || null,
+            hireDate: input.hireDate ? new Date(input.hireDate) : null,
+            salary: input.salary || null,
+            photoUrl: input.photoUrl || null,
+            accessStatus: input.accessStatus,
+            faceEnrolled: false,
+          });
+
+          return { success: true, userId: userResult.insertId };
         } catch (error: any) {
           console.error("[staff.create] Error:", error);
           if (error instanceof TRPCError) throw error;
@@ -3211,7 +3369,22 @@ export const appRouter = router({
         name: z.string().optional(),
         email: z.string().email().optional(),
         password: z.string().min(6).optional(),
+        cpf: z.string().optional(),
         phone: z.string().optional(),
+        birthDate: z.string().optional(),
+        address: z.string().optional(),
+        number: z.string().optional(),
+        complement: z.string().optional(),
+        neighborhood: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        zipCode: z.string().optional(),
+        position: z.string().optional(),
+        department: z.string().optional(),
+        hireDate: z.string().optional(),
+        salary: z.string().optional(),
+        photoUrl: z.string().optional(),
+        accessStatus: z.enum(["active", "inactive", "suspended", "blocked"]).optional(),
         permissions: z.object({
           viewStudents: z.boolean().optional(),
           editStudents: z.boolean().optional(),
@@ -3223,22 +3396,50 @@ export const appRouter = router({
         }).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const staff = await db.getUserById(input.staffId);
-        if (!staff || staff.gymId !== ctx.user.gymId || staff.role !== "staff") {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Staff member not found" });
+        if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
+
+        const staffMember = await db.getStaffById(input.staffId, ctx.user.gymId);
+        if (!staffMember) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Funcionário não encontrado" });
         }
 
-        const updates: any = {};
-        if (input.name) updates.name = input.name;
-        if (input.email) updates.email = input.email;
+        // Update user data if needed
+        const userUpdates: any = {};
+        if (input.name) userUpdates.name = input.name;
+        if (input.email) userUpdates.email = input.email;
         if (input.password) {
-          updates.password = await bcrypt.hash(input.password, 10);
+          userUpdates.password = await bcrypt.hash(input.password, 10);
         }
         if (input.permissions) {
-          updates.permissions = JSON.stringify(input.permissions);
+          userUpdates.permissions = JSON.stringify(input.permissions);
+        }
+        if (Object.keys(userUpdates).length > 0) {
+          await db.updateUser(staffMember.userId, userUpdates);
         }
 
-        await db.updateUser(input.staffId, updates);
+        // Update staff data
+        const staffUpdates: any = {};
+        if (input.cpf) staffUpdates.cpf = input.cpf;
+        if (input.phone !== undefined) staffUpdates.phone = input.phone;
+        if (input.birthDate !== undefined) staffUpdates.birthDate = input.birthDate ? new Date(input.birthDate) : null;
+        if (input.address !== undefined) staffUpdates.address = input.address;
+        if (input.number !== undefined) staffUpdates.number = input.number;
+        if (input.complement !== undefined) staffUpdates.complement = input.complement;
+        if (input.neighborhood !== undefined) staffUpdates.neighborhood = input.neighborhood;
+        if (input.city !== undefined) staffUpdates.city = input.city;
+        if (input.state !== undefined) staffUpdates.state = input.state;
+        if (input.zipCode !== undefined) staffUpdates.zipCode = input.zipCode;
+        if (input.position !== undefined) staffUpdates.position = input.position;
+        if (input.department !== undefined) staffUpdates.department = input.department;
+        if (input.hireDate !== undefined) staffUpdates.hireDate = input.hireDate ? new Date(input.hireDate) : null;
+        if (input.salary !== undefined) staffUpdates.salary = input.salary;
+        if (input.photoUrl !== undefined) staffUpdates.photoUrl = input.photoUrl;
+        if (input.accessStatus !== undefined) staffUpdates.accessStatus = input.accessStatus;
+
+        if (Object.keys(staffUpdates).length > 0) {
+          await db.updateStaff(input.staffId, ctx.user.gymId, staffUpdates);
+        }
+
         return { success: true };
       }),
 
@@ -3248,12 +3449,40 @@ export const appRouter = router({
         staffId: z.number(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const staff = await db.getUserById(input.staffId);
-        if (!staff || staff.gymId !== ctx.user.gymId || staff.role !== "staff") {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Staff member not found" });
+        if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
+
+        const staffMember = await db.getStaffById(input.staffId, ctx.user.gymId);
+        if (!staffMember) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Funcionário não encontrado" });
         }
 
-        await db.deleteUser(input.staffId);
+        // Delete staff record (will also delete user due to FK constraint)
+        await db.deleteStaff(input.staffId, ctx.user.gymId);
+        return { success: true };
+      }),
+
+    updateAccessStatus: gymAdminProcedure
+      .input(z.object({
+        gymSlug: z.string(),
+        staffId: z.number(),
+        accessStatus: z.enum(["active", "inactive", "suspended", "blocked"]),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
+        await db.updateStaffAccessStatus(input.staffId, ctx.user.gymId, input.accessStatus);
+        return { success: true };
+      }),
+
+    enrollFace: gymAdminProcedure
+      .input(z.object({
+        gymSlug: z.string(),
+        staffId: z.number(),
+        controlIdUserId: z.number(),
+        faceImageUrl: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
+        await db.enrollStaffFace(input.staffId, ctx.user.gymId, input.controlIdUserId, input.faceImageUrl);
         return { success: true };
       }),
   }),

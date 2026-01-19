@@ -10,6 +10,8 @@ import {
   superAdminSettings, InsertSuperAdminSettings,
   users, InsertUser,
   students, InsertStudent,
+  staff, InsertStaff,
+  professors, InsertProfessor,
   plans, InsertPlan,
   subscriptions, InsertSubscription,
   payments, InsertPayment,
@@ -655,6 +657,225 @@ export async function deleteStudent(id: number, gymId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(students).where(and(eq(students.id, id), eq(students.gymId, gymId)));
+}
+
+// ============ STAFF ============
+
+export async function createStaff(staffData: InsertStaff) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(staff).values(staffData);
+  return { insertId: Number(result[0].insertId) };
+}
+
+export async function getStaffByUserId(userId: number, gymId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(staff)
+    .where(and(eq(staff.userId, userId), eq(staff.gymId, gymId)))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getStaffById(id: number, gymId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(staff)
+    .where(and(eq(staff.id, id), eq(staff.gymId, gymId)))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function listStaff(gymId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select({
+      id: staff.id,
+      userId: staff.userId,
+      registrationNumber: staff.registrationNumber,
+      cpf: staff.cpf,
+      phone: staff.phone,
+      birthDate: staff.birthDate,
+      address: staff.address,
+      number: staff.number,
+      complement: staff.complement,
+      neighborhood: staff.neighborhood,
+      city: staff.city,
+      state: staff.state,
+      zipCode: staff.zipCode,
+      position: staff.position,
+      department: staff.department,
+      hireDate: staff.hireDate,
+      salary: staff.salary,
+      accessStatus: staff.accessStatus,
+      controlIdUserId: staff.controlIdUserId,
+      faceEnrolled: staff.faceEnrolled,
+      faceImageUrl: staff.faceImageUrl,
+      photoUrl: staff.photoUrl,
+      createdAt: staff.createdAt,
+      updatedAt: staff.updatedAt,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(staff)
+    .leftJoin(users, eq(staff.userId, users.id))
+    .where(eq(staff.gymId, gymId))
+    .orderBy(desc(staff.createdAt));
+}
+
+export async function updateStaff(id: number, gymId: number, data: Partial<InsertStaff>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(staff).set(data).where(and(eq(staff.id, id), eq(staff.gymId, gymId)));
+}
+
+export async function deleteStaff(id: number, gymId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(staff).where(and(eq(staff.id, id), eq(staff.gymId, gymId)));
+}
+
+export async function updateStaffAccessStatus(
+  id: number,
+  gymId: number,
+  accessStatus: "active" | "inactive" | "suspended" | "blocked"
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(staff).set({ accessStatus }).where(and(eq(staff.id, id), eq(staff.gymId, gymId)));
+}
+
+export async function enrollStaffFace(
+  id: number,
+  gymId: number,
+  controlIdUserId: number,
+  faceImageUrl: string
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(staff)
+    .set({
+      controlIdUserId,
+      faceImageUrl,
+      faceEnrolled: true,
+    })
+    .where(and(eq(staff.id, id), eq(staff.gymId, gymId)));
+}
+
+// ============ PROFESSORS ============
+
+export async function createProfessor(professorData: InsertProfessor) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(professors).values(professorData);
+  return { insertId: Number(result[0].insertId) };
+}
+
+export async function getProfessorByUserId(userId: number, gymId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(professors)
+    .where(and(eq(professors.userId, userId), eq(professors.gymId, gymId)))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getProfessorById(id: number, gymId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(professors)
+    .where(and(eq(professors.id, id), eq(professors.gymId, gymId)))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function listProfessors(gymId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select({
+      id: professors.id,
+      userId: professors.userId,
+      registrationNumber: professors.registrationNumber,
+      cpf: professors.cpf,
+      phone: professors.phone,
+      birthDate: professors.birthDate,
+      address: professors.address,
+      number: professors.number,
+      complement: professors.complement,
+      neighborhood: professors.neighborhood,
+      city: professors.city,
+      state: professors.state,
+      zipCode: professors.zipCode,
+      specialty: professors.specialty,
+      certifications: professors.certifications,
+      hireDate: professors.hireDate,
+      cref: professors.cref,
+      bio: professors.bio,
+      accessStatus: professors.accessStatus,
+      controlIdUserId: professors.controlIdUserId,
+      faceEnrolled: professors.faceEnrolled,
+      faceImageUrl: professors.faceImageUrl,
+      photoUrl: professors.photoUrl,
+      createdAt: professors.createdAt,
+      updatedAt: professors.updatedAt,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(professors)
+    .leftJoin(users, eq(professors.userId, users.id))
+    .where(eq(professors.gymId, gymId))
+    .orderBy(desc(professors.createdAt));
+}
+
+export async function updateProfessor(id: number, gymId: number, data: Partial<InsertProfessor>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(professors).set(data).where(and(eq(professors.id, id), eq(professors.gymId, gymId)));
+}
+
+export async function deleteProfessor(id: number, gymId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(professors).where(and(eq(professors.id, id), eq(professors.gymId, gymId)));
+}
+
+export async function updateProfessorAccessStatus(
+  id: number,
+  gymId: number,
+  accessStatus: "active" | "inactive" | "suspended" | "blocked"
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(professors).set({ accessStatus }).where(and(eq(professors.id, id), eq(professors.gymId, gymId)));
+}
+
+export async function enrollProfessorFace(
+  id: number,
+  gymId: number,
+  controlIdUserId: number,
+  faceImageUrl: string
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(professors)
+    .set({
+      controlIdUserId,
+      faceImageUrl,
+      faceEnrolled: true,
+    })
+    .where(and(eq(professors.id, id), eq(professors.gymId, gymId)));
 }
 
 // ============ PLANS ============
