@@ -3315,7 +3315,7 @@ export const appRouter = router({
             if (professor.faceEnrolled && controlIdUserId) {
               try {
                 console.log('[uploadFaceImage-Professor] 🗑️  Deletando foto facial antiga...');
-                await controlIdService.deleteFaceImages(controlIdUserId);
+                await controlIdService.removeUserFace(controlIdUserId);
                 console.log('[uploadFaceImage-Professor] ✅ Foto antiga deletada');
               } catch (deleteError) {
                 console.log('[uploadFaceImage-Professor] ⚠️  Erro ao deletar foto antiga (continuando):', deleteError);
@@ -3685,7 +3685,7 @@ export const appRouter = router({
             if (staffMember.faceEnrolled && controlIdUserId) {
               try {
                 console.log('[uploadFaceImage-Staff] 🗑️  Deletando foto facial antiga...');
-                await controlIdService.deleteFaceImages(controlIdUserId);
+                await controlIdService.removeUserFace(controlIdUserId);
                 console.log('[uploadFaceImage-Staff] ✅ Foto antiga deletada');
               } catch (deleteError) {
                 console.log('[uploadFaceImage-Staff] ⚠️  Erro ao deletar foto antiga (continuando):', deleteError);
