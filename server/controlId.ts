@@ -242,7 +242,7 @@ export class ControlIdService {
    * @param registration - Registration number
    * @param groupId - Group ID (default: 1 = "Padrão")
    */
-  async createUser(name: string, registration: string, groupId: number = 1): Promise<number> {
+  async createUser(name: string, registration: string, groupId?: number): Promise<number> {
     if (this.useAgent) {
       return await this.sendToAgent('createUser', {
         name,
@@ -287,32 +287,36 @@ export class ControlIdService {
       const controlIdUserId = response.data.ids[0];
       console.log(`[ControlID] ✅ User created with ID: ${controlIdUserId}`);
 
-      // 2. Link user to group automatically
-      try {
-        await axios.post(
-          `${this.getBaseUrl()}/create_objects.fcgi?session=${session}`,
-          {
-            object: "user_groups",
-            values: [
-              {
-                user_id: controlIdUserId,
-                group_id: groupId,
-              },
-            ],
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
+      // 2. Link user to group ONLY if groupId is provided
+      if (groupId !== undefined) {
+        try {
+          await axios.post(
+            `${this.getBaseUrl()}/create_objects.fcgi?session=${session}`,
+            {
+              object: "user_groups",
+              values: [
+                {
+                  user_id: controlIdUserId,
+                  group_id: groupId,
+                },
+              ],
             },
-            timeout: 10000,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+              timeout: 10000,
+            }
+          );
+          console.log(`[ControlID] ✅ User ${controlIdUserId} linked to group ${groupId}`);
+        } catch (groupError: any) {
+          // If group link already exists, that's OK
+          if (!groupError.response?.data?.error?.includes('already exists')) {
+            console.warn(`[ControlID] Failed to link user to group:`, groupError.response?.data);
           }
-        );
-        console.log(`[ControlID] ✅ User ${controlIdUserId} linked to group ${groupId}`);
-      } catch (groupError: any) {
-        // If group link already exists, that's OK
-        if (!groupError.response?.data?.error?.includes('already exists')) {
-          console.warn(`[ControlID] Failed to link user to group:`, groupError.response?.data);
         }
+      } else {
+        console.log(`[ControlID] ℹ️  User ${controlIdUserId} created WITHOUT group (will be added later based on status)`);
       }
 
       return controlIdUserId;
@@ -565,6 +569,32 @@ export class ControlIdService {
     } catch (error) {
       console.error("[ControlID] Failed to list users with faces:", error);
       return [];
+    }
+  }
+
+  /**
+   * Load all users from Control ID
+   */
+  async loadUsers(): Promise<Array<{ id: number; name: string; registration: string; image?: number }>> {
+    if (this.useAgent) {
+      return await this.sendToAgent('loadUsers', {});
+    }
+
+    try {
+      const session = await this.ensureSession();
+      const response = await axios.post(
+        `${this.getBaseUrl()}/load_objects.fcgi?session=${session}`,
+        { object: 'users' },
+        {
+          headers: { "Content-Type": "application/json" },
+          timeout: 10000,
+        }
+      );
+
+      return response.data.users || [];
+    } catch (error) {
+      console.error("[ControlID] Failed to load users:", error);
+      throw new Error("Failed to load users from Control ID");
     }
   }
 

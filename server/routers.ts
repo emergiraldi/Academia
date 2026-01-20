@@ -16,6 +16,8 @@ import { TRPCError } from "@trpc/server";
 import { storagePut } from "./storage";
 import { getPixService, getPixServiceFromBankAccount, getPixServiceFromSuperAdmin } from "./pix";
 import { generateReceiptHTML, generateReceiptFilename, generateExpenseReceiptHTML } from "./receipt";
+import { isValidCPF, isValidCEP } from "./validators";
+import axios from "axios";
 
 const SALT_ROUNDS = 10;
 
@@ -160,6 +162,49 @@ export const appRouter = router({
   saasPlans: saasPlansRouter,
   superAdminSettings: superAdminSettingsRouter,
   landingPageScreenshots: landingPageScreenshotsRouter,
+
+  // ============ UTILITIES ============
+  utils: router({
+    // Fetch address by CEP (ViaCEP API)
+    fetchAddressByCep: publicProcedure
+      .input(z.object({ cep: z.string() }))
+      .query(async ({ input }) => {
+        try {
+          const cleanCEP = input.cep.replace(/\D/g, '');
+
+          if (!isValidCEP(cleanCEP)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "CEP inválido"
+            });
+          }
+
+          const response = await axios.get(`https://viacep.com.br/ws/${cleanCEP}/json/`);
+
+          if (response.data.erro) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "CEP não encontrado"
+            });
+          }
+
+          return {
+            address: response.data.logradouro || '',
+            neighborhood: response.data.bairro || '',
+            city: response.data.localidade || '',
+            state: response.data.uf || '',
+            zipCode: response.data.cep || ''
+          };
+        } catch (error: any) {
+          if (error instanceof TRPCError) throw error;
+
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Erro ao buscar CEP"
+          });
+        }
+      }),
+  }),
 
   // ============ GYM BILLING CYCLES ============
   gymBillingCycles: router({
@@ -827,6 +872,22 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
 
+        // Validate CPF
+        if (input.cpf && !isValidCPF(input.cpf)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "CPF inválido"
+          });
+        }
+
+        // Validate CEP
+        if (input.zipCode && !isValidCEP(input.zipCode)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "CEP inválido"
+          });
+        }
+
         // Check if email already exists
         const existingUser = await db.getUserByEmail(input.email);
         if (existingUser) {
@@ -919,6 +980,22 @@ export const appRouter = router({
         const student = await db.getStudentById(input.studentId, gym.id);
         if (!student) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Aluno não encontrado" });
+        }
+
+        // Validate CPF if provided
+        if (input.cpf && !isValidCPF(input.cpf)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "CPF inválido"
+          });
+        }
+
+        // Validate CEP if provided
+        if (input.zipCode && !isValidCEP(input.zipCode)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "CEP inválido"
+          });
         }
 
         // Update students table fields (cpf, phone, address, etc.)
@@ -3094,6 +3171,22 @@ export const appRouter = router({
             throw new TRPCError({ code: "FORBIDDEN", message: "Academia não identificada" });
           }
 
+          // Validate CPF
+          if (input.cpf && !isValidCPF(input.cpf)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "CPF inválido"
+            });
+          }
+
+          // Validate CEP
+          if (input.zipCode && !isValidCEP(input.zipCode)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "CEP inválido"
+            });
+          }
+
           // Check if email already exists
           const existing = await db.getUserByEmail(input.email);
           if (existing) {
@@ -3190,6 +3283,22 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Professor não encontrado" });
         }
 
+        // Validate CPF if provided
+        if (input.cpf && !isValidCPF(input.cpf)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "CPF inválido"
+          });
+        }
+
+        // Validate CEP if provided
+        if (input.zipCode && !isValidCEP(input.zipCode)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "CEP inválido"
+          });
+        }
+
         // Update user data if needed
         const userUpdates: any = {};
         if (input.name) userUpdates.name = input.name;
@@ -3241,8 +3350,39 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Professor não encontrado" });
         }
 
-        // Delete professor record (will also delete user due to FK constraint)
+        console.log(`[Delete Professor] 🗑️  Iniciando exclusão do professor ID ${professor.id}`);
+
+        // 1. Delete user from Control ID if enrolled (remove facial photo)
+        if (professor.controlIdUserId) {
+          try {
+            const { getControlIdServiceForGym } = await import("./controlId");
+            const service = await getControlIdServiceForGym(ctx.user.gymId);
+
+            if (service) {
+              await service.deleteUser(professor.controlIdUserId);
+              console.log(`[Control ID] ✅ Professor ID ${professor.id} deletado do Control ID (foto facial removida)`);
+            }
+          } catch (error) {
+            console.error(`[Control ID] ❌ Falha ao deletar professor ${professor.id} do Control ID:`, error);
+            // Continue with database deletion even if Control ID fails
+          }
+        }
+
+        // 2. Delete professor record
         await db.deleteProfessor(input.professorId, ctx.user.gymId);
+
+        // 3. Delete user record (email, etc.)
+        if (professor.userId) {
+          try {
+            await db.deleteUser(professor.userId);
+            console.log(`[Delete Professor] ✅ Usuário (email) deletado do banco`);
+          } catch (error) {
+            console.error(`[Delete Professor] ⚠️  Erro ao deletar usuário:`, error);
+          }
+        }
+
+        console.log(`[Delete Professor] ✅ Professor deletado completamente do sistema`);
+
         return { success: true };
       }),
 
@@ -3254,7 +3394,41 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
+
+        // Get professor data
+        const professor = await db.getProfessorById(input.professorId, ctx.user.gymId);
+        if (!professor) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Professor não encontrado" });
+        }
+
+        console.log(`[Update Access Status] Atualizando status de ${professor.id} para: ${input.accessStatus}`);
+
+        // Update status in database
         await db.updateProfessorAccessStatus(input.professorId, ctx.user.gymId, input.accessStatus);
+
+        // Update access in Control ID if user has facial enrolled
+        if (professor.controlIdUserId && professor.faceEnrolled) {
+          try {
+            const { getControlIdServiceForGym } = await import("./controlId");
+            const service = await getControlIdServiceForGym(ctx.user.gymId);
+
+            if (service) {
+              if (input.accessStatus === 'active') {
+                await service.unblockUserAccess(professor.controlIdUserId, 1);
+                console.log(`[Update Access Status] ✅ Acesso desbloqueado na leitora (ATIVO)`);
+              } else {
+                await service.blockUserAccess(professor.controlIdUserId);
+                console.log(`[Update Access Status] ✅ Acesso bloqueado na leitora (${input.accessStatus.toUpperCase()})`);
+              }
+            }
+          } catch (error) {
+            console.error(`[Update Access Status] ⚠️  Erro ao atualizar leitora:`, error);
+            // Continue even if Control ID update fails
+          }
+        } else {
+          console.log(`[Update Access Status] ℹ️  Sem facial cadastrada, apenas atualizando banco`);
+        }
+
         return { success: true };
       }),
 
@@ -3598,9 +3772,141 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Funcionário não encontrado" });
         }
 
-        // Delete staff record (will also delete user due to FK constraint)
+        console.log(`[Delete Staff] 🗑️  Iniciando exclusão do funcionário ID ${staffMember.id}`);
+
+        // 1. Delete user from Control ID if enrolled (remove facial photo)
+        if (staffMember.controlIdUserId) {
+          try {
+            const { getControlIdServiceForGym } = await import("./controlId");
+            const service = await getControlIdServiceForGym(ctx.user.gymId);
+
+            if (service) {
+              await service.deleteUser(staffMember.controlIdUserId);
+              console.log(`[Control ID] ✅ Funcionário ID ${staffMember.id} deletado do Control ID (foto facial removida)`);
+            }
+          } catch (error) {
+            console.error(`[Control ID] ❌ Falha ao deletar funcionário ${staffMember.id} do Control ID:`, error);
+            // Continue with database deletion even if Control ID fails
+          }
+        }
+
+        // 2. Delete staff record
         await db.deleteStaff(input.staffId, ctx.user.gymId);
+
+        // 3. Delete user record (email, etc.)
+        if (staffMember.userId) {
+          try {
+            await db.deleteUser(staffMember.userId);
+            console.log(`[Delete Staff] ✅ Usuário (email) deletado do banco`);
+          } catch (error) {
+            console.error(`[Delete Staff] ⚠️  Erro ao deletar usuário:`, error);
+          }
+        }
+
+        console.log(`[Delete Staff] ✅ Funcionário deletado completamente do sistema`);
+
         return { success: true };
+      }),
+
+    cleanupOrphanUsers: gymAdminProcedure
+      .input(z.object({
+        gymSlug: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
+
+        console.log(`[Cleanup Orphans] 🧹 Iniciando limpeza de usuários órfãos na leitora...`);
+
+        try {
+          const { getControlIdServiceForGym } = await import("./controlId");
+          const service = await getControlIdServiceForGym(ctx.user.gymId);
+
+          if (!service) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Serviço Control ID não disponível"
+            });
+          }
+
+          // 1. Listar todos os usuários na leitora
+          const readerUsers = await service.loadUsers();
+          console.log(`[Cleanup Orphans] 📊 Usuários na leitora: ${readerUsers.length}`);
+
+          if (readerUsers.length === 0) {
+            return {
+              success: true,
+              message: 'Leitora já está limpa',
+              deleted: 0,
+              total: 0
+            };
+          }
+
+          // 2. Buscar todos os controlIdUserId válidos do banco
+          const students = await db.db
+            .select({ controlIdUserId: db.students.controlIdUserId })
+            .from(db.students)
+            .where(
+              db.and(
+                db.eq(db.students.gymId, ctx.user.gymId),
+                db.isNotNull(db.students.controlIdUserId)
+              )
+            );
+
+          const staff = await db.db
+            .select({ controlIdUserId: db.staff.controlIdUserId })
+            .from(db.staff)
+            .where(
+              db.and(
+                db.eq(db.staff.gymId, ctx.user.gymId),
+                db.isNotNull(db.staff.controlIdUserId)
+              )
+            );
+
+          const validIds = new Set([
+            ...students.map(s => s.controlIdUserId),
+            ...staff.map(s => s.controlIdUserId)
+          ]);
+
+          console.log(`[Cleanup Orphans] ✅ IDs válidos no banco: ${validIds.size}`);
+
+          // 3. Deletar usuários órfãos
+          let deleted = 0;
+          const orphanIds: number[] = [];
+
+          for (const user of readerUsers) {
+            if (!validIds.has(user.id)) {
+              orphanIds.push(user.id);
+              console.log(`[Cleanup Orphans] 🗑️  Deletando órfão ID ${user.id}: ${user.name}`);
+
+              try {
+                await service.deleteUser(user.id);
+                deleted++;
+                console.log(`[Cleanup Orphans]    ✅ Deletado`);
+              } catch (error) {
+                console.error(`[Cleanup Orphans]    ❌ Erro ao deletar:`, error);
+              }
+            }
+          }
+
+          console.log(`[Cleanup Orphans] ✅ Limpeza concluída: ${deleted} órfãos deletados`);
+
+          return {
+            success: true,
+            message: deleted > 0
+              ? `${deleted} usuário(s) órfão(s) removido(s) da leitora`
+              : 'Nenhum usuário órfão encontrado',
+            deleted,
+            total: readerUsers.length,
+            orphanIds
+          };
+
+        } catch (error: any) {
+          console.error(`[Cleanup Orphans] ❌ Erro:`, error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error.message || "Erro ao limpar usuários órfãos"
+          });
+        }
       }),
 
     updateAccessStatus: gymAdminProcedure
@@ -3611,7 +3917,41 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
+
+        // Get staff member data
+        const staffMember = await db.getStaffById(input.staffId, ctx.user.gymId);
+        if (!staffMember) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Funcionário não encontrado" });
+        }
+
+        console.log(`[Update Access Status] Atualizando status de ${staffMember.id} para: ${input.accessStatus}`);
+
+        // Update status in database
         await db.updateStaffAccessStatus(input.staffId, ctx.user.gymId, input.accessStatus);
+
+        // Update access in Control ID if user has facial enrolled
+        if (staffMember.controlIdUserId && staffMember.faceEnrolled) {
+          try {
+            const { getControlIdServiceForGym } = await import("./controlId");
+            const service = await getControlIdServiceForGym(ctx.user.gymId);
+
+            if (service) {
+              if (input.accessStatus === 'active') {
+                await service.unblockUserAccess(staffMember.controlIdUserId, 1);
+                console.log(`[Update Access Status] ✅ Acesso desbloqueado na leitora (ATIVO)`);
+              } else {
+                await service.blockUserAccess(staffMember.controlIdUserId);
+                console.log(`[Update Access Status] ✅ Acesso bloqueado na leitora (${input.accessStatus.toUpperCase()})`);
+              }
+            }
+          } catch (error) {
+            console.error(`[Update Access Status] ⚠️  Erro ao atualizar leitora:`, error);
+            // Continue even if Control ID update fails
+          }
+        } else {
+          console.log(`[Update Access Status] ℹ️  Sem facial cadastrada, apenas atualizando banco`);
+        }
+
         return { success: true };
       }),
 

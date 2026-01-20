@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import Webcam from "react-webcam";
 import { trpc } from "@/lib/trpc";
+import { fetchAddressByCEP } from "@/lib/validators";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -224,6 +225,76 @@ export default function AdminStaff() {
     }
   }, [webcamRef]);
 
+  // Format CPF
+  const formatCPF = (value: string) => {
+    const cleanValue = value.replace(/\D/g, '');
+    if (cleanValue.length <= 3) return cleanValue;
+    if (cleanValue.length <= 6) return `${cleanValue.slice(0, 3)}.${cleanValue.slice(3)}`;
+    if (cleanValue.length <= 9) return `${cleanValue.slice(0, 3)}.${cleanValue.slice(3, 6)}.${cleanValue.slice(6)}`;
+    return `${cleanValue.slice(0, 3)}.${cleanValue.slice(3, 6)}.${cleanValue.slice(6, 9)}-${cleanValue.slice(9, 11)}`;
+  };
+
+  // Format Phone
+  const formatPhone = (value: string) => {
+    const cleanValue = value.replace(/\D/g, '');
+    if (cleanValue.length <= 2) return cleanValue;
+    if (cleanValue.length <= 7) return `(${cleanValue.slice(0, 2)}) ${cleanValue.slice(2)}`;
+    if (cleanValue.length <= 11) return `(${cleanValue.slice(0, 2)}) ${cleanValue.slice(2, 7)}-${cleanValue.slice(7)}`;
+    return `(${cleanValue.slice(0, 2)}) ${cleanValue.slice(2, 7)}-${cleanValue.slice(7, 11)}`;
+  };
+
+  // Format CEP and fetch address
+  const formatCEP = (value: string) => {
+    const cleanValue = value.replace(/\D/g, '');
+    if (cleanValue.length <= 5) return cleanValue;
+    return `${cleanValue.slice(0, 5)}-${cleanValue.slice(5, 8)}`;
+  };
+
+  const handleCEPChange = async (value: string, isEdit: boolean = false) => {
+    const formattedCEP = formatCEP(value);
+
+    // Update CEP field
+    if (isEdit) {
+      setEditFormData(prev => ({ ...prev, zipCode: formattedCEP }));
+    } else {
+      setFormData(prev => ({ ...prev, zipCode: formattedCEP }));
+    }
+
+    // Fetch address when CEP is complete
+    const cleanCEP = value.replace(/\D/g, '');
+
+    if (cleanCEP.length === 8) {
+      try {
+        const address = await fetchAddressByCEP(cleanCEP);
+
+        if (address) {
+          if (isEdit) {
+            setEditFormData(prev => ({
+              ...prev,
+              address: address.logradouro || prev.address,
+              neighborhood: address.bairro || prev.neighborhood,
+              city: address.localidade || prev.city,
+              state: address.uf || prev.state,
+            }));
+          } else {
+            setFormData(prev => ({
+              ...prev,
+              address: address.logradouro || prev.address,
+              neighborhood: address.bairro || prev.neighborhood,
+              city: address.localidade || prev.city,
+              state: address.uf || prev.state,
+            }));
+          }
+          toast.success("Endereço encontrado!");
+        } else {
+          toast.error("CEP não encontrado");
+        }
+      } catch (error: any) {
+        toast.error("Erro ao buscar endereço");
+      }
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: "",
@@ -282,8 +353,8 @@ export default function AdminStaff() {
       name: staffMember.userName || "",
       email: staffMember.userEmail || "",
       password: "",
-      cpf: staffMember.cpf || "",
-      phone: staffMember.phone || "",
+      cpf: staffMember.cpf ? formatCPF(staffMember.cpf) : "",
+      phone: staffMember.phone ? formatPhone(staffMember.phone) : "",
       birthDate: staffMember.birthDate ? new Date(staffMember.birthDate).toISOString().split('T')[0] : "",
       address: staffMember.address || "",
       number: staffMember.number || "",
@@ -291,7 +362,7 @@ export default function AdminStaff() {
       neighborhood: staffMember.neighborhood || "",
       city: staffMember.city || "",
       state: staffMember.state || "",
-      zipCode: staffMember.zipCode || "",
+      zipCode: staffMember.zipCode ? formatCEP(staffMember.zipCode) : "",
       position: staffMember.position || "",
       department: staffMember.department || "",
       hireDate: staffMember.hireDate ? new Date(staffMember.hireDate).toISOString().split('T')[0] : "",
@@ -605,8 +676,9 @@ export default function AdminStaff() {
                     <Input
                       id="cpf"
                       value={formData.cpf}
-                      onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, cpf: formatCPF(e.target.value) })}
                       placeholder="000.000.000-00"
+                      maxLength={14}
                     />
                   </div>
 
@@ -615,8 +687,9 @@ export default function AdminStaff() {
                     <Input
                       id="phone"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
                       placeholder="(00) 00000-0000"
+                      maxLength={15}
                     />
                   </div>
 
@@ -733,8 +806,9 @@ export default function AdminStaff() {
                     <Input
                       id="zipCode"
                       value={formData.zipCode}
-                      onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                      onChange={(e) => handleCEPChange(e.target.value, false)}
                       placeholder="00000-000"
+                      maxLength={9}
                     />
                   </div>
                 </div>
@@ -869,7 +943,8 @@ export default function AdminStaff() {
                     <Input
                       id="edit-cpf"
                       value={editFormData.cpf}
-                      onChange={(e) => setEditFormData({ ...editFormData, cpf: e.target.value })}
+                      onChange={(e) => setEditFormData({ ...editFormData, cpf: formatCPF(e.target.value) })}
+                      maxLength={14}
                     />
                   </div>
 
@@ -878,7 +953,8 @@ export default function AdminStaff() {
                     <Input
                       id="edit-phone"
                       value={editFormData.phone}
-                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                      onChange={(e) => setEditFormData({ ...editFormData, phone: formatPhone(e.target.value) })}
+                      maxLength={15}
                     />
                   </div>
 
@@ -988,7 +1064,8 @@ export default function AdminStaff() {
                     <Input
                       id="edit-zipCode"
                       value={editFormData.zipCode}
-                      onChange={(e) => setEditFormData({ ...editFormData, zipCode: e.target.value })}
+                      onChange={(e) => handleCEPChange(e.target.value, true)}
+                      maxLength={9}
                     />
                   </div>
                 </div>
