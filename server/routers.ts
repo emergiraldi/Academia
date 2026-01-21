@@ -564,8 +564,8 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Academia não encontrada" });
         }
 
-        // Check if email already exists
-        const existingUser = await db.getUserByEmail(input.email);
+        // Check if email already exists in this gym
+        const existingUser = await db.getUserByEmailAndGym(input.email, gym.id);
         if (existingUser) {
           throw new TRPCError({ code: "CONFLICT", message: "Email already registered" });
         }
@@ -888,12 +888,12 @@ export const appRouter = router({
           });
         }
 
-        // Check if email already exists
-        const existingUser = await db.getUserByEmail(input.email);
+        // Check if email already exists in this gym
+        const existingUser = await db.getUserByEmailAndGym(input.email, gym.id);
         if (existingUser) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `Email ${input.email} já está cadastrado no sistema`
+            message: `Email ${input.email} já está cadastrado nesta academia`
           });
         }
 
@@ -1021,13 +1021,13 @@ export const appRouter = router({
           const userUpdates: any = {};
           if (input.name !== undefined) userUpdates.name = input.name;
 
-          // Check if email is being changed and if new email already exists
+          // Check if email is being changed and if new email already exists in this gym
           if (input.email !== undefined) {
-            const existingUser = await db.getUserByEmail(input.email);
+            const existingUser = await db.getUserByEmailAndGym(input.email, gym.id);
             if (existingUser && existingUser.id !== student.userId) {
               throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: `Email ${input.email} já está cadastrado no sistema`
+                message: `Email ${input.email} já está cadastrado nesta academia`
               });
             }
             userUpdates.email = input.email;
@@ -3187,10 +3187,10 @@ export const appRouter = router({
             });
           }
 
-          // Check if email already exists
-          const existing = await db.getUserByEmail(input.email);
+          // Check if email already exists in this gym
+          const existing = await db.getUserByEmailAndGym(input.email, ctx.user.gymId);
           if (existing) {
-            throw new TRPCError({ code: "CONFLICT", message: "Email já está em uso" });
+            throw new TRPCError({ code: "CONFLICT", message: "Email já está em uso nesta academia" });
           }
 
           // Hash password
@@ -3615,10 +3615,10 @@ export const appRouter = router({
             throw new TRPCError({ code: "FORBIDDEN", message: "Academia não identificada" });
           }
 
-          // Check if email already exists
-          const existing = await db.getUserByEmail(input.email);
+          // Check if email already exists in this gym
+          const existing = await db.getUserByEmailAndGym(input.email, ctx.user.gymId);
           if (existing) {
-            throw new TRPCError({ code: "CONFLICT", message: "Email já está em uso" });
+            throw new TRPCError({ code: "CONFLICT", message: "Email já está em uso nesta academia" });
           }
 
           // Hash password

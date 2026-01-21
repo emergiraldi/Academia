@@ -390,6 +390,15 @@ export async function getUserByEmail(email: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getUserByEmailAndGym(email: string, gymId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(
+    and(eq(users.email, email), eq(users.gymId, gymId))
+  ).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function getUserById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
