@@ -644,14 +644,36 @@ export async function syncAccessLogsFromControlId() {
         let newLogs = 0;
         for (const log of logs) {
           try {
-            // Find student by Control ID user ID
+            // Find student OR staff by Control ID user ID
             const students = await db.listStudents(gym.id);
+
+            // 🔍 DEBUG: Log para ver tipo e valor
+            console.log(`[CRON] 🔍 DEBUG log.user_id: value=${log.user_id}, type=${typeof log.user_id}`);
+            console.log(`[CRON] 🔍 DEBUG Total students: ${students.length}`);
+            const studentsWithControlId = students.filter(s => s.controlIdUserId !== null);
+            console.log(`[CRON] 🔍 DEBUG Students com controlIdUserId: ${studentsWithControlId.length}`);
+            if (studentsWithControlId.length > 0) {
+              console.log(`[CRON] 🔍 DEBUG Primeiro student com controlId:`, {
+                id: studentsWithControlId[0].id,
+                name: studentsWithControlId[0].name,
+                controlIdUserId: studentsWithControlId[0].controlIdUserId,
+                type: typeof studentsWithControlId[0].controlIdUserId
+              });
+            }
+
             const student = students.find(s => s.controlIdUserId === log.user_id);
 
-            if (!student) {
+            const staffMembers = await db.listStaff(gym.id);
+            const staffMember = staffMembers.find(s => s.controlIdUserId === log.user_id);
+
+            if (!student && !staffMember) {
               console.log(`[CRON] Student not found for Control ID user ${log.user_id}, skipping log`);
               continue;
             }
+
+            const person = student || staffMember;
+            const personName = student ? student.name : (staffMember?.userName || 'Funcionário');
+            const personStatus = student ? student.membershipStatus : (staffMember?.accessStatus || 'inactive');
 
             // Determine access type based on event code
             // Control ID event codes: 6 = entrada, 7 = saída, outros = negado
@@ -676,49 +698,92 @@ export async function syncAccessLogsFromControlId() {
             console.log(`[CRON] Processing log: user_id=${log.user_id}, event=${log.event}, accessType=${accessType}, time=${timestamp.toLocaleString('pt-BR')}`);
 
             // Check if this log already exists (avoid duplicates)
-            const existingLogs = await db.getStudentAccessLogs(student.id, gym.id);
-            console.log(`[CRON] Existing logs for student ${student.id}: ${existingLogs.length}`);
+            if (student) {
+              const existingLogs = await db.getStudentAccessLogs(student.id, gym.id);
+              console.log(`[CRON] Existing logs for student ${student.id}: ${existingLogs.length}`);
 
-            const isDuplicate = existingLogs.some(existing => {
-              const timeDiff = Math.abs(new Date(existing.timestamp).getTime() - timestamp.getTime());
-              const isDup = timeDiff < 1000 && existing.accessType === accessType;
-              if (isDup) {
-                console.log(`[CRON] Duplicate detected: timeDiff=${timeDiff}ms, type=${accessType}`);
+              const isDuplicate = existingLogs.some(existing => {
+                const timeDiff = Math.abs(new Date(existing.timestamp).getTime() - timestamp.getTime());
+                const isDup = timeDiff < 1000 && existing.accessType === accessType;
+                if (isDup) {
+                  console.log(`[CRON] Duplicate detected: timeDiff=${timeDiff}ms, type=${accessType}`);
+                }
+                return isDup;
+              });
+
+              if (isDuplicate) {
+                console.log(`[CRON] Skipping duplicate log for student ${student.id}`);
+                continue; // Skip duplicate
               }
-              return isDup;
-            });
 
-            if (isDuplicate) {
-              console.log(`[CRON] Skipping duplicate log for student ${student.id}`);
-              continue; // Skip duplicate
+              // Save log to database for student
+              await db.createAccessLog({
+                gymId: gym.id,
+                studentId: student.id,
+                deviceId: device.id,
+                accessType,
+                denialReason,
+                timestamp,
+              });
+
+              newLogs++;
+              console.log(`[CRON] ✅ Saved ${accessType} log for student ${student.id} at ${timestamp.toLocaleString('pt-BR')}`);
+            } else if (staffMember) {
+              // Check for duplicate staff logs
+              const existingLogs = await db.getStaffAccessLogs(staffMember.id, gym.id);
+              console.log(`[CRON] Existing logs for staff ${staffMember.id}: ${existingLogs.length}`);
+
+              const isDuplicate = existingLogs.some(existing => {
+                const timeDiff = Math.abs(new Date(existing.timestamp).getTime() - timestamp.getTime());
+                const isDup = timeDiff < 1000 && existing.accessType === accessType;
+                if (isDup) {
+                  console.log(`[CRON] Duplicate detected: timeDiff=${timeDiff}ms, type=${accessType}`);
+                }
+                return isDup;
+              });
+
+              if (isDuplicate) {
+                console.log(`[CRON] Skipping duplicate log for staff ${staffMember.id}`);
+                continue; // Skip duplicate
+              }
+
+              // Save log to database for staff
+              await db.createAccessLog({
+                gymId: gym.id,
+                staffId: staffMember.id,
+                deviceId: device.id,
+                accessType,
+                denialReason,
+                timestamp,
+              });
+
+              newLogs++;
+              console.log(`[CRON] ✅ Saved ${accessType} log for staff ${staffMember.id} (${personName}) at ${timestamp.toLocaleString('pt-BR')}`);
             }
-
-            // Save log to database
-            await db.createAccessLog({
-              gymId: gym.id,
-              studentId: student.id,
-              deviceId: device.id, // Use the Control ID device from our database
-              accessType,
-              denialReason,
-              timestamp,
-            });
-
-            newLogs++;
-            console.log(`[CRON] ✅ Saved ${accessType} log for student ${student.id} at ${timestamp.toLocaleString('pt-BR')}`);
 
             // 🔄 INTEGRAÇÃO HÍBRIDA: Control ID + Toletus HUB
             // Se a academia usa Toletus HUB e o acesso foi aprovado, liberar a catraca Toletus
             // A leitora facial apenas reconhece a pessoa, a catraca física determina o sentido (entrada/saída)
-            console.log(`[CRON] 🔍 Verificando liberação automática: accessType=${accessType}, gym.turnstileType=${gym.turnstileType}, student.membershipStatus=${student.membershipStatus}`);
 
-            // IMPORTANTE: Só liberar se o aluno está ATIVO e o acesso foi aprovado (não negado)
+            // Verificar se o acesso é RECENTE (últimos 2 minutos) - não liberar para logs históricos!
+            const now = new Date();
+            const logAge = Math.abs(now.getTime() - timestamp.getTime());
+            const isRecentLog = logAge < 2 * 60 * 1000; // 2 minutos em ms
+
+            console.log(`[CRON] 🔍 Verificando liberação automática: accessType=${accessType}, gym.turnstileType=${gym.turnstileType}, personStatus=${personStatus}, logAge=${Math.floor(logAge/1000)}s, isRecent=${isRecentLog}`);
+
+            // IMPORTANTE: Só liberar se:
+            // 1. A pessoa está ATIVA
+            // 2. O acesso foi aprovado (não negado)
+            // 3. O log é RECENTE (não histórico)
             const shouldRelease = (accessType === "entry" || accessType === "exit") &&
-                                   gym.turnstileType === "toletus_hub" &&
-                                   student.membershipStatus === "active";
+                                   (gym.turnstileType === "toletus_hub" || gym.turnstileType === "toletus") &&
+                                   personStatus === "active" &&
+                                   isRecentLog;
 
             if (shouldRelease) {
               try {
-                console.log(`[CRON] 🔓 Academia ${gym.name} usa Toletus HUB - Liberando catraca para ${student.name}...`);
+                console.log(`[CRON] 🔓 Academia ${gym.name} usa Toletus HUB - Liberando catraca para ${personName}...`);
 
                 const { getToletusHubServiceForGym, createToletusDevicePayload } = await import("./toletusHub");
                 const toletusService = await getToletusHubServiceForGym(gym.id);
@@ -732,16 +797,16 @@ export async function syncAccessLogsFromControlId() {
                     // Liberar entrada no primeiro dispositivo ativo (pode ser ajustado para liberar em todos)
                     const targetDevice = activeDevices[0];
                     const devicePayload = createToletusDevicePayload(targetDevice);
-                    const message = `Bem-vindo, ${student.name}!`;
+                    const message = `Bem-vindo, ${personName}!`;
 
-                    console.log(`[CRON] 🚪 Liberando catraca ${targetDevice.name} para ${student.name}`);
+                    console.log(`[CRON] 🚪 Liberando catraca ${targetDevice.name} para ${personName}`);
 
                     const released = await toletusService.releaseEntry(devicePayload, message);
 
                     if (released) {
-                      console.log(`[CRON] ✅ Catraca Toletus liberada com sucesso para ${student.name}`);
+                      console.log(`[CRON] ✅ Catraca Toletus liberada com sucesso para ${personName}`);
                     } else {
-                      console.log(`[CRON] ⚠️  Falha ao liberar catraca Toletus para ${student.name}`);
+                      console.log(`[CRON] ⚠️  Falha ao liberar catraca Toletus para ${personName}`);
                     }
                   } else {
                     console.log(`[CRON] ⚠️  Nenhum dispositivo Toletus ativo encontrado para academia ${gym.id}`);
