@@ -583,6 +583,7 @@ export const appRouter = router({
           email: input.email,
           password: hashedPassword,
           name: input.name,
+          phone: input.phone || null,
           role: "student",
           loginMethod: "email",
         });
@@ -904,6 +905,7 @@ export const appRouter = router({
           email: input.email,
           password: hashedPassword,
           name: input.name,
+          phone: input.phone || null,
           role: "student",
           gymId: gym.id,
         });
