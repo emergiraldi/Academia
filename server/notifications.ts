@@ -599,6 +599,10 @@ export async function checkAndBlockDefaulters() {
   }
 }
 
+// Cursor para rastrear último timestamp processado por academia
+// Isso evita processar os mesmos logs múltiplas vezes
+const lastProcessedTimestamp = new Map<number, number>();
+
 /**
  * Helper: Liberar catraca Toletus se necessário
  * Só libera se o log for RECENTE e a pessoa estiver ATIVA
@@ -704,9 +708,17 @@ export async function syncAccessLogsFromControlId() {
 
         console.log(`[CRON] ✅ Encontrados ${logs.length} logs do Control ID para academia ${gym.id}`);
 
-        // Process and save each log
+        // Get last processed timestamp for this gym (inicializa com timestamp antigo na primeira vez)
+        const lastTimestamp = lastProcessedTimestamp.get(gym.id) || 0;
+        console.log(`[CRON] 📌 Último timestamp processado para academia ${gym.id}: ${lastTimestamp} (${new Date(lastTimestamp * 1000).toISOString()})`);
+
+        // Filter logs to process only NEW ones (after last timestamp)
+        const newLogsToProcess = logs.filter((log: any) => log.time > lastTimestamp);
+        console.log(`[CRON] 🆕 Logs NOVOS para processar: ${newLogsToProcess.length} de ${logs.length} total`);
+
+        // Process and save each NEW log
         let newLogs = 0;
-        for (const log of logs) {
+        for (const log of newLogsToProcess) {
           try {
             // Find student OR staff by Control ID user ID
             const students = await db.listStudents(gym.id);
@@ -853,6 +865,13 @@ export async function syncAccessLogsFromControlId() {
           } catch (logError) {
             console.error(`[CRON] Error processing individual log:`, logError);
           }
+        }
+
+        // Update last processed timestamp for this gym
+        if (newLogsToProcess.length > 0) {
+          const maxTimestamp = Math.max(...newLogsToProcess.map((log: any) => log.time));
+          lastProcessedTimestamp.set(gym.id, maxTimestamp);
+          console.log(`[CRON] 📌 Atualizado último timestamp processado para ${maxTimestamp} (${new Date(maxTimestamp * 1000).toISOString()})`);
         }
 
         console.log(`[CRON] ✅ Synced ${newLogs} new access logs for gym ${gym.id}`);
