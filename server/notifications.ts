@@ -664,10 +664,24 @@ export async function syncAccessLogsFromControlId() {
             const student = students.find(s => s.controlIdUserId === log.user_id);
 
             const staffMembers = await db.listStaff(gym.id);
+            console.log(`[CRON] 🔍 DEBUG Total staff: ${staffMembers.length}`);
+            const staffWithControlId = staffMembers.filter(s => s.controlIdUserId !== null);
+            console.log(`[CRON] 🔍 DEBUG Staff com controlIdUserId: ${staffWithControlId.length}`);
+            if (staffWithControlId.length > 0) {
+              console.log(`[CRON] 🔍 DEBUG Primeiro staff com controlId:`, {
+                id: staffWithControlId[0].id,
+                userName: staffWithControlId[0].userName,
+                controlIdUserId: staffWithControlId[0].controlIdUserId,
+                type: typeof staffWithControlId[0].controlIdUserId
+              });
+            }
             const staffMember = staffMembers.find(s => s.controlIdUserId === log.user_id);
+            if (staffMember) {
+              console.log(`[CRON] ✅ STAFF ENCONTRADO: ${staffMember.userName || staffMember.id}, controlId: ${staffMember.controlIdUserId}`);
+            }
 
             if (!student && !staffMember) {
-              console.log(`[CRON] Student not found for Control ID user ${log.user_id}, skipping log`);
+              console.log(`[CRON] ⚠️  Person not found (student or staff) for Control ID user ${log.user_id}, skipping log`);
               continue;
             }
 
