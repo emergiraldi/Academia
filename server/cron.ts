@@ -49,8 +49,8 @@ export function startCronJobs() {
     }
   });
 
-  // Run every 30 seconds - Sync access logs from Control ID devices
-  cron.schedule("*/30 * * * * *", async () => {
+  // Run every 5 seconds - Sync access logs from Control ID devices
+  cron.schedule("*/5 * * * * *", async () => {
     console.log("Running access logs sync from Control ID...");
     try {
       await syncAccessLogsFromControlId();
@@ -118,6 +118,6 @@ export function startCronJobs() {
   console.log("  - Payment reminders: Daily at 9:00 AM");
   console.log("  - Billing notifications: Daily at 9:30 AM");
   console.log("  - Medical exam reminders: Daily at 10:00 AM");
-  console.log("  - Access logs sync: Every 30 seconds");
+  console.log("  - Access logs sync: Every 5 seconds");
   console.log("  - Gym PIX payment polling: Every 2 seconds");
 }
