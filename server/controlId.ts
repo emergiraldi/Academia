@@ -195,11 +195,16 @@ export class ControlIdService {
 
       return response.data;
     } catch (error: any) {
-      console.error("[ControlID] Face image upload failed:", error);
+      console.error("[ControlID] ❌ Face image upload failed!");
+      console.error("[ControlID] Error status:", error.response?.status);
+      console.error("[ControlID] Error data:", JSON.stringify(error.response?.data));
+      console.error("[ControlID] Error message:", error.message);
+      console.error("[ControlID] Full error:", error);
+
       if (error.response?.data) {
         return error.response.data;
       }
-      throw new Error("Failed to upload face image");
+      throw new Error(`Failed to upload face image: ${error.message} - ${JSON.stringify(error.response?.data)}`);
     }
   }
 
@@ -504,6 +509,69 @@ export class ControlIdService {
     } catch (error) {
       console.error("[ControlID] Failed to load access logs:", error);
       return [];
+    }
+  }
+
+  /**
+   * Clear old access logs from device
+   * @param hoursAgo - Clear logs older than this many hours (default: 1 hour)
+   */
+  async clearOldAccessLogs(hoursAgo: number = 1): Promise<{ deleted: number; remaining: number; total: number }> {
+    if (this.useAgent) {
+      return await this.sendToAgent('clearOldAccessLogs', { hoursAgo });
+    }
+
+    try {
+      const session = await this.ensureSession();
+
+      // Calculate cutoff timestamp
+      const cutoffTime = Math.floor(Date.now() / 1000) - (hoursAgo * 60 * 60);
+
+      // First load all logs to count them
+      const logsResponse = await axios.post(
+        `${this.getBaseUrl()}/load_objects.fcgi?session=${session}`,
+        { object: "access_logs" },
+        {
+          headers: { "Content-Type": "application/json" },
+          timeout: 10000,
+        }
+      );
+
+      const allLogs = logsResponse.data.access_logs || [];
+      const oldLogs = allLogs.filter((log: any) => log.time < cutoffTime);
+
+      if (oldLogs.length === 0) {
+        console.log("[ControlID] No old logs to clear");
+        return { deleted: 0, remaining: allLogs.length, total: allLogs.length };
+      }
+
+      // Delete old logs
+      await axios.post(
+        `${this.getBaseUrl()}/destroy_objects.fcgi?session=${session}`,
+        {
+          object: "access_logs",
+          where: {
+            access_logs: {
+              time: { "<": cutoffTime }
+            }
+          }
+        },
+        {
+          headers: { "Content-Type": "application/json" },
+          timeout: 10000,
+        }
+      );
+
+      console.log(`[ControlID] Cleared ${oldLogs.length} old access logs`);
+
+      return {
+        deleted: oldLogs.length,
+        remaining: allLogs.length - oldLogs.length,
+        total: allLogs.length
+      };
+    } catch (error) {
+      console.error("[ControlID] Failed to clear old access logs:", error);
+      return { deleted: 0, remaining: 0, total: 0 };
     }
   }
 

@@ -2453,6 +2453,15 @@ export async function getStudentAccessLogs(studentId: number, gymId: number) {
     .limit(10);
 }
 
+export async function getStaffAccessLogs(staffId: number, gymId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(accessLogs)
+    .where(and(eq(accessLogs.staffId, staffId), eq(accessLogs.gymId, gymId)))
+    .orderBy(desc(accessLogs.timestamp))
+    .limit(10);
+}
+
 // ============ CONTROL ID DEVICES ============
 
 export async function createDevice(device: InsertControlIdDevice) {

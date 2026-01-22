@@ -1,0 +1,77 @@
+========================================
+  INSTRUÇÕES DE INSTALAÇÃO
+  Sistema Academia - Catraca Automática
+========================================
+
+ARQUIVOS INCLUÍDOS:
+-------------------
+1. INICIAR_TUDO.bat          - Inicia tudo automaticamente (RECOMENDADO)
+2. 1_START_AGENT.bat         - Inicia apenas o Agent (Control ID)
+3. 2_START_TOLETUS_HUB.bat   - Inicia apenas o Toletus HUB (Catraca)
+
+
+INSTALAÇÃO:
+-----------
+
+PASSO 1: Copiar os arquivos .bat
+   - Copie os 3 arquivos .bat para a Área de Trabalho
+
+
+PASSO 2: Configurar inicialização automática (OPCIONAL)
+   a) Pressione as teclas: Windows + R
+   b) Digite: shell:startup
+   c) Pressione Enter
+   d) Copie o arquivo "INICIAR_TUDO.bat" para essa pasta
+   e) Pronto! Agora o sistema inicia automaticamente quando ligar o computador
+
+
+COMO USAR:
+----------
+
+1. PRIMEIRA VEZ:
+   - Dê um duplo clique no arquivo "INICIAR_TUDO.bat" na Área de Trabalho
+   - Duas janelas minimizadas vão aparecer na barra de tarefas
+   - NÃO FECHE essas janelas!
+
+2. PARA VERIFICAR SE ESTÁ FUNCIONANDO:
+   - Olhe na barra de tarefas
+   - Deve ter duas janelas:
+     * "Agent Academia 33"
+     * "Toletus HUB"
+
+3. PARA PARAR O SISTEMA:
+   - Clique na janela do Agent e pressione Ctrl+C
+   - Clique na janela do Toletus e feche
+   - Ou simplesmente feche as duas janelas
+
+
+RESOLUÇÃO DE PROBLEMAS:
+-----------------------
+
+PROBLEMA: "Cannot find module agent.js"
+SOLUÇÃO: Verifique se existe a pasta C:\SysFit\agent\ com o arquivo agent.js
+
+PROBLEMA: "Toletus HUB não inicia"
+SOLUÇÃO: Verifique se o Toletus HUB está instalado em C:\SysFit\agent\
+
+PROBLEMA: "Agent não conecta"
+SOLUÇÃO:
+   1. Verifique se o Node.js está instalado
+   2. Verifique a conexão com a internet
+   3. Reinicie o computador e tente novamente
+
+
+CONFIGURAÇÃO ATUAL:
+-------------------
+- Academia: Studio Vem Dançar Jaime Arôxa (ID 33)
+- Control ID: 192.168.0.129
+- Toletus HUB: https://localhost:7067
+- Catraca: 192.168.0.100 (LiteNet3)
+- VPS: 72.60.2.237
+
+
+SUPORTE:
+--------
+Em caso de dúvidas ou problemas, entre em contato com o suporte técnico.
+
+========================================

@@ -367,7 +367,16 @@ export default function AdminStudents() {
       password: "",
       cpf: student.cpf || "",
       phone: student.phone || "",
-      dateOfBirth: student.dateOfBirth ? new Date(student.dateOfBirth).toISOString().split('T')[0] : "",
+      dateOfBirth: (() => {
+        if (!student.dateOfBirth) return "";
+        try {
+          const date = new Date(student.dateOfBirth);
+          if (isNaN(date.getTime())) return "";
+          return date.toISOString().split('T')[0];
+        } catch {
+          return "";
+        }
+      })(),
       address: student.address || "",
       number: student.number || "",
       complement: student.complement || "",

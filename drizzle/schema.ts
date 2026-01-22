@@ -659,7 +659,8 @@ export type InsertPersonalRecord = typeof personalRecords.$inferInsert;
 export const accessLogs = mysqlTable("access_logs", {
   id: int("id").autoincrement().primaryKey(),
   gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
-  studentId: int("studentId").notNull().references(() => students.id, { onDelete: "cascade" }),
+  studentId: int("studentId").references(() => students.id, { onDelete: "cascade" }),
+  staffId: int("staffId").references(() => staff.id, { onDelete: "cascade" }),
   deviceId: int("deviceId").references(() => controlIdDevices.id),
   deviceType: mysqlEnum("deviceType", ["control_id", "toletus_hub"]).default("control_id").notNull(),
   accessType: mysqlEnum("accessType", ["entry", "exit", "denied"]).notNull(),

@@ -596,7 +596,7 @@ export const appRouter = router({
           registrationNumber,
           cpf: input.cpf,
           phone: input.phone || null,
-          birthDate: input.birthDate ? new Date(input.birthDate) : null,
+          birthDate: input.birthDate && input.birthDate.trim() !== '' ? new Date(input.birthDate) : null,
           membershipStatus: "inactive",
         });
 
@@ -907,6 +907,7 @@ export const appRouter = router({
           name: input.name,
           phone: input.phone || null,
           role: "student",
+          loginMethod: "email",
           gymId: gym.id,
         });
 
@@ -916,7 +917,7 @@ export const appRouter = router({
           userId: userResult.insertId,
           cpf: input.cpf,
           phone: input.phone || null,
-          birthDate: input.dateOfBirth ? new Date(input.dateOfBirth) : null,
+          birthDate: input.dateOfBirth && input.dateOfBirth.trim() !== '' ? new Date(input.dateOfBirth) : null,
           address: input.address || null,
           number: input.number || null,
           complement: input.complement || null,
@@ -1004,7 +1005,7 @@ export const appRouter = router({
         const studentUpdates: any = {};
         if (input.cpf !== undefined) studentUpdates.cpf = input.cpf;
         if (input.phone !== undefined) studentUpdates.phone = input.phone;
-        if (input.dateOfBirth !== undefined) studentUpdates.birthDate = new Date(input.dateOfBirth);
+        if (input.dateOfBirth !== undefined) studentUpdates.birthDate = input.dateOfBirth && input.dateOfBirth.trim() !== '' ? new Date(input.dateOfBirth) : null;
         if (input.address !== undefined) studentUpdates.address = input.address;
         if (input.number !== undefined) studentUpdates.number = input.number;
         if (input.complement !== undefined) studentUpdates.complement = input.complement;
@@ -1075,18 +1076,24 @@ export const appRouter = router({
 
         // 1. Delete user from Control ID if enrolled (remove facial photo)
         if (student.controlIdUserId) {
+          console.log(`[Delete Student] 🔍 Aluno ${student.name} tem controlIdUserId=${student.controlIdUserId}, tentando deletar do Control ID...`);
           try {
             const { getControlIdServiceForGym } = await import("./controlId");
             const service = await getControlIdServiceForGym(gym.id);
 
             if (service) {
+              console.log(`[Delete Student] 🌐 Service Control ID disponível, enviando comando deleteUser(${student.controlIdUserId})...`);
               await service.deleteUser(student.controlIdUserId);
               console.log(`[Control ID] ✅ Aluno ${student.name} (ID ${student.id}) deletado do Control ID (foto facial removida)`);
+            } else {
+              console.warn(`[Control ID] ⚠️  Service Control ID NÃO disponível para academia ${gym.id} - foto NÃO foi removida!`);
             }
           } catch (error) {
             console.error(`[Control ID] ❌ Falha ao deletar aluno ${student.id} do Control ID:`, error);
             // Continue with database deletion even if Control ID fails
           }
+        } else {
+          console.log(`[Delete Student] ⏭️  Aluno ${student.name} NÃO tem controlIdUserId, pulando exclusão do Control ID`);
         }
 
         // 2. Delete completely from database (including all related records)
@@ -3057,6 +3064,7 @@ export const appRouter = router({
         message: z.string().default("Bem-vindo!"),
       }))
       .mutation(async ({ ctx, input }) => {
+        console.log('[TOLETUS] 🚀 releaseEntry called - deviceId:', input.deviceId, 'gymId:', ctx.user.gymId, 'message:', input.message);
         if (!ctx.user.gymId) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
         }
@@ -3223,7 +3231,7 @@ export const appRouter = router({
             registrationNumber,
             cpf: input.cpf,
             phone: input.phone || null,
-            birthDate: input.birthDate ? new Date(input.birthDate) : null,
+            birthDate: input.birthDate && input.birthDate.trim() !== '' ? new Date(input.birthDate) : null,
             address: input.address || null,
             number: input.number || null,
             complement: input.complement || null,
@@ -3316,7 +3324,7 @@ export const appRouter = router({
         const professorUpdates: any = {};
         if (input.cpf) professorUpdates.cpf = input.cpf;
         if (input.phone !== undefined) professorUpdates.phone = input.phone;
-        if (input.birthDate !== undefined) professorUpdates.birthDate = input.birthDate ? new Date(input.birthDate) : null;
+        if (input.birthDate !== undefined) professorUpdates.birthDate = input.birthDate && input.birthDate.trim() !== '' ? new Date(input.birthDate) : null;
         if (input.address !== undefined) professorUpdates.address = input.address;
         if (input.number !== undefined) professorUpdates.number = input.number;
         if (input.complement !== undefined) professorUpdates.complement = input.complement;
@@ -3356,18 +3364,24 @@ export const appRouter = router({
 
         // 1. Delete user from Control ID if enrolled (remove facial photo)
         if (professor.controlIdUserId) {
+          console.log(`[Delete Professor] 🔍 Professor tem controlIdUserId=${professor.controlIdUserId}, tentando deletar do Control ID...`);
           try {
             const { getControlIdServiceForGym } = await import("./controlId");
             const service = await getControlIdServiceForGym(ctx.user.gymId);
 
             if (service) {
+              console.log(`[Delete Professor] 🌐 Service Control ID disponível, enviando comando deleteUser(${professor.controlIdUserId})...`);
               await service.deleteUser(professor.controlIdUserId);
               console.log(`[Control ID] ✅ Professor ID ${professor.id} deletado do Control ID (foto facial removida)`);
+            } else {
+              console.warn(`[Control ID] ⚠️  Service Control ID NÃO disponível para academia ${ctx.user.gymId} - foto NÃO foi removida!`);
             }
           } catch (error) {
             console.error(`[Control ID] ❌ Falha ao deletar professor ${professor.id} do Control ID:`, error);
             // Continue with database deletion even if Control ID fails
           }
+        } else {
+          console.log(`[Delete Professor] ⏭️  Professor NÃO tem controlIdUserId, pulando exclusão do Control ID`);
         }
 
         // 2. Delete professor record
@@ -3652,7 +3666,7 @@ export const appRouter = router({
             registrationNumber,
             cpf: input.cpf,
             phone: input.phone || null,
-            birthDate: input.birthDate ? new Date(input.birthDate) : null,
+            birthDate: input.birthDate && input.birthDate.trim() !== '' ? new Date(input.birthDate) : null,
             address: input.address || null,
             number: input.number || null,
             complement: input.complement || null,
@@ -3662,8 +3676,8 @@ export const appRouter = router({
             zipCode: input.zipCode || null,
             position: input.position || null,
             department: input.department || null,
-            hireDate: input.hireDate ? new Date(input.hireDate) : null,
-            salary: input.salary || null,
+            hireDate: input.hireDate && input.hireDate.trim() !== '' ? new Date(input.hireDate) : null,
+            salary: input.salary && input.salary.toString().trim() !== '' ? parseFloat(input.salary.toString()) : null,
             photoUrl: input.photoUrl || null,
             accessStatus: input.accessStatus,
             faceEnrolled: false,
@@ -3739,7 +3753,7 @@ export const appRouter = router({
         const staffUpdates: any = {};
         if (input.cpf) staffUpdates.cpf = input.cpf;
         if (input.phone !== undefined) staffUpdates.phone = input.phone;
-        if (input.birthDate !== undefined) staffUpdates.birthDate = input.birthDate ? new Date(input.birthDate) : null;
+        if (input.birthDate !== undefined) staffUpdates.birthDate = input.birthDate && input.birthDate.trim() !== '' ? new Date(input.birthDate) : null;
         if (input.address !== undefined) staffUpdates.address = input.address;
         if (input.number !== undefined) staffUpdates.number = input.number;
         if (input.complement !== undefined) staffUpdates.complement = input.complement;
@@ -3749,13 +3763,34 @@ export const appRouter = router({
         if (input.zipCode !== undefined) staffUpdates.zipCode = input.zipCode;
         if (input.position !== undefined) staffUpdates.position = input.position;
         if (input.department !== undefined) staffUpdates.department = input.department;
-        if (input.hireDate !== undefined) staffUpdates.hireDate = input.hireDate ? new Date(input.hireDate) : null;
-        if (input.salary !== undefined) staffUpdates.salary = input.salary;
+        if (input.hireDate !== undefined) staffUpdates.hireDate = input.hireDate && input.hireDate.trim() !== '' ? new Date(input.hireDate) : null;
+        if (input.salary !== undefined) staffUpdates.salary = input.salary && input.salary.toString().trim() !== '' ? parseFloat(input.salary.toString()) : null;
         if (input.photoUrl !== undefined) staffUpdates.photoUrl = input.photoUrl;
         if (input.accessStatus !== undefined) staffUpdates.accessStatus = input.accessStatus;
 
         if (Object.keys(staffUpdates).length > 0) {
           await db.updateStaff(input.staffId, ctx.user.gymId, staffUpdates);
+        }
+
+        // Update access in Control ID if accessStatus was changed and user has facial enrolled
+        if (input.accessStatus !== undefined && staffMember.controlIdUserId && staffMember.faceEnrolled) {
+          try {
+            const { getControlIdServiceForGym } = await import("./controlId");
+            const service = await getControlIdServiceForGym(ctx.user.gymId);
+
+            if (service) {
+              if (input.accessStatus === 'active') {
+                await service.unblockUserAccess(staffMember.controlIdUserId, 1);
+                console.log(`[Update Staff] ✅ Acesso desbloqueado na leitora (ATIVO) - Staff ID ${staffMember.id}`);
+              } else {
+                await service.blockUserAccess(staffMember.controlIdUserId);
+                console.log(`[Update Staff] ✅ Acesso bloqueado na leitora (${input.accessStatus.toUpperCase()}) - Staff ID ${staffMember.id}`);
+              }
+            }
+          } catch (error) {
+            console.error(`[Update Staff] ⚠️  Erro ao atualizar leitora para Staff ID ${staffMember.id}:`, error);
+            // Continue - database update is more important
+          }
         }
 
         return { success: true };
@@ -3778,18 +3813,24 @@ export const appRouter = router({
 
         // 1. Delete user from Control ID if enrolled (remove facial photo)
         if (staffMember.controlIdUserId) {
+          console.log(`[Delete Staff] 🔍 Funcionário tem controlIdUserId=${staffMember.controlIdUserId}, tentando deletar do Control ID...`);
           try {
             const { getControlIdServiceForGym } = await import("./controlId");
             const service = await getControlIdServiceForGym(ctx.user.gymId);
 
             if (service) {
+              console.log(`[Delete Staff] 🌐 Service Control ID disponível, enviando comando deleteUser(${staffMember.controlIdUserId})...`);
               await service.deleteUser(staffMember.controlIdUserId);
               console.log(`[Control ID] ✅ Funcionário ID ${staffMember.id} deletado do Control ID (foto facial removida)`);
+            } else {
+              console.warn(`[Control ID] ⚠️  Service Control ID NÃO disponível para academia ${ctx.user.gymId} - foto NÃO foi removida!`);
             }
           } catch (error) {
             console.error(`[Control ID] ❌ Falha ao deletar funcionário ${staffMember.id} do Control ID:`, error);
             // Continue with database deletion even if Control ID fails
           }
+        } else {
+          console.log(`[Delete Staff] ⏭️  Funcionário NÃO tem controlIdUserId, pulando exclusão do Control ID`);
         }
 
         // 2. Delete staff record
@@ -4007,14 +4048,20 @@ export const appRouter = router({
             if (!controlIdUserId) {
               console.log('[uploadFaceImage-Staff] 👤 Criando usuário no Control ID...');
 
+              // Create user with group 1 if status is active, without group otherwise
+              const groupId = staffMember.accessStatus === 'active' ? 1 : undefined;
+
               controlIdUserId = await controlIdService.createUser(
                 staffMember.userName || 'Funcionário',
-                staffMember.registrationNumber || String(staffMember.id)
+                staffMember.registrationNumber || String(staffMember.id),
+                groupId
               );
 
               await db.updateStaff(input.staffId, ctx.user.gymId, {
                 controlIdUserId: controlIdUserId,
               });
+
+              console.log(`[uploadFaceImage-Staff] ${groupId ? '✅ Usuário criado no grupo 1' : 'ℹ️ Usuário criado sem grupo'}`);
             }
 
             // Upload face image
@@ -4046,14 +4093,20 @@ export const appRouter = router({
                   faceEnrolled: false,
                 });
 
+                // Create user with group 1 if status is active, without group otherwise
+                const groupId = staffMember.accessStatus === 'active' ? 1 : undefined;
+
                 controlIdUserId = await controlIdService.createUser(
                   staffMember.userName || 'Funcionário',
-                  staffMember.registrationNumber || String(staffMember.id)
+                  staffMember.registrationNumber || String(staffMember.id),
+                  groupId
                 );
 
                 await db.updateStaff(input.staffId, ctx.user.gymId, {
                   controlIdUserId: controlIdUserId,
                 });
+
+                console.log(`[uploadFaceImage-Staff] ${groupId ? '✅ Usuário recriado no grupo 1' : 'ℹ️ Usuário recriado sem grupo'}`);
 
                 result = await controlIdService.uploadFaceImage(controlIdUserId, imageBuffer);
               } else {
@@ -4344,6 +4397,51 @@ export const appRouter = router({
         const logs = await service.loadAccessLogs();
 
         return { logs };
+      }),
+
+    // Clear old access logs
+    clearOldAccessLogs: gymAdminProcedure
+      .input(z.object({
+        deviceId: z.number().optional(),
+        hoursAgo: z.number().default(1), // Default: clear logs older than 1 hour
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        }
+
+        console.log(`[clearOldAccessLogs] Clearing logs older than ${input.hoursAgo} hours for gym ${ctx.user.gymId}`);
+
+        // Get device
+        let device;
+        if (input.deviceId) {
+          device = await db.getDeviceById(input.deviceId);
+        } else {
+          device = await db.getActiveDeviceByGym(ctx.user.gymId);
+        }
+
+        if (!device) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "No active Control ID device found" });
+        }
+
+        const { getControlIdServiceForGym } = await import("./controlId");
+        const service = await getControlIdServiceForGym(ctx.user.gymId);
+
+        if (!service) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Control ID service not available" });
+        }
+
+        const result = await service.clearOldAccessLogs(input.hoursAgo);
+
+        console.log(`[clearOldAccessLogs] Result:`, result);
+
+        return {
+          success: true,
+          deleted: result.deleted,
+          remaining: result.remaining,
+          total: result.total,
+          message: `Cleared ${result.deleted} old logs. ${result.remaining} logs remaining.`
+        };
       }),
   }),
 

@@ -355,7 +355,16 @@ export default function AdminStaff() {
       password: "",
       cpf: staffMember.cpf ? formatCPF(staffMember.cpf) : "",
       phone: staffMember.phone ? formatPhone(staffMember.phone) : "",
-      birthDate: staffMember.birthDate ? new Date(staffMember.birthDate).toISOString().split('T')[0] : "",
+      birthDate: (() => {
+        if (!staffMember.birthDate) return "";
+        try {
+          const date = new Date(staffMember.birthDate);
+          if (isNaN(date.getTime())) return "";
+          return date.toISOString().split('T')[0];
+        } catch {
+          return "";
+        }
+      })(),
       address: staffMember.address || "",
       number: staffMember.number || "",
       complement: staffMember.complement || "",
@@ -365,7 +374,16 @@ export default function AdminStaff() {
       zipCode: staffMember.zipCode ? formatCEP(staffMember.zipCode) : "",
       position: staffMember.position || "",
       department: staffMember.department || "",
-      hireDate: staffMember.hireDate ? new Date(staffMember.hireDate).toISOString().split('T')[0] : "",
+      hireDate: (() => {
+        if (!staffMember.hireDate) return "";
+        try {
+          const date = new Date(staffMember.hireDate);
+          if (isNaN(date.getTime())) return "";
+          return date.toISOString().split('T')[0];
+        } catch {
+          return "";
+        }
+      })(),
       salary: staffMember.salary || "",
       photoUrl: staffMember.photoUrl || "",
       accessStatus: staffMember.accessStatus || "inactive",
