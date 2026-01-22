@@ -600,6 +600,70 @@ export async function checkAndBlockDefaulters() {
 }
 
 /**
+ * Helper: Liberar catraca Toletus se necessário
+ * Só libera se o log for RECENTE e a pessoa estiver ATIVA
+ */
+async function releaseToletusIfNeeded(
+  gym: any,
+  person: any,
+  personName: string,
+  personStatus: string,
+  accessType: "entry" | "exit" | "denied",
+  timestamp: Date,
+  db: any
+) {
+  try {
+    console.log(`[CRON] 🔍 Verificando liberação automática: accessType=${accessType}, gym.turnstileType=${gym.turnstileType}, personStatus=${personStatus}`);
+
+    // IMPORTANTE: Só liberar se:
+    // 1. A pessoa está ATIVA
+    // 2. O acesso foi aprovado (não negado)
+    // 3. Academia usa Toletus
+    // NÃO verifica tempo - confia que só será chamado para logs NOVOS (não duplicados)
+    const shouldRelease = (accessType === "entry" || accessType === "exit") &&
+                           (gym.turnstileType === "toletus_hub" || gym.turnstileType === "toletus") &&
+                           personStatus === "active";
+
+    if (shouldRelease) {
+      console.log(`[CRON] 🔓 Academia ${gym.name} usa Toletus HUB - Liberando catraca para ${personName}...`);
+
+      const { getToletusHubServiceForGym, createToletusDevicePayload } = await import("./toletusHub");
+      const toletusService = await getToletusHubServiceForGym(gym.id);
+
+      if (toletusService) {
+        // Buscar dispositivos Toletus ativos da academia
+        const toletusDevices = await db.listToletusDevices(gym.id);
+        const activeDevices = toletusDevices.filter((d: any) => d.active);
+
+        if (activeDevices.length > 0) {
+          // Liberar entrada no primeiro dispositivo ativo (pode ser ajustado para liberar em todos)
+          const targetDevice = activeDevices[0];
+          const devicePayload = createToletusDevicePayload(targetDevice);
+          const message = `Bem-vindo, ${personName}!`;
+
+          console.log(`[CRON] 🚪 Liberando catraca ${targetDevice.name} para ${personName}`);
+
+          const released = await toletusService.releaseEntry(devicePayload, message);
+
+          if (released) {
+            console.log(`[CRON] ✅ Catraca Toletus liberada com sucesso para ${personName}`);
+          } else {
+            console.log(`[CRON] ⚠️  Falha ao liberar catraca Toletus para ${personName}`);
+          }
+        } else {
+          console.log(`[CRON] ⚠️  Nenhum dispositivo Toletus ativo encontrado para academia ${gym.id}`);
+        }
+      } else {
+        console.log(`[CRON] ⚠️  Serviço Toletus HUB não disponível para academia ${gym.id}`);
+      }
+    }
+  } catch (toletusError) {
+    console.error(`[CRON] ❌ Erro ao liberar catraca Toletus:`, toletusError);
+    // Não interrompe o fluxo - o log já foi salvo
+  }
+}
+
+/**
  * Sync access logs from Control ID devices to database
  * Runs periodically to keep access logs up to date
  */
@@ -742,6 +806,12 @@ export async function syncAccessLogsFromControlId() {
 
               newLogs++;
               console.log(`[CRON] ✅ Saved ${accessType} log for student ${student.id} at ${timestamp.toLocaleString('pt-BR')}`);
+
+              // 🔄 INTEGRAÇÃO HÍBRIDA: Control ID + Toletus HUB (STUDENT)
+              // Se a academia usa Toletus HUB e o acesso foi aprovado, liberar a catraca Toletus
+              // IMPORTANTE: Só libera se for um LOG NOVO (não duplicado)
+              await releaseToletusIfNeeded(gym, student, personName, personStatus, accessType, timestamp, db);
+
             } else if (staffMember) {
               // Check for duplicate staff logs
               const existingLogs = await db.getStaffAccessLogs(staffMember.id, gym.id);
@@ -773,66 +843,11 @@ export async function syncAccessLogsFromControlId() {
 
               newLogs++;
               console.log(`[CRON] ✅ Saved ${accessType} log for staff ${staffMember.id} (${personName}) at ${timestamp.toLocaleString('pt-BR')}`);
-            }
 
-            // 🔄 INTEGRAÇÃO HÍBRIDA: Control ID + Toletus HUB
-            // Se a academia usa Toletus HUB e o acesso foi aprovado, liberar a catraca Toletus
-            // A leitora facial apenas reconhece a pessoa, a catraca física determina o sentido (entrada/saída)
-
-            // Verificar se o acesso é RECENTE (considerar diferença de fuso horário)
-            // Aceitar logs com até 5h de diferença para compensar fuso horário da Control ID
-            const now = new Date();
-            const logAge = Math.abs(now.getTime() - timestamp.getTime());
-            const isRecentLog = logAge < 5 * 60 * 60 * 1000; // 5 horas em ms
-
-            console.log(`[CRON] 🔍 Verificando liberação automática: accessType=${accessType}, gym.turnstileType=${gym.turnstileType}, personStatus=${personStatus}, logAge=${Math.floor(logAge/1000)}s, isRecent=${isRecentLog}`);
-
-            // IMPORTANTE: Só liberar se:
-            // 1. A pessoa está ATIVA
-            // 2. O acesso foi aprovado (não negado)
-            // 3. O log é RECENTE (não histórico)
-            const shouldRelease = (accessType === "entry" || accessType === "exit") &&
-                                   (gym.turnstileType === "toletus_hub" || gym.turnstileType === "toletus") &&
-                                   personStatus === "active" &&
-                                   isRecentLog;
-
-            if (shouldRelease) {
-              try {
-                console.log(`[CRON] 🔓 Academia ${gym.name} usa Toletus HUB - Liberando catraca para ${personName}...`);
-
-                const { getToletusHubServiceForGym, createToletusDevicePayload } = await import("./toletusHub");
-                const toletusService = await getToletusHubServiceForGym(gym.id);
-
-                if (toletusService) {
-                  // Buscar dispositivos Toletus ativos da academia
-                  const toletusDevices = await db.listToletusDevices(gym.id);
-                  const activeDevices = toletusDevices.filter(d => d.active);
-
-                  if (activeDevices.length > 0) {
-                    // Liberar entrada no primeiro dispositivo ativo (pode ser ajustado para liberar em todos)
-                    const targetDevice = activeDevices[0];
-                    const devicePayload = createToletusDevicePayload(targetDevice);
-                    const message = `Bem-vindo, ${personName}!`;
-
-                    console.log(`[CRON] 🚪 Liberando catraca ${targetDevice.name} para ${personName}`);
-
-                    const released = await toletusService.releaseEntry(devicePayload, message);
-
-                    if (released) {
-                      console.log(`[CRON] ✅ Catraca Toletus liberada com sucesso para ${personName}`);
-                    } else {
-                      console.log(`[CRON] ⚠️  Falha ao liberar catraca Toletus para ${personName}`);
-                    }
-                  } else {
-                    console.log(`[CRON] ⚠️  Nenhum dispositivo Toletus ativo encontrado para academia ${gym.id}`);
-                  }
-                } else {
-                  console.log(`[CRON] ⚠️  Serviço Toletus HUB não disponível para academia ${gym.id}`);
-                }
-              } catch (toletusError) {
-                console.error(`[CRON] ❌ Erro ao liberar catraca Toletus:`, toletusError);
-                // Não interrompe o fluxo - o log já foi salvo
-              }
+              // 🔄 INTEGRAÇÃO HÍBRIDA: Control ID + Toletus HUB (STAFF)
+              // Se a academia usa Toletus HUB e o acesso foi aprovado, liberar a catraca Toletus
+              // IMPORTANTE: Só libera se for um LOG NOVO (não duplicado)
+              await releaseToletusIfNeeded(gym, staffMember, personName, personStatus, accessType, timestamp, db);
             }
 
           } catch (logError) {
