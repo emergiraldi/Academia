@@ -765,10 +765,11 @@ export async function syncAccessLogsFromControlId() {
             // Se a academia usa Toletus HUB e o acesso foi aprovado, liberar a catraca Toletus
             // A leitora facial apenas reconhece a pessoa, a catraca física determina o sentido (entrada/saída)
 
-            // Verificar se o acesso é RECENTE (últimos 2 minutos) - não liberar para logs históricos!
+            // Verificar se o acesso é RECENTE (considerar diferença de fuso horário)
+            // Aceitar logs com até 5h de diferença para compensar fuso horário da Control ID
             const now = new Date();
             const logAge = Math.abs(now.getTime() - timestamp.getTime());
-            const isRecentLog = logAge < 2 * 60 * 1000; // 2 minutos em ms
+            const isRecentLog = logAge < 5 * 60 * 60 * 1000; // 5 horas em ms
 
             console.log(`[CRON] 🔍 Verificando liberação automática: accessType=${accessType}, gym.turnstileType=${gym.turnstileType}, personStatus=${personStatus}, logAge=${Math.floor(logAge/1000)}s, isRecent=${isRecentLog}`);
 
