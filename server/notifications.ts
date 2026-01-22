@@ -603,6 +603,10 @@ export async function checkAndBlockDefaulters() {
  * Sync access logs from Control ID devices to database
  * Runs periodically to keep access logs up to date
  */
+
+// Map para armazenar o último timestamp processado por academia (evitar reprocessamento)
+const lastProcessedTimestamps = new Map<number, number>();
+
 export async function syncAccessLogsFromControlId() {
   console.log("[CRON] Starting access logs sync from Control ID...");
 
@@ -640,9 +644,28 @@ export async function syncAccessLogsFromControlId() {
 
         console.log(`[CRON] ✅ Encontrados ${logs.length} logs do Control ID para academia ${gym.id}`);
 
-        // Process and save each log
+        // Obter último timestamp processado para esta academia
+        const lastProcessedTime = lastProcessedTimestamps.get(gym.id) || 0;
+        console.log(`[CRON] 📅 Último timestamp processado: ${lastProcessedTime} (${new Date(lastProcessedTime * 1000).toISOString()})`);
+
+        // Filtrar apenas logs NOVOS (timestamp > último processado)
+        const newLogsOnly = logs.filter((log: any) => {
+          const logTime = typeof log.time === 'number' ? log.time : Math.floor(new Date(log.time).getTime() / 1000);
+          return logTime > lastProcessedTime;
+        });
+
+        if (newLogsOnly.length === 0) {
+          console.log(`[CRON] ℹ️  Nenhum log NOVO encontrado para academia ${gym.id} (todos já foram processados)`);
+          continue;
+        }
+
+        console.log(`[CRON] 🆕 Processando ${newLogsOnly.length} logs NOVOS (de ${logs.length} totais)`);
+
+        // Process and save each NEW log
         let newLogs = 0;
-        for (const log of logs) {
+        let maxTimestamp = lastProcessedTime;
+
+        for (const log of newLogsOnly) {
           try {
             // Find student OR staff by Control ID user ID
             const students = await db.listStudents(gym.id);
@@ -692,8 +715,14 @@ export async function syncAccessLogsFromControlId() {
 
             // Parse timestamp (pode vir como Unix timestamp em segundos OU string formatada)
             console.log(`[CRON] 🔍 RAW log.time value:`, log.time, `type: ${typeof log.time}`);
-            const timestamp = typeof log.time === 'number' ? new Date(log.time * 1000) : new Date(log.time);
+            const timestamp = typeof log.time === 'number' ? new Date((log.time + 10800) * 1000) : new Date(log.time);
             console.log(`[CRON] 📅 Converted timestamp:`, timestamp.toISOString());
+
+            // Atualizar maxTimestamp para rastrear o log mais recente processado
+            const logTimeUnix = typeof log.time === 'number' ? log.time : Math.floor(timestamp.getTime() / 1000);
+            if (logTimeUnix > maxTimestamp) {
+              maxTimestamp = logTimeUnix;
+            }
 
             console.log(`[CRON] Processing log: user_id=${log.user_id}, event=${log.event}, accessType=${accessType}, time=${timestamp.toLocaleString('pt-BR')}`);
 
@@ -765,21 +794,18 @@ export async function syncAccessLogsFromControlId() {
             // Se a academia usa Toletus HUB e o acesso foi aprovado, liberar a catraca Toletus
             // A leitora facial apenas reconhece a pessoa, a catraca física determina o sentido (entrada/saída)
 
-            // Verificar se o acesso é RECENTE (últimos 2 minutos) - não liberar para logs históricos!
-            const now = new Date();
-            const logAge = Math.abs(now.getTime() - timestamp.getTime());
-            const isRecentLog = logAge < 2 * 60 * 1000; // 2 minutos em ms
-
-            console.log(`[CRON] 🔍 Verificando liberação automática: accessType=${accessType}, gym.turnstileType=${gym.turnstileType}, personStatus=${personStatus}, logAge=${Math.floor(logAge/1000)}s, isRecent=${isRecentLog}`);
+            // IMPORTANTE: Se chegou até aqui, o log é NOVO (verificação de duplicatas já foi feita acima)
+            // Portanto, devemos liberar a catraca IMEDIATAMENTE, independente do timestamp do log
+            // NOTA: Control ID tem delay de 5-8 minutos, mas o que importa é que o log é NOVO
+            console.log(`[CRON] 🔍 Verificando liberação automática: accessType=${accessType}, gym.turnstileType=${gym.turnstileType}, personStatus=${personStatus}`);
 
             // IMPORTANTE: Só liberar se:
             // 1. A pessoa está ATIVA
             // 2. O acesso foi aprovado (não negado)
-            // 3. O log é RECENTE (não histórico)
+            // 3. O log é NOVO (já verificado pela detecção de duplicatas acima)
             const shouldRelease = (accessType === "entry" || accessType === "exit") &&
                                    (gym.turnstileType === "toletus_hub" || gym.turnstileType === "toletus") &&
-                                   personStatus === "active" &&
-                                   isRecentLog;
+                                   personStatus === "active";
 
             if (shouldRelease) {
               try {
@@ -824,6 +850,10 @@ export async function syncAccessLogsFromControlId() {
             console.error(`[CRON] Error processing individual log:`, logError);
           }
         }
+
+        // Atualizar último timestamp processado para esta academia
+        lastProcessedTimestamps.set(gym.id, maxTimestamp);
+        console.log(`[CRON] 📅 Atualizado último timestamp processado: ${maxTimestamp} (${new Date(maxTimestamp * 1000).toISOString()})`);
 
         console.log(`[CRON] ✅ Synced ${newLogs} new access logs for gym ${gym.id}`);
 
