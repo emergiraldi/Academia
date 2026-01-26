@@ -1297,8 +1297,8 @@ export default function AdminStaff() {
               {faceImage && (
                 <div className="space-y-3">
                   <h4 className="font-semibold">Foto Capturada</h4>
-                  <div className="relative rounded-lg overflow-hidden bg-black">
-                    <img src={faceImage} alt="Foto facial" className="w-full" />
+                  <div className="relative rounded-lg overflow-hidden bg-black flex items-center justify-center max-h-48">
+                    <img src={faceImage} alt="Foto facial" className="w-full h-full object-contain max-h-48" />
                   </div>
                   <div className="flex gap-2 justify-center">
                     <Button
