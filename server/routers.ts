@@ -4077,6 +4077,10 @@ export const appRouter = router({
               'base64'
             );
 
+            console.log('[uploadFaceImage-Staff] 📸 Preparando upload...');
+            console.log('[uploadFaceImage-Staff]    controlIdUserId:', controlIdUserId);
+            console.log('[uploadFaceImage-Staff]    Tamanho da imagem:', (imageBuffer.length / 1024).toFixed(2), 'KB');
+
             // Não deletar foto antiga - Control ID permite sobrescrever diretamente
             // Se já tinha facial cadastrada, deletar primeiro para recadastrar
             // if (staffMember.faceEnrolled && controlIdUserId) {
@@ -4091,7 +4095,9 @@ export const appRouter = router({
 
             let result;
             try {
+              console.log('[uploadFaceImage-Staff] 📤 Enviando para Control ID...');
               result = await controlIdService.uploadFaceImage(controlIdUserId, imageBuffer);
+              console.log('[uploadFaceImage-Staff] ✅ Upload concluído, resultado:', JSON.stringify(result));
             } catch (uploadError: any) {
               // Se der erro 400 ou "User does not exist", recria o usuário
               const shouldRecreate = uploadError.message && (
