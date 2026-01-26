@@ -4018,6 +4018,13 @@ export const appRouter = router({
         faceImageBase64: z.string(), // base64
       }))
       .mutation(async ({ input, ctx }) => {
+        console.log('[uploadFaceImage-Staff] 📥 Requisição recebida:', {
+          gymSlug: input.gymSlug,
+          staffId: input.staffId,
+          imageSize: input.faceImageBase64.length,
+          gymId: ctx.user.gymId
+        });
+
         if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
 
         const staffMember = await db.getStaffById(input.staffId, ctx.user.gymId);
