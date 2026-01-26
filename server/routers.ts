@@ -4093,7 +4093,18 @@ export const appRouter = router({
             try {
               result = await controlIdService.uploadFaceImage(controlIdUserId, imageBuffer);
             } catch (uploadError: any) {
-              if (uploadError.message && uploadError.message.includes('User does not exist')) {
+              // Retry se der erro 401 (sessão expirada)
+              if (uploadError.message && uploadError.message.includes('401')) {
+                console.log('[uploadFaceImage-Staff] ⚠️  Erro 401 - Fazendo login novamente...');
+                try {
+                  await controlIdService.login();
+                  console.log('[uploadFaceImage-Staff] ✅ Login realizado, tentando upload novamente...');
+                  result = await controlIdService.uploadFaceImage(controlIdUserId, imageBuffer);
+                } catch (retryError: any) {
+                  console.log('[uploadFaceImage-Staff] ❌ Erro no retry após login:', retryError.message);
+                  throw retryError;
+                }
+              } else if (uploadError.message && uploadError.message.includes('User does not exist')) {
                 console.log('[uploadFaceImage-Staff] ⚠️  Usuário não existe, recriando...');
 
                 await db.updateStaff(input.staffId, ctx.user.gymId, {
