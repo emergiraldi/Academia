@@ -4070,16 +4070,17 @@ export const appRouter = router({
               'base64'
             );
 
+            // Não deletar foto antiga - Control ID permite sobrescrever diretamente
             // Se já tinha facial cadastrada, deletar primeiro para recadastrar
-            if (staffMember.faceEnrolled && controlIdUserId) {
-              try {
-                console.log('[uploadFaceImage-Staff] 🗑️  Deletando foto facial antiga...');
-                await controlIdService.removeUserFace(controlIdUserId);
-                console.log('[uploadFaceImage-Staff] ✅ Foto antiga deletada');
-              } catch (deleteError) {
-                console.log('[uploadFaceImage-Staff] ⚠️  Erro ao deletar foto antiga (continuando):', deleteError);
-              }
-            }
+            // if (staffMember.faceEnrolled && controlIdUserId) {
+            //   try {
+            //     console.log('[uploadFaceImage-Staff] 🗑️  Deletando foto facial antiga...');
+            //     await controlIdService.removeUserFace(controlIdUserId);
+            //     console.log('[uploadFaceImage-Staff] ✅ Foto antiga deletada');
+            //   } catch (deleteError) {
+            //     console.log('[uploadFaceImage-Staff] ⚠️  Erro ao deletar foto antiga (continuando):', deleteError);
+            //   }
+            // }
 
             let result;
             try {
