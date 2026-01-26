@@ -4093,8 +4093,15 @@ export const appRouter = router({
             try {
               result = await controlIdService.uploadFaceImage(controlIdUserId, imageBuffer);
             } catch (uploadError: any) {
-              if (uploadError.message && uploadError.message.includes('User does not exist')) {
-                console.log('[uploadFaceImage-Staff] ⚠️  Usuário não existe, recriando...');
+              // Se der erro 400 ou "User does not exist", recria o usuário
+              const shouldRecreate = uploadError.message && (
+                uploadError.message.includes('User does not exist') ||
+                uploadError.message.includes('400')
+              );
+
+              if (shouldRecreate) {
+                console.log('[uploadFaceImage-Staff] ⚠️  Erro no upload (usuário pode não existir), recriando...');
+                console.log('[uploadFaceImage-Staff] Erro original:', uploadError.message);
 
                 await db.updateStaff(input.staffId, ctx.user.gymId, {
                   controlIdUserId: null,
