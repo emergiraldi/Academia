@@ -44,6 +44,7 @@ import {
   LockOpen,
   Ban,
   Pause,
+  Upload,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -224,6 +225,33 @@ export default function AdminStaff() {
       toast.success("Foto capturada com sucesso!");
     }
   }, [webcamRef]);
+
+  // Handle file upload
+  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check if it's an image
+    if (!file.type.startsWith('image/')) {
+      toast.error("Por favor, selecione um arquivo de imagem válido");
+      return;
+    }
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 5MB");
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setFaceImage(result);
+      toast.success("Foto carregada com sucesso!");
+    };
+    reader.readAsDataURL(file);
+  }, []);
 
   // Format CPF
   const formatCPF = (value: string) => {
@@ -1214,11 +1242,28 @@ export default function AdminStaff() {
               </div>
 
               {!showWebcam && !faceImage && (
-                <div className="flex justify-center py-8">
-                  <Button size="lg" onClick={() => setShowWebcam(true)}>
-                    <Camera className="mr-2 h-5 w-5" />
-                    Abrir Câmera
-                  </Button>
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <div className="flex gap-3">
+                    <Button size="lg" onClick={() => setShowWebcam(true)}>
+                      <Camera className="mr-2 h-5 w-5" />
+                      Abrir Câmera
+                    </Button>
+                    <Button size="lg" variant="outline" asChild>
+                      <label className="cursor-pointer">
+                        <Upload className="mr-2 h-5 w-5" />
+                        Fazer Upload
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleFileUpload}
+                        />
+                      </label>
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Tire uma foto pela câmera ou faça upload de uma imagem
+                  </p>
                 </div>
               )}
 
