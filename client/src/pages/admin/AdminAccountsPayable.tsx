@@ -308,7 +308,7 @@ export default function AdminAccountsPayable() {
                       }
                     />
                   </div>
-                  <div>
+                  <div className="col-span-2">
                     <Label htmlFor="supplier">Fornecedor/Credor *</Label>
                     <Select
                       value={formData.supplierId}
@@ -316,7 +316,7 @@ export default function AdminAccountsPayable() {
                         setFormData({ ...formData, supplierId: value })
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="truncate">
                         <SelectValue placeholder="Selecione um fornecedor..." />
                       </SelectTrigger>
                       <SelectContent>
