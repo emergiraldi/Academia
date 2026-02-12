@@ -2462,6 +2462,25 @@ export async function getStaffAccessLogs(staffId: number, gymId: number) {
     .limit(10);
 }
 
+export async function getGymAccessLogs(gymId: number) {
+  const conn = await getConnection();
+  const [rows] = await conn.query(
+    `SELECT al.*,
+            u.name as studentName,
+            st.userName as staffName
+     FROM access_logs al
+     LEFT JOIN students s ON al.studentId = s.id
+     LEFT JOIN users u ON s.userId = u.id
+     LEFT JOIN staff st ON al.staffId = st.id
+     WHERE al.gymId = ?
+     ORDER BY al.timestamp DESC
+     LIMIT 500`,
+    [gymId]
+  );
+  await conn.end();
+  return rows;
+}
+
 // ============ CONTROL ID DEVICES ============
 
 export async function createDevice(device: InsertControlIdDevice) {

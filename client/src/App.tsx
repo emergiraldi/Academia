@@ -35,6 +35,7 @@ import AdminCategories from "./pages/admin/AdminCategories";
 import AdminSuppliers from "./pages/admin/AdminSuppliers";
 import AdminCostCenters from "./pages/admin/AdminCostCenters";
 import AdminPaymentMethods from "./pages/admin/AdminPaymentMethods";
+import AdminAccessLogs from "./pages/admin/AdminAccessLogs";
 import AdminBankAccounts from "./pages/admin/AdminBankAccounts";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminWellhubMembers from "./pages/admin/AdminWellhubMembers";
@@ -125,6 +126,7 @@ function Router() {
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/wellhub/members" component={AdminWellhubMembers} />
       <Route path="/admin/wellhub/checkin" component={AdminWellhubCheckIn} />
+      <Route path="/admin/access-logs" component={AdminAccessLogs} />
 
       {/* 404 */}
       <Route path={"/404"} component={NotFound} />

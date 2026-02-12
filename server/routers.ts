@@ -2899,6 +2899,13 @@ export const appRouter = router({
       }
       return await db.getStudentAccessLogs(student.id, ctx.user.gymId);
     }),
+
+    list: gymAdminProcedure.query(async ({ ctx }) => {
+      if (!ctx.user.gymId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+      }
+      return await db.getGymAccessLogs(ctx.user.gymId);
+    }),
   }),
 
   // ============ CONTROL ID DEVICES ============
