@@ -2467,11 +2467,12 @@ export async function getGymAccessLogs(gymId: number) {
   const [rows] = await conn.query(
     `SELECT al.*,
             u.name as studentName,
-            st.userName as staffName
+            u2.name as staffName
      FROM access_logs al
      LEFT JOIN students s ON al.studentId = s.id
      LEFT JOIN users u ON s.userId = u.id
      LEFT JOIN staff st ON al.staffId = st.id
+     LEFT JOIN users u2 ON st.userId = u2.id
      WHERE al.gymId = ?
      ORDER BY al.timestamp DESC
      LIMIT 2000`,
