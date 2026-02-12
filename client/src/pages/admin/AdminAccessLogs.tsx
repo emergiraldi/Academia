@@ -45,12 +45,16 @@ export default function AdminAccessLogs() {
   const { gymSlug } = useGym();
 
   const { data: settings } = trpc.settings.get.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
-  const { data: accessLogs = [] } = trpc.accessLogs.list.useQuery(undefined, {
+  const { data: accessLogs = [], error: queryError, isError, isLoading } = trpc.accessLogs.list.useQuery(undefined, {
     enabled: !!gymSlug,
     refetchInterval: 30000,
+    retry: false,
   });
 
   const gymName = settings?.gymName || "Academia";
+
+  // Debug: mostrar estado da query no console
+  console.log('[AccessLogs] gymSlug:', gymSlug, 'isLoading:', isLoading, 'isError:', isError, 'error:', queryError?.message, 'records:', (accessLogs as any[]).length);
 
   // Filtrar logs
   const filteredLogs = (accessLogs as any[]).filter((log: any) => {
@@ -264,6 +268,31 @@ export default function AdminAccessLogs() {
             Exportar PDF
           </Button>
         </div>
+
+        {/* Debug info */}
+        {isError && (
+          <Card className="border-l-4 border-l-red-500 bg-red-50">
+            <CardContent className="pt-4">
+              <p className="text-red-700 font-bold">Erro ao carregar dados:</p>
+              <p className="text-red-600 text-sm">{queryError?.message || 'Erro desconhecido'}</p>
+              <p className="text-red-500 text-xs mt-1">gymSlug: {gymSlug || 'VAZIO'}</p>
+            </CardContent>
+          </Card>
+        )}
+        {isLoading && (
+          <Card className="border-l-4 border-l-yellow-500 bg-yellow-50">
+            <CardContent className="pt-4">
+              <p className="text-yellow-700">Carregando dados...</p>
+            </CardContent>
+          </Card>
+        )}
+        {!gymSlug && !isLoading && (
+          <Card className="border-l-4 border-l-orange-500 bg-orange-50">
+            <CardContent className="pt-4">
+              <p className="text-orange-700">gymSlug esta vazio - query desabilitada</p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-3">
