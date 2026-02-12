@@ -234,10 +234,21 @@ export default function AdminSuppliers() {
       }
     }
 
-    createSupplier.mutate({
+    // Limpar campos vazios para não enviar "" ao backend
+    const cleanData: any = {
       gymSlug,
-      ...formData,
-    });
+      name: formData.name,
+    };
+    if (formData.cnpjCpf) cleanData.cnpjCpf = formData.cnpjCpf;
+    if (formData.email) cleanData.email = formData.email;
+    if (formData.phone) cleanData.phone = formData.phone;
+    if (formData.address) cleanData.address = formData.address;
+    if (formData.city) cleanData.city = formData.city;
+    if (formData.state) cleanData.state = formData.state;
+    if (formData.zipCode) cleanData.zipCode = formData.zipCode;
+    if (formData.notes) cleanData.notes = formData.notes;
+
+    createSupplier.mutate(cleanData);
   };
 
   const handleEdit = (supplier: any) => {
