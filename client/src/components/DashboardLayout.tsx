@@ -306,21 +306,27 @@ function TurnstileReleaseFAB({ gymSlug }: { gymSlug: string | null }) {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div>
-              <Label>Dispositivo</Label>
-              <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o dispositivo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(devices as any[]).map((device: any) => (
-                    <SelectItem key={device.id} value={String(device.id)}>
-                      {device.name} ({device.ip})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {(devices as any[]).length > 1 ? (
+              <div>
+                <Label>Dispositivo</Label>
+                <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o dispositivo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(devices as any[]).map((device: any) => (
+                      <SelectItem key={device.id} value={String(device.id)}>
+                        {device.name}{device.ip ? ` (${device.ip})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (devices as any[]).length === 1 ? (
+              <p className="text-sm text-muted-foreground">
+                Dispositivo: <span className="font-medium text-foreground">{(devices as any[])[0].name}</span>
+              </p>
+            ) : null}
 
             <div>
               <Label>Mensagem no display</Label>
