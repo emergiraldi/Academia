@@ -352,7 +352,7 @@ export default function AdminAccountsPayable() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="costCenter">Centro de Custo</Label>
                     <Select
@@ -361,7 +361,7 @@ export default function AdminAccountsPayable() {
                         setFormData({ ...formData, costCenterId: value })
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="truncate">
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
