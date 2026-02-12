@@ -2474,7 +2474,7 @@ export async function getGymAccessLogs(gymId: number) {
      LEFT JOIN staff st ON al.staffId = st.id
      WHERE al.gymId = ?
      ORDER BY al.timestamp DESC
-     LIMIT 500`,
+     LIMIT 2000`,
     [gymId]
   );
   await conn.end();
