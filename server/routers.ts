@@ -2901,10 +2901,19 @@ export const appRouter = router({
     }),
 
     list: gymAdminProcedure.query(async ({ ctx }) => {
+      console.log(`[ACCESS_LOGS] list called - userId: ${ctx.user.id}, gymId: ${ctx.user.gymId}, role: ${ctx.user.role}`);
       if (!ctx.user.gymId) {
+        console.log(`[ACCESS_LOGS] ERROR: no gymId for user ${ctx.user.id}`);
         throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
       }
-      return await db.getGymAccessLogs(ctx.user.gymId);
+      try {
+        const logs = await db.getGymAccessLogs(ctx.user.gymId);
+        console.log(`[ACCESS_LOGS] Returned ${(logs as any[]).length} logs for gymId ${ctx.user.gymId}`);
+        return logs;
+      } catch (error: any) {
+        console.error(`[ACCESS_LOGS] ERROR in getGymAccessLogs:`, error.message);
+        throw error;
+      }
     }),
   }),
 
