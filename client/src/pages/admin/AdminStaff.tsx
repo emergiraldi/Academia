@@ -1,6 +1,27 @@
 import { useState, useRef, useCallback } from "react";
 import Webcam from "react-webcam";
 import { trpc } from "@/lib/trpc";
+
+function compressImage(base64: string, maxWidth = 640, maxHeight = 480, quality = 0.85): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let { width, height } = img;
+      if (width > maxWidth || height > maxHeight) {
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = base64;
+  });
+}
 import { fetchAddressByCEP } from "@/lib/validators";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -217,10 +238,11 @@ export default function AdminStaff() {
   // Webcam ref and capture function
   const webcamRef = useRef<Webcam>(null);
 
-  const capturePhoto = useCallback(() => {
+  const capturePhoto = useCallback(async () => {
     const imageSrc = webcamRef.current?.getScreenshot();
     if (imageSrc) {
-      setFaceImage(imageSrc);
+      const compressed = await compressImage(imageSrc);
+      setFaceImage(compressed);
       setShowWebcam(false);
       toast.success("Foto capturada com sucesso!");
     }
@@ -245,9 +267,10 @@ export default function AdminStaff() {
 
     // Convert to base64
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const result = e.target?.result as string;
-      setFaceImage(result);
+      const compressed = await compressImage(result);
+      setFaceImage(compressed);
       toast.success("Foto carregada com sucesso!");
     };
     reader.readAsDataURL(file);
@@ -1276,8 +1299,8 @@ export default function AdminStaff() {
                       screenshotFormat="image/jpeg"
                       className="w-full"
                       videoConstraints={{
-                        width: 1280,
-                        height: 720,
+                        width: 640,
+                        height: 480,
                         facingMode: "user"
                       }}
                     />

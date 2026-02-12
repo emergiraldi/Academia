@@ -105,6 +105,20 @@ async function garantirSessao() {
   return session;
 }
 
+async function executarComRetry(fn) {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error.response && error.response.status === 401) {
+      log('warn', 'Sessão expirada (401). Fazendo re-login...');
+      session = null;
+      await loginLeitora();
+      return await fn();
+    }
+    throw error;
+  }
+}
+
 async function verificarLeitora() {
   try {
     const response = await axios.get(
@@ -878,17 +892,19 @@ async function deletarUsuario(data) {
 async function carregarLogs() {
   await garantirSessao();
 
-  log('debug', 'Carregando logs de acesso...');
+  return await executarComRetry(async () => {
+    log('debug', 'Carregando logs de acesso...');
 
-  const response = await axios.post(
-    getLeitoraUrl(`/load_objects.fcgi?session=${session}`),
-    { object: 'access_logs' },
-    { timeout: 10000 }
-  );
+    const response = await axios.post(
+      getLeitoraUrl(`/load_objects.fcgi?session=${session}`),
+      { object: 'access_logs' },
+      { timeout: 10000 }
+    );
 
-  const logs = response.data.access_logs || [];
-  log('debug', `${logs.length} logs carregados`);
-  return logs;
+    const logs = response.data.access_logs || [];
+    log('debug', `${logs.length} logs carregados`);
+    return logs;
+  });
 }
 
 async function obterImagemUsuario(data) {
