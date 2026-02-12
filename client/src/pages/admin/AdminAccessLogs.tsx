@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, LogIn, LogOut, ShieldX, Activity, FileText, Download } from "lucide-react";
+import { Search, LogIn, ShieldX, Activity, FileText, Download } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useGym } from "@/_core/hooks/useGym";
 import { toast } from "sonner";
@@ -45,16 +45,12 @@ export default function AdminAccessLogs() {
   const { gymSlug } = useGym();
 
   const { data: settings } = trpc.settings.get.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
-  const { data: accessLogs = [], error: queryError, isError, isLoading } = trpc.accessLogs.list.useQuery(undefined, {
+  const { data: accessLogs = [] } = trpc.accessLogs.list.useQuery(undefined, {
     enabled: !!gymSlug,
     refetchInterval: 30000,
-    retry: false,
   });
 
   const gymName = settings?.gymName || "Academia";
-
-  // Debug: mostrar estado da query no console
-  console.log('[AccessLogs] gymSlug:', gymSlug, 'isLoading:', isLoading, 'isError:', isError, 'error:', queryError?.message, 'records:', (accessLogs as any[]).length);
 
   // Filtrar logs
   const filteredLogs = (accessLogs as any[]).filter((log: any) => {
@@ -66,7 +62,10 @@ export default function AdminAccessLogs() {
     }
 
     // Filtro de tipo de acesso
-    if (accessTypeFilter !== "all" && log.accessType !== accessTypeFilter) {
+    if (accessTypeFilter === "presenca" && log.accessType !== "entry" && log.accessType !== "exit") {
+      return false;
+    }
+    if (accessTypeFilter === "denied" && log.accessType !== "denied") {
       return false;
     }
 
@@ -83,16 +82,15 @@ export default function AdminAccessLogs() {
   });
 
   // Calcular resumos do periodo filtrado
-  const totalEntries = filteredLogs.filter((l: any) => l.accessType === "entry").length;
-  const totalExits = filteredLogs.filter((l: any) => l.accessType === "exit").length;
+  // entry e exit = presenca (pessoa passou na leitora), denied = negado
+  const totalPresenca = filteredLogs.filter((l: any) => l.accessType === "entry" || l.accessType === "exit").length;
   const totalDenied = filteredLogs.filter((l: any) => l.accessType === "denied").length;
 
   const getAccessBadge = (type: string) => {
     switch (type) {
       case "entry":
-        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100"><LogIn className="w-3 h-3 mr-1" /> Entrada</Badge>;
       case "exit":
-        return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100"><LogOut className="w-3 h-3 mr-1" /> Saida</Badge>;
+        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100"><LogIn className="w-3 h-3 mr-1" /> Presenca</Badge>;
       case "denied":
         return <Badge className="bg-red-100 text-red-700 hover:bg-red-100"><ShieldX className="w-3 h-3 mr-1" /> Negado</Badge>;
       default:
@@ -102,8 +100,9 @@ export default function AdminAccessLogs() {
 
   const getAccessTypeText = (type: string) => {
     switch (type) {
-      case "entry": return "Entrada";
-      case "exit": return "Saida";
+      case "entry":
+      case "exit":
+        return "Presenca";
       case "denied": return "Negado";
       default: return type;
     }
@@ -154,35 +153,26 @@ export default function AdminAccessLogs() {
 
       // Resumo boxes
       let yPos = 55;
-      const boxWidth = (pageWidth - 42) / 3;
+      const boxWidth = (pageWidth - 35) / 2;
 
-      // Entradas
+      // Presencas
       doc.setFillColor(220, 252, 231);
       doc.roundedRect(14, yPos, boxWidth, 20, 3, 3, 'F');
       doc.setFontSize(10);
       doc.setTextColor(21, 128, 61);
       doc.setFont('helvetica', 'bold');
-      doc.text("Entradas", 14 + boxWidth / 2, yPos + 8, { align: 'center' });
+      doc.text("Presencas", 14 + boxWidth / 2, yPos + 8, { align: 'center' });
       doc.setFontSize(16);
-      doc.text(String(totalEntries), 14 + boxWidth / 2, yPos + 16, { align: 'center' });
-
-      // Saidas
-      doc.setFillColor(219, 234, 254);
-      doc.roundedRect(14 + boxWidth + 7, yPos, boxWidth, 20, 3, 3, 'F');
-      doc.setTextColor(37, 99, 235);
-      doc.setFontSize(10);
-      doc.text("Saidas", 14 + boxWidth + 7 + boxWidth / 2, yPos + 8, { align: 'center' });
-      doc.setFontSize(16);
-      doc.text(String(totalExits), 14 + boxWidth + 7 + boxWidth / 2, yPos + 16, { align: 'center' });
+      doc.text(String(totalPresenca), 14 + boxWidth / 2, yPos + 16, { align: 'center' });
 
       // Negados
       doc.setFillColor(254, 226, 226);
-      doc.roundedRect(14 + (boxWidth + 7) * 2, yPos, boxWidth, 20, 3, 3, 'F');
+      doc.roundedRect(14 + boxWidth + 7, yPos, boxWidth, 20, 3, 3, 'F');
       doc.setTextColor(220, 38, 38);
       doc.setFontSize(10);
-      doc.text("Negados", 14 + (boxWidth + 7) * 2 + boxWidth / 2, yPos + 8, { align: 'center' });
+      doc.text("Negados", 14 + boxWidth + 7 + boxWidth / 2, yPos + 8, { align: 'center' });
       doc.setFontSize(16);
-      doc.text(String(totalDenied), 14 + (boxWidth + 7) * 2 + boxWidth / 2, yPos + 16, { align: 'center' });
+      doc.text(String(totalDenied), 14 + boxWidth + 7 + boxWidth / 2, yPos + 16, { align: 'center' });
 
       yPos += 28;
 
@@ -269,51 +259,15 @@ export default function AdminAccessLogs() {
           </Button>
         </div>
 
-        {/* Debug info */}
-        {isError && (
-          <Card className="border-l-4 border-l-red-500 bg-red-50">
-            <CardContent className="pt-4">
-              <p className="text-red-700 font-bold">Erro ao carregar dados:</p>
-              <p className="text-red-600 text-sm">{queryError?.message || 'Erro desconhecido'}</p>
-              <p className="text-red-500 text-xs mt-1">gymSlug: {gymSlug || 'VAZIO'}</p>
-            </CardContent>
-          </Card>
-        )}
-        {isLoading && (
-          <Card className="border-l-4 border-l-yellow-500 bg-yellow-50">
-            <CardContent className="pt-4">
-              <p className="text-yellow-700">Carregando dados...</p>
-            </CardContent>
-          </Card>
-        )}
-        {!gymSlug && !isLoading && (
-          <Card className="border-l-4 border-l-orange-500 bg-orange-50">
-            <CardContent className="pt-4">
-              <p className="text-orange-700">gymSlug esta vazio - query desabilitada</p>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <Card className="border-l-4 border-l-green-500 shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Entradas</CardTitle>
+              <CardTitle className="text-sm font-medium">Presencas</CardTitle>
               <LogIn className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{totalEntries}</div>
-              <p className="text-xs text-muted-foreground">{getPeriodLabel()}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-blue-500 shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Saidas</CardTitle>
-              <LogOut className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{totalExits}</div>
+              <div className="text-2xl font-bold text-green-600">{totalPresenca}</div>
               <p className="text-xs text-muted-foreground">{getPeriodLabel()}</p>
             </CardContent>
           </Card>
@@ -366,8 +320,7 @@ export default function AdminAccessLogs() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="entry">Entradas</SelectItem>
-                    <SelectItem value="exit">Saidas</SelectItem>
+                    <SelectItem value="presenca">Presencas</SelectItem>
                     <SelectItem value="denied">Negados</SelectItem>
                   </SelectContent>
                 </Select>
