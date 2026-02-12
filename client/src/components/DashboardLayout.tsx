@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useGym } from "@/_core/hooks/useGym";
 import { trpc } from "@/lib/trpc";
@@ -8,6 +9,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { getLoginUrl } from "@/const";
 import {
   LayoutDashboard,
@@ -33,10 +49,13 @@ import {
   Landmark,
   UserCheck,
   Dumbbell,
+  DoorOpen,
+  Loader2,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { toast } from "sonner";
 
 export default function DashboardLayout({
   children,
@@ -217,6 +236,116 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         {/* Page Content */}
         {children}
       </div>
+
+      {/* FAB Liberar Catraca - so aparece se usa Toletus HUB */}
+      {settings?.turnstileType === 'toletus_hub' && (
+        <TurnstileReleaseFAB gymSlug={gymSlug} />
+      )}
     </div>
+  );
+}
+
+function TurnstileReleaseFAB({ gymSlug }: { gymSlug: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
+  const [message, setMessage] = useState("Bem-vindo!");
+
+  const { data: devices = [] } = trpc.toletusDevices.list.useQuery(undefined, {
+    enabled: !!gymSlug,
+  });
+
+  const releaseEntryMutation = trpc.toletusDevices.releaseEntry.useMutation({
+    onSuccess: () => {
+      toast.success("Catraca liberada com sucesso!");
+      setOpen(false);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao liberar catraca");
+    },
+  });
+
+  const handleOpen = () => {
+    // Auto-seleciona o primeiro dispositivo se so tiver 1
+    if ((devices as any[]).length === 1) {
+      setSelectedDeviceId(String((devices as any[])[0].id));
+    }
+    setMessage("Bem-vindo!");
+    setOpen(true);
+  };
+
+  const handleRelease = () => {
+    if (!selectedDeviceId) {
+      toast.error("Selecione um dispositivo");
+      return;
+    }
+    releaseEntryMutation.mutate({
+      deviceId: Number(selectedDeviceId),
+      message,
+    });
+  };
+
+  return (
+    <>
+      {/* Botao flutuante */}
+      <button
+        onClick={handleOpen}
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+        title="Liberar Catraca"
+      >
+        <DoorOpen className="w-6 h-6" />
+      </button>
+
+      {/* Dialog de liberacao */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DoorOpen className="w-5 h-5 text-green-600" />
+              Liberar Catraca
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Dispositivo</Label>
+              <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o dispositivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(devices as any[]).map((device: any) => (
+                    <SelectItem key={device.id} value={String(device.id)}>
+                      {device.name} ({device.ip})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Mensagem no display</Label>
+              <Input
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Bem-vindo!"
+              />
+            </div>
+
+            <Button
+              onClick={handleRelease}
+              disabled={releaseEntryMutation.isPending || !selectedDeviceId}
+              className="w-full bg-green-500 hover:bg-green-600 text-white h-12 text-lg"
+            >
+              {releaseEntryMutation.isPending ? (
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              ) : (
+                <DoorOpen className="w-5 h-5 mr-2" />
+              )}
+              Liberar Entrada
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
