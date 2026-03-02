@@ -52,6 +52,8 @@ import {
   DoorOpen,
   Loader2,
   MessageCircle,
+  ChevronRight,
+  Menu,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -109,142 +111,165 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     { enabled: !!gymSlug }
   );
 
-  // Menu sections with grouped items
-  type MenuItem = { icon: any; label: string; path: string };
-  type MenuSection = { title: string; items: MenuItem[] };
+  // Collapsible sections state
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const menuSections: MenuSection[] = [
-    {
-      title: "",
-      items: [
-        { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
-      ],
-    },
-    {
-      title: "Cadastros",
-      items: [
-        { icon: Users, label: "Alunos", path: "/admin/students" },
-        { icon: GraduationCap, label: "Professores", path: "/admin/professors" },
-        { icon: UserCog, label: "Funcionários", path: "/admin/staff" },
-        { icon: UserPlus, label: "CRM / Leads", path: "/admin/crm" },
-      ],
-    },
-    {
-      title: "Treinos",
-      items: [
-        { icon: CreditCard, label: "Planos", path: "/admin/plans" },
-        { icon: Ruler, label: "Avaliações", path: "/admin/assessments" },
-      ],
-    },
-    {
-      title: "Agenda",
-      items: [
-        { icon: Calendar, label: "Horários e Aulas", path: "/admin/schedule" },
-      ],
-    },
-    {
-      title: "Financeiro",
-      items: [
-        { icon: DollarSign, label: "Pagamentos", path: "/admin/payments" },
-        { icon: Calendar, label: "Mensalidades", path: "/admin/billing" },
-        { icon: Receipt, label: "Contas a Pagar", path: "/admin/accounts-payable" },
-        { icon: AlertCircle, label: "Inadimplentes", path: "/admin/defaulters" },
-        { icon: Wallet, label: "Fluxo de Caixa", path: "/admin/cash-flow" },
-        { icon: TrendingUp, label: "Financeiro", path: "/admin/financial" },
-        { icon: Landmark, label: "Contas Bancárias", path: "/admin/bank-accounts" },
-      ],
-    },
-    {
-      title: "Cadastros Fin.",
-      items: [
-        { icon: Tag, label: "Categorias", path: "/admin/categories" },
-        { icon: Building2, label: "Fornecedores", path: "/admin/suppliers" },
-        { icon: Target, label: "Centros de Custo", path: "/admin/cost-centers" },
-        { icon: CreditCard, label: "Formas Pagto.", path: "/admin/payment-methods" },
-      ],
-    },
-    {
-      title: "Controle de Acesso",
-      items: [
-        { icon: Shield, label: "Control ID", path: "/admin/control-id-devices" },
-        ...(settings?.turnstileType === 'toletus_hub'
-          ? [{ icon: Shield, label: "Toletus HUB", path: "/admin/toletus-devices" }]
-          : []),
-      ],
-    },
-    {
-      title: "Integrações",
-      items: [
-        { icon: Users, label: "Wellhub Membros", path: "/admin/wellhub/members" },
-        { icon: UserCheck, label: "Wellhub Check-in", path: "/admin/wellhub/checkin" },
-        { icon: MessageCircle, label: "WhatsApp", path: "/admin/whatsapp" },
-      ],
-    },
-    {
-      title: "Sistema",
-      items: [
-        { icon: FileText, label: "Relatórios", path: "/admin/reports" },
-        { icon: Settings, label: "Configurações", path: "/admin/settings" },
-      ],
-    },
-  ];
+  const toggleSection = (key: string) => {
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Check if any child path in a section is active
+  const isSectionActive = (paths: string[]) => paths.some(p => location === p);
+
+  // Nav link component
+  const NavLink = ({ icon: Icon, label, path }: { icon: any; label: string; path: string }) => {
+    const isActive = location === path;
+    return (
+      <button
+        onClick={() => { setLocation(path); setSidebarOpen(false); }}
+        className={`w-full flex items-center gap-3 px-5 py-2.5 text-sm transition border-l-[3px] ${
+          isActive
+            ? "border-blue-300 bg-white/10 text-white font-medium"
+            : "border-transparent text-white/70 hover:bg-white/5 hover:text-white"
+        }`}
+      >
+        <Icon className="w-4 h-4 shrink-0" />
+        <span className="truncate">{label}</span>
+      </button>
+    );
+  };
+
+  // Collapsible section component
+  const NavSection = ({ icon: Icon, label, sectionKey, children: items }: {
+    icon: any; label: string; sectionKey: string;
+    children: Array<{ icon: any; label: string; path: string }>;
+  }) => {
+    const isOpen = openSections[sectionKey] || isSectionActive(items.map(i => i.path));
+    return (
+      <div>
+        <button
+          onClick={() => toggleSection(sectionKey)}
+          className={`w-full flex items-center justify-between px-5 py-2.5 text-sm transition border-l-[3px] ${
+            isSectionActive(items.map(i => i.path))
+              ? "border-blue-300 bg-white/10 text-white font-medium"
+              : "border-transparent text-white/70 hover:bg-white/5 hover:text-white"
+          }`}
+        >
+          <span className="flex items-center gap-3">
+            <Icon className="w-4 h-4 shrink-0" />
+            <span className="truncate">{label}</span>
+          </span>
+          <ChevronRight className={`w-3.5 h-3.5 opacity-60 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`} />
+        </button>
+        {isOpen && (
+          <div className="pb-1">
+            {items.map((item) => {
+              const isActive = location === item.path;
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => { setLocation(item.path); setSidebarOpen(false); }}
+                  className={`w-full text-left px-5 py-1.5 pl-12 text-[13px] transition ${
+                    isActive
+                      ? "text-white bg-white/5"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <div className="w-56 bg-gradient-to-b from-blue-600 to-blue-700 flex flex-col py-4 shrink-0">
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-4 pb-4 border-b border-white/10">
-          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
-            <Dumbbell className="w-5 h-5 text-white" />
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-[280px] bg-gradient-to-b from-blue-600 to-blue-700 flex flex-col shrink-0 transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        {/* Brand */}
+        <div className="px-5 py-5 border-b border-white/10 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <Dumbbell className="w-6 h-6 text-white" />
+            <h1 className="text-white text-xl font-bold">
+              Sys<span className="text-blue-200">Fit</span> Pro
+            </h1>
           </div>
-          <div>
-            <h2 className="text-white font-bold text-sm leading-tight">SysFit Pro</h2>
-            <p className="text-white/50 text-xs">Gestão de Academia</p>
-          </div>
+          <p className="text-white/50 text-xs mt-1">Gestão de Academia</p>
         </div>
 
-        {/* Menu Items - Scrollable */}
-        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-1">
-          {menuSections.map((section, sIdx) => (
-            <div key={sIdx}>
-              {section.title && (
-                <p className="text-white/40 text-[10px] uppercase font-semibold tracking-wider px-3 pt-3 pb-1">
-                  {section.title}
-                </p>
-              )}
-              {section.items.map((item) => {
-                const isActive = location === item.path;
-                return (
-                  <button
-                    key={item.path}
-                    onClick={() => setLocation(item.path)}
-                    className={`w-full h-9 rounded-md flex items-center gap-3 px-3 transition text-left ${
-                      isActive
-                        ? "bg-white/20 text-white"
-                        : "text-white/60 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    <item.icon className="w-4 h-4 shrink-0" />
-                    <span className="text-sm truncate">{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+        {/* Navigation - Scrollable */}
+        <nav className="flex-1 overflow-y-auto py-3">
+          {/* Direct links */}
+          <NavLink icon={LayoutDashboard} label="Dashboard" path="/admin/dashboard" />
+          <NavLink icon={Users} label="Alunos" path="/admin/students" />
+          <NavLink icon={GraduationCap} label="Professores" path="/admin/professors" />
+          <NavLink icon={UserCog} label="Funcionários" path="/admin/staff" />
+          <NavLink icon={CreditCard} label="Planos" path="/admin/plans" />
+
+          {/* Financeiro - collapsible */}
+          <NavSection icon={DollarSign} label="Financeiro" sectionKey="financeiro">
+            {[
+              { icon: DollarSign, label: "Pagamentos", path: "/admin/payments" },
+              { icon: Calendar, label: "Mensalidades", path: "/admin/billing" },
+              { icon: Receipt, label: "Contas a Pagar", path: "/admin/accounts-payable" },
+              { icon: AlertCircle, label: "Inadimplentes", path: "/admin/defaulters" },
+              { icon: Wallet, label: "Fluxo de Caixa", path: "/admin/cash-flow" },
+              { icon: TrendingUp, label: "Resumo Financeiro", path: "/admin/financial" },
+              { icon: Landmark, label: "Contas Bancárias", path: "/admin/bank-accounts" },
+              { icon: CreditCard, label: "Formas de Pagamento", path: "/admin/payment-methods" },
+              { icon: Tag, label: "Categorias", path: "/admin/categories" },
+              { icon: Building2, label: "Fornecedores", path: "/admin/suppliers" },
+              { icon: Target, label: "Centros de Custo", path: "/admin/cost-centers" },
+            ]}
+          </NavSection>
+
+          <NavLink icon={Calendar} label="Horários e Aulas" path="/admin/schedule" />
+          <NavLink icon={Ruler} label="Avaliações" path="/admin/assessments" />
+          <NavLink icon={UserPlus} label="CRM / Leads" path="/admin/crm" />
+
+          {/* Controle de Acesso - collapsible */}
+          <NavSection icon={Shield} label="Controle de Acesso" sectionKey="acesso">
+            {[
+              { icon: Shield, label: "Control ID", path: "/admin/control-id-devices" },
+              ...(settings?.turnstileType === 'toletus_hub'
+                ? [{ icon: Shield, label: "Toletus HUB", path: "/admin/toletus-devices" }]
+                : []),
+            ]}
+          </NavSection>
+
+          {/* Wellhub - collapsible */}
+          <NavSection icon={Dumbbell} label="Wellhub" sectionKey="wellhub">
+            {[
+              { icon: Users, label: "Membros", path: "/admin/wellhub/members" },
+              { icon: UserCheck, label: "Check-in", path: "/admin/wellhub/checkin" },
+            ]}
+          </NavSection>
+
+          <NavLink icon={MessageCircle} label="WhatsApp" path="/admin/whatsapp" />
+          <NavLink icon={FileText} label="Relatórios" path="/admin/reports" />
+          <NavLink icon={Settings} label="Configurações" path="/admin/settings" />
         </nav>
 
         {/* Logout */}
-        <div className="border-t border-white/10 pt-2 px-2">
+        <div className="border-t border-white/10 px-3 py-3">
           <button
             onClick={logout}
-            className="w-full h-9 rounded-md flex items-center gap-3 px-3 text-white/60 hover:bg-white/10 hover:text-white transition"
+            className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-white/60 hover:bg-white/5 hover:text-white transition rounded-md"
           >
             <LogOut className="w-4 h-4 shrink-0" />
-            <span className="text-sm">Sair</span>
+            <span>Sair</span>
           </button>
         </div>
-      </div>
+      </aside>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
@@ -252,6 +277,13 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         <div className="bg-white border-b px-8 py-6">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             <div className="flex items-center space-x-3">
+              {/* Mobile menu button */}
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-1 -ml-2 mr-1 text-gray-600 hover:text-gray-900"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
               <Dumbbell className="w-8 h-8 text-blue-600" />
               <h1 className="text-2xl font-bold text-gray-900">SysFit Pro</h1>
             </div>
