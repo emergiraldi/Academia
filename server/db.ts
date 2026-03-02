@@ -3674,7 +3674,8 @@ export async function updateGymSettings(gymId: number, settings: any) {
       smtpUseTls = ?,
       smtpUseSsl = ?,
       allowStudentCancelBooking = ?,
-      minHoursToCancel = ?
+      minHoursToCancel = ?,
+      autoGeneratePayment = ?
     WHERE gymId = ?`,
     [
       settings.daysToBlockAfterDue,
@@ -3697,6 +3698,7 @@ export async function updateGymSettings(gymId: number, settings: any) {
       settings.smtpUseSsl ?? false,
       settings.allowStudentCancelBooking ?? true,
       settings.minHoursToCancel ?? 0,
+      settings.autoGeneratePayment ?? true,
       gymId
     ]
   );

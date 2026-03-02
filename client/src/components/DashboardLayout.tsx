@@ -109,90 +109,141 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     { enabled: !!gymSlug }
   );
 
-  // Base menu items
-  const baseMenuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
-    { icon: Users, label: "Alunos", path: "/admin/students" },
-    { icon: UserPlus, label: "CRM / Leads", path: "/admin/crm" },
-    { icon: CreditCard, label: "Planos", path: "/admin/plans" },
-    { icon: Calendar, label: "Agendamento", path: "/admin/schedule" },
-    { icon: Ruler, label: "Avaliações", path: "/admin/assessments" },
-    { icon: GraduationCap, label: "Professores", path: "/admin/professors" },
-    { icon: UserCog, label: "Funcionários", path: "/admin/staff" },
-    { icon: DollarSign, label: "Pagamentos", path: "/admin/payments" },
-    { icon: Calendar, label: "Mensalidades", path: "/admin/billing" },
-    { icon: Receipt, label: "Contas a Pagar", path: "/admin/accounts-payable" },
-    { icon: Tag, label: "Categorias", path: "/admin/categories" },
-    { icon: Building2, label: "Fornecedores", path: "/admin/suppliers" },
-    { icon: Target, label: "Centros de Custo", path: "/admin/cost-centers" },
-    { icon: CreditCard, label: "Formas de Pagamento", path: "/admin/payment-methods" },
-    { icon: Landmark, label: "Contas Bancárias", path: "/admin/bank-accounts" },
-    { icon: Wallet, label: "Fluxo de Caixa", path: "/admin/cash-flow" },
-    { icon: TrendingUp, label: "Financeiro", path: "/admin/financial" },
-    { icon: AlertCircle, label: "Inadimplentes", path: "/admin/defaulters" },
-  ];
+  // Menu sections with grouped items
+  type MenuItem = { icon: any; label: string; path: string };
+  type MenuSection = { title: string; items: MenuItem[] };
 
-  // Conditional turnstile menu items
-  // Se usar Toletus HUB, mostra AMBOS (Control ID para reconhecimento + Toletus para catraca)
-  const turnstileMenuItems = settings?.turnstileType === 'toletus_hub'
-    ? [
+  const menuSections: MenuSection[] = [
+    {
+      title: "",
+      items: [
+        { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
+      ],
+    },
+    {
+      title: "Cadastros",
+      items: [
+        { icon: Users, label: "Alunos", path: "/admin/students" },
+        { icon: GraduationCap, label: "Professores", path: "/admin/professors" },
+        { icon: UserCog, label: "Funcionários", path: "/admin/staff" },
+        { icon: UserPlus, label: "CRM / Leads", path: "/admin/crm" },
+      ],
+    },
+    {
+      title: "Treinos",
+      items: [
+        { icon: CreditCard, label: "Planos", path: "/admin/plans" },
+        { icon: Ruler, label: "Avaliações", path: "/admin/assessments" },
+      ],
+    },
+    {
+      title: "Agenda",
+      items: [
+        { icon: Calendar, label: "Horários e Aulas", path: "/admin/schedule" },
+      ],
+    },
+    {
+      title: "Financeiro",
+      items: [
+        { icon: DollarSign, label: "Pagamentos", path: "/admin/payments" },
+        { icon: Calendar, label: "Mensalidades", path: "/admin/billing" },
+        { icon: Receipt, label: "Contas a Pagar", path: "/admin/accounts-payable" },
+        { icon: AlertCircle, label: "Inadimplentes", path: "/admin/defaulters" },
+        { icon: Wallet, label: "Fluxo de Caixa", path: "/admin/cash-flow" },
+        { icon: TrendingUp, label: "Financeiro", path: "/admin/financial" },
+        { icon: Landmark, label: "Contas Bancárias", path: "/admin/bank-accounts" },
+      ],
+    },
+    {
+      title: "Cadastros Fin.",
+      items: [
+        { icon: Tag, label: "Categorias", path: "/admin/categories" },
+        { icon: Building2, label: "Fornecedores", path: "/admin/suppliers" },
+        { icon: Target, label: "Centros de Custo", path: "/admin/cost-centers" },
+        { icon: CreditCard, label: "Formas Pagto.", path: "/admin/payment-methods" },
+      ],
+    },
+    {
+      title: "Controle de Acesso",
+      items: [
         { icon: Shield, label: "Control ID", path: "/admin/control-id-devices" },
-        { icon: Shield, label: "Toletus HUB", path: "/admin/toletus-devices" },
-      ]
-    : [
-        { icon: Shield, label: "Control ID", path: "/admin/control-id-devices" },
-      ];
-
-  // Bottom menu items
-  const bottomMenuItems = [
-    { icon: Users, label: "Wellhub - Membros", path: "/admin/wellhub/members" },
-    { icon: UserCheck, label: "Wellhub - Check-in", path: "/admin/wellhub/checkin" },
-    { icon: MessageCircle, label: "WhatsApp", path: "/admin/whatsapp" },
-    { icon: FileText, label: "Relatórios", path: "/admin/reports" },
-    { icon: Settings, label: "Parâmetros", path: "/admin/settings" },
+        ...(settings?.turnstileType === 'toletus_hub'
+          ? [{ icon: Shield, label: "Toletus HUB", path: "/admin/toletus-devices" }]
+          : []),
+      ],
+    },
+    {
+      title: "Integrações",
+      items: [
+        { icon: Users, label: "Wellhub Membros", path: "/admin/wellhub/members" },
+        { icon: UserCheck, label: "Wellhub Check-in", path: "/admin/wellhub/checkin" },
+        { icon: MessageCircle, label: "WhatsApp", path: "/admin/whatsapp" },
+      ],
+    },
+    {
+      title: "Sistema",
+      items: [
+        { icon: FileText, label: "Relatórios", path: "/admin/reports" },
+        { icon: Settings, label: "Configurações", path: "/admin/settings" },
+      ],
+    },
   ];
-
-  // Combine all menu items
-  const menuItems = [...baseMenuItems, ...turnstileMenuItems, ...bottomMenuItems];
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
-      <div className="w-20 bg-gradient-to-b from-blue-600 to-blue-700 flex flex-col items-center py-6 space-y-6">
+      <div className="w-56 bg-gradient-to-b from-blue-600 to-blue-700 flex flex-col py-4 shrink-0">
         {/* Logo */}
-        <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-          <Dumbbell className="w-6 h-6 text-white" />
+        <div className="flex items-center gap-3 px-4 pb-4 border-b border-white/10">
+          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
+            <Dumbbell className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-white font-bold text-sm leading-tight">SysFit Pro</h2>
+            <p className="text-white/50 text-xs">Gestão de Academia</p>
+          </div>
         </div>
 
-        {/* Menu Items */}
-        <nav className="flex-1 flex flex-col space-y-2">
-          {menuItems.map((item) => {
-            const isActive = location === item.path;
-            return (
-              <button
-                key={item.path}
-                onClick={() => setLocation(item.path)}
-                className={`w-12 h-12 rounded-lg flex items-center justify-center transition ${
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : "text-white/60 hover:bg-white/10 hover:text-white"
-                }`}
-                title={item.label}
-              >
-                <item.icon className="w-5 h-5" />
-              </button>
-            );
-          })}
+        {/* Menu Items - Scrollable */}
+        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-1">
+          {menuSections.map((section, sIdx) => (
+            <div key={sIdx}>
+              {section.title && (
+                <p className="text-white/40 text-[10px] uppercase font-semibold tracking-wider px-3 pt-3 pb-1">
+                  {section.title}
+                </p>
+              )}
+              {section.items.map((item) => {
+                const isActive = location === item.path;
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => setLocation(item.path)}
+                    className={`w-full h-9 rounded-md flex items-center gap-3 px-3 transition text-left ${
+                      isActive
+                        ? "bg-white/20 text-white"
+                        : "text-white/60 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4 shrink-0" />
+                    <span className="text-sm truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Logout */}
-        <button
-          onClick={logout}
-          className="w-12 h-12 rounded-lg flex items-center justify-center text-white/60 hover:bg-white/10 hover:text-white transition"
-          title="Sair"
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
+        <div className="border-t border-white/10 pt-2 px-2">
+          <button
+            onClick={logout}
+            className="w-full h-9 rounded-md flex items-center gap-3 px-3 text-white/60 hover:bg-white/10 hover:text-white transition"
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span className="text-sm">Sair</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}

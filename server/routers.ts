@@ -933,9 +933,13 @@ export const appRouter = router({
           professorId: input.professorId || null,
         });
 
-        // Create subscription
+        // Check if gym auto-generates payment on student creation
+        const gymSettings = await db.getGymSettings(gym.id);
+        const autoGenerate = gymSettings?.autoGeneratePayment !== 0 && gymSettings?.autoGeneratePayment !== false;
+
+        // Create subscription and first payment (if enabled)
         const plan = await db.getPlanById(input.planId, gym.id);
-        if (plan) {
+        if (plan && autoGenerate) {
           const subscriptionResult = await db.createSubscription({
             gymId: gym.id,
             studentId: studentResult.insertId,
@@ -4955,6 +4959,8 @@ export const appRouter = router({
         // Regras de Agendamento
         allowStudentCancelBooking: z.boolean().optional(),
         minHoursToCancel: z.number().min(0).max(72).optional(),
+        // Gerar mensalidade ao criar aluno
+        autoGeneratePayment: z.boolean().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);

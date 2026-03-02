@@ -91,6 +91,8 @@ export default function AdminSettings() {
     // Regras de Agendamento
     allowStudentCancelBooking: true,
     minHoursToCancel: 0,
+    // Gerar mensalidade ao criar aluno
+    autoGeneratePayment: true,
     // Logo da Academia
     logoUrl: '',
   });
@@ -134,6 +136,8 @@ export default function AdminSettings() {
         // Regras de Agendamento
         allowStudentCancelBooking: settings.allowStudentCancelBooking === 1 || settings.allowStudentCancelBooking === true,
         minHoursToCancel: settings.minHoursToCancel || 0,
+        // Gerar mensalidade ao criar aluno
+        autoGeneratePayment: settings.autoGeneratePayment === 1 || settings.autoGeneratePayment === true || settings.autoGeneratePayment === undefined || settings.autoGeneratePayment === null,
         // Logo da Academia
         logoUrl: settings.logoUrl || '',
       });
@@ -572,6 +576,40 @@ export default function AdminSettings() {
                 </p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Gerar Mensalidade ao Cadastrar Aluno */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-primary" />
+              <CardTitle>Mensalidade ao Cadastrar Aluno</CardTitle>
+            </div>
+            <CardDescription>
+              Configure se ao criar um novo aluno a primeira mensalidade será gerada automaticamente
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Gerar mensalidade automaticamente</Label>
+                <p className="text-sm text-muted-foreground">
+                  {formData.autoGeneratePayment
+                    ? "Ao cadastrar um aluno, a primeira mensalidade será gerada com vencimento no dia do cadastro"
+                    : "Ao cadastrar um aluno, nenhuma mensalidade será gerada. Você poderá gerar manualmente com datas personalizadas"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">{formData.autoGeneratePayment ? "Sim" : "Não"}</span>
+                <input
+                  type="checkbox"
+                  checked={formData.autoGeneratePayment}
+                  onChange={(e) => setFormData({ ...formData, autoGeneratePayment: e.target.checked })}
+                  className="h-5 w-5 rounded border-gray-300"
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
