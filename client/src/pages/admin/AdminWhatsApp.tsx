@@ -89,10 +89,39 @@ export default function AdminWhatsApp() {
   const [editingStageId, setEditingStageId] = useState<number | null>(null);
   const [stageForm, setStageForm] = useState<StageForm>(EMPTY_STAGE_FORM);
   const [stageFilter, setStageFilter] = useState<string>("");
+  const [wahaForm, setWahaForm] = useState({ wahaUrl: "", wahaApiKey: "" });
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [testPhone, setTestPhone] = useState("");
+  const [testMessage, setTestMessage] = useState("Ola! Esta e uma mensagem de teste do sistema de cobranca.");
 
   const { gymSlug } = useGym();
 
   // ---- Queries ----
+  const { data: wahaConfig, refetch: refetchConfig } =
+    trpc.whatsappBilling.getConfig.useQuery(
+      { gymSlug: gymSlug || "" },
+      {
+        enabled: !!gymSlug,
+        retry: false,
+        onSuccess: (data: any) => {
+          setWahaForm({
+            wahaUrl: data?.wahaUrl || "",
+            wahaApiKey: data?.wahaApiKey || "",
+          });
+        },
+      }
+    );
+
+  const { data: wahaStatus, refetch: refetchStatus } =
+    trpc.whatsappBilling.getStatus.useQuery(
+      { gymSlug: gymSlug || "" },
+      {
+        enabled: !!gymSlug && !!wahaConfig?.wahaUrl,
+        retry: false,
+        refetchInterval: 15000, // Auto-refresh every 15s
+      }
+    );
+
   const { data: stages = [], refetch: refetchStages } =
     trpc.whatsappBilling.listStages.useQuery(
       { gymSlug: gymSlug || "" },
@@ -137,6 +166,56 @@ export default function AdminWhatsApp() {
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao executar cobranca");
+    },
+  });
+
+  const startSession = trpc.whatsappBilling.startSession.useMutation({
+    onSuccess: (data: any) => {
+      if (data?.success) {
+        toast.success("Sessao iniciada! Aguarde o QR Code...");
+        setTimeout(() => refetchStatus(), 2000);
+      } else {
+        toast.error(data?.error || "Erro ao iniciar sessao");
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao iniciar sessao");
+    },
+  });
+
+  const getQr = trpc.whatsappBilling.getQr.useMutation({
+    onSuccess: (data: any) => {
+      if (data?.success && data?.qr) {
+        setQrCode(data.qr);
+      } else {
+        toast.error(data?.error || "QR Code nao disponivel");
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao obter QR Code");
+    },
+  });
+
+  const sendTest = trpc.whatsappBilling.sendTest.useMutation({
+    onSuccess: (data: any) => {
+      if (data?.success) {
+        toast.success("Mensagem de teste enviada com sucesso!");
+      } else {
+        toast.error(data?.error || "Falha ao enviar mensagem de teste");
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao enviar mensagem de teste");
+    },
+  });
+
+  const updateConfig = trpc.whatsappBilling.updateConfig.useMutation({
+    onSuccess: () => {
+      toast.success("Configuracao WAHA salva com sucesso!");
+      refetchConfig();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao salvar configuracao");
     },
   });
 
@@ -297,6 +376,77 @@ export default function AdminWhatsApp() {
         {/* ============ TAB 1: STATUS ============ */}
         {activeTab === "status" && (
           <div className="space-y-6">
+            {/* WAHA Configuration Card */}
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Power className="h-5 w-5" />
+                  Configuracao do Servidor WAHA
+                </CardTitle>
+                <CardDescription>
+                  Configure a URL e chave de API do servidor WAHA para integrar com o WhatsApp
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="wahaUrl">URL do Servidor WAHA</Label>
+                    <Input
+                      id="wahaUrl"
+                      placeholder="http://localhost:3001"
+                      value={wahaForm.wahaUrl}
+                      onChange={(e) => setWahaForm({ ...wahaForm, wahaUrl: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Ex: http://seu-servidor:3001
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="wahaApiKey">Chave de API (API Key)</Label>
+                    <Input
+                      id="wahaApiKey"
+                      type="password"
+                      placeholder="sua-chave-api"
+                      value={wahaForm.wahaApiKey}
+                      onChange={(e) => setWahaForm({ ...wahaForm, wahaApiKey: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Chave configurada no servidor WAHA (WAHA_API_KEY)
+                    </p>
+                  </div>
+                </div>
+
+                {wahaConfig?.wahaUrl ? (
+                  <div className="flex items-center gap-2 p-3 border rounded-lg bg-green-50">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm text-green-700 font-medium">Configurado: {wahaConfig.wahaUrl}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-3 border rounded-lg bg-yellow-50">
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                    <span className="text-sm text-yellow-700 font-medium">WAHA nao configurado. Preencha os campos acima.</span>
+                  </div>
+                )}
+
+                <Button
+                  onClick={() => {
+                    if (!wahaForm.wahaUrl || !wahaForm.wahaApiKey) {
+                      toast.error("Preencha a URL e a Chave de API");
+                      return;
+                    }
+                    updateConfig.mutate({
+                      gymSlug: gymSlug || "",
+                      wahaUrl: wahaForm.wahaUrl,
+                      wahaApiKey: wahaForm.wahaApiKey,
+                    });
+                  }}
+                  disabled={updateConfig.isPending}
+                >
+                  {updateConfig.isPending ? "Salvando..." : "Salvar Configuracao"}
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Connection Status Card */}
             <Card className="shadow-md">
               <CardHeader>
@@ -305,32 +455,190 @@ export default function AdminWhatsApp() {
                   Status da Conexao
                 </CardTitle>
                 <CardDescription>
-                  Gerencie a sessao WhatsApp para envio de cobracas automaticas
+                  Status em tempo real da sessao WhatsApp
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-3 p-4 border rounded-lg bg-muted/50">
-                  <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">
-                      A conexao WhatsApp e gerenciada pelo servidor WAHA configurado para sua academia.
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Caso tenha problemas, desconecte e conecte novamente pelo painel WAHA ou entre em contato com o suporte.
+                {!wahaConfig?.wahaUrl ? (
+                  <div className="flex items-center gap-3 p-4 border rounded-lg bg-yellow-50 border-yellow-200">
+                    <AlertCircle className="h-5 w-5 text-yellow-600" />
+                    <span className="text-sm text-yellow-700 font-medium">Configure o servidor WAHA acima para verificar o status.</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className={`flex items-center gap-3 p-4 border rounded-lg ${
+                      wahaStatus?.status === "WORKING"
+                        ? "bg-green-50 border-green-200"
+                        : wahaStatus?.status === "SCAN_QR_CODE"
+                        ? "bg-orange-50 border-orange-200"
+                        : wahaStatus?.status === "not_configured"
+                        ? "bg-yellow-50 border-yellow-200"
+                        : wahaStatus?.status === "error"
+                        ? "bg-red-50 border-red-200"
+                        : "bg-muted/50"
+                    }`}>
+                      {wahaStatus?.status === "WORKING" ? (
+                        <CheckCircle className="h-6 w-6 text-green-600" />
+                      ) : wahaStatus?.status === "SCAN_QR_CODE" ? (
+                        <Clock className="h-6 w-6 text-orange-600" />
+                      ) : wahaStatus?.status === "error" ? (
+                        <XCircle className="h-6 w-6 text-red-600" />
+                      ) : (
+                        <AlertCircle className="h-6 w-6 text-muted-foreground" />
+                      )}
+                      <div>
+                        <p className="text-sm font-semibold">
+                          {wahaStatus?.status === "WORKING" && "Conectado"}
+                          {wahaStatus?.status === "SCAN_QR_CODE" && "Aguardando QR Code"}
+                          {wahaStatus?.status === "STOPPED" && "Sessao Parada"}
+                          {wahaStatus?.status === "STARTING" && "Iniciando..."}
+                          {wahaStatus?.status === "not_configured" && "Nao Configurado"}
+                          {wahaStatus?.status === "error" && "Erro de Conexao"}
+                          {!wahaStatus && "Verificando..."}
+                          {wahaStatus?.status && !["WORKING", "SCAN_QR_CODE", "STOPPED", "STARTING", "not_configured", "error"].includes(wahaStatus.status) && `Status: ${wahaStatus.status}`}
+                        </p>
+                        {wahaStatus?.error && (
+                          <p className="text-xs text-red-600 mt-1">{wahaStatus.error}</p>
+                        )}
+                        {wahaStatus?.status === "WORKING" && (
+                          <p className="text-xs text-green-600 mt-1">WhatsApp pronto para enviar mensagens</p>
+                        )}
+                        {wahaStatus?.status === "SCAN_QR_CODE" && (
+                          <p className="text-xs text-orange-600 mt-1">Escaneie o QR Code no painel WAHA para conectar</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* QR Code Display */}
+                    {qrCode && wahaStatus?.status !== "WORKING" && (
+                      <div className="flex flex-col items-center gap-3 p-4 border rounded-lg bg-white">
+                        <p className="text-sm font-medium">Escaneie o QR Code com o WhatsApp:</p>
+                        <div className="p-3 bg-white rounded-lg shadow-md">
+                          <img
+                            src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`}
+                            alt="QR Code WhatsApp"
+                            className="w-64 h-64"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Abra o WhatsApp &gt; Menu &gt; Aparelhos conectados &gt; Conectar aparelho
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-3">
+                      {wahaStatus?.status !== "WORKING" && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => {
+                            startSession.mutate({ gymSlug: gymSlug || "" });
+                            setTimeout(() => {
+                              getQr.mutate({ gymSlug: gymSlug || "" });
+                            }, 2000);
+                          }}
+                          disabled={startSession.isPending || getQr.isPending}
+                        >
+                          <Play className="h-4 w-4 mr-2" />
+                          {startSession.isPending ? "Iniciando..." : "Conectar WhatsApp"}
+                        </Button>
+                      )}
+                      {wahaStatus?.status !== "WORKING" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => getQr.mutate({ gymSlug: gymSlug || "" })}
+                          disabled={getQr.isPending}
+                        >
+                          {getQr.isPending ? "Gerando..." : "Gerar QR Code"}
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          refetchStatus();
+                          setQrCode(null);
+                        }}
+                      >
+                        <Wifi className="h-4 w-4 mr-2" />
+                        Verificar Status
+                      </Button>
+                      {wahaStatus?.status === "WORKING" && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            logoutSession.mutate({ gymSlug: gymSlug || "" });
+                            setQrCode(null);
+                            setTimeout(() => refetchStatus(), 2000);
+                          }}
+                          disabled={logoutSession.isPending}
+                        >
+                          <PowerOff className="h-4 w-4 mr-2" />
+                          {logoutSession.isPending ? "Desconectando..." : "Desconectar Sessao"}
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Test Message Card */}
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Teste de Mensagem
+                </CardTitle>
+                <CardDescription>
+                  Envie uma mensagem de teste para verificar se o WhatsApp esta funcionando
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="testPhone">Telefone (com DDD)</Label>
+                    <Input
+                      id="testPhone"
+                      placeholder="5562999999999"
+                      value={testPhone}
+                      onChange={(e) => setTestPhone(e.target.value.replace(/\D/g, ""))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Formato: 55 + DDD + numero (ex: 5562999887766)
                     </p>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="testMessage">Mensagem</Label>
+                    <Textarea
+                      id="testMessage"
+                      placeholder="Digite a mensagem de teste..."
+                      value={testMessage}
+                      onChange={(e) => setTestMessage(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
                 </div>
-
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    variant="destructive"
-                    onClick={() => logoutSession.mutate({ gymSlug: gymSlug || "" })}
-                    disabled={logoutSession.isPending}
-                  >
-                    <PowerOff className="h-4 w-4 mr-2" />
-                    {logoutSession.isPending ? "Desconectando..." : "Desconectar Sessao"}
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => {
+                    if (!testPhone || testPhone.length < 10) {
+                      toast.error("Digite um telefone valido com DDD");
+                      return;
+                    }
+                    sendTest.mutate({
+                      gymSlug: gymSlug || "",
+                      phone: testPhone,
+                      message: testMessage,
+                    });
+                  }}
+                  disabled={sendTest.isPending || !testPhone}
+                  variant="outline"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {sendTest.isPending ? "Enviando..." : "Enviar Mensagem de Teste"}
+                </Button>
               </CardContent>
             </Card>
 

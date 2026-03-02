@@ -117,6 +117,70 @@ export async function getSessionStatus(
 }
 
 /**
+ * Get QR Code for WhatsApp session
+ */
+export async function getQrCode(
+  gymId: number
+): Promise<{ success: boolean; qr?: string; error?: string }> {
+  try {
+    const config = await getWahaConfig(gymId);
+    if (!config) {
+      return { success: false, error: "WAHA not configured" };
+    }
+
+    // First try to start the session (in case it's not started)
+    try {
+      await wahaRequest(config, "POST", "/api/sessions/start", {
+        name: SESSION_NAME,
+      });
+    } catch (e) {
+      // Session might already be started, that's ok
+    }
+
+    // Get QR code - fetch directly to handle binary PNG response
+    const url = `${config.url}/api/${SESSION_NAME}/auth/qr`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "X-Api-Key": config.apiKey },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`WAHA QR error ${response.status}: ${text}`);
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+
+    // If response is JSON (some WAHA versions)
+    if (contentType.includes("application/json")) {
+      const json = await response.json();
+      if (json?.value) {
+        return { success: true, qr: json.value };
+      }
+      return { success: false, error: "QR Code nao disponivel" };
+    }
+
+    // If response is image (PNG/binary) - convert to base64
+    if (contentType.includes("image/")) {
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const base64 = buffer.toString("base64");
+      const mimeType = contentType.split(";")[0].trim();
+      return { success: true, qr: `data:${mimeType};base64,${base64}` };
+    }
+
+    // Fallback: try as text
+    const text = await response.text();
+    if (text && text.length > 10) {
+      return { success: true, qr: text };
+    }
+
+    return { success: false, error: "QR Code nao disponivel. Sessao ja pode estar conectada." };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Send WhatsApp text message
  */
 export async function sendMessage(
@@ -131,7 +195,11 @@ export async function sendMessage(
     }
 
     // Format phone to WhatsApp format (55XXXXXXXXXXX@c.us)
-    const cleanPhone = phone.replace(/\D/g, "");
+    let cleanPhone = phone.replace(/\D/g, "");
+    // Adiciona 55 automaticamente se não começa com 55
+    if (!cleanPhone.startsWith("55")) {
+      cleanPhone = `55${cleanPhone}`;
+    }
     const chatId = `${cleanPhone}@c.us`;
 
     await wahaRequest(config, "POST", "/api/sendText", {
