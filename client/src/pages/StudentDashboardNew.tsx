@@ -18,6 +18,8 @@ import {
   FileText,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { StudentDigitalCard } from "@/components/StudentDigitalCard";
 import StudentPayments from "./StudentPayments";
 import StudentFaceEnrollment from "./StudentFaceEnrollment";
@@ -28,6 +30,7 @@ export default function StudentDashboardNew() {
   const [, setLocation] = useLocation();
   const [currentScreen, setCurrentScreen] = useState("dashboard");
   const [showNotifications, setShowNotifications] = useState(false);
+  const [cancelBookingId, setCancelBookingId] = useState<number | null>(null);
 
   // Queries
   const { data: student, refetch: refetchStudent } = trpc.students.me.useQuery(undefined, {
@@ -40,6 +43,21 @@ export default function StudentDashboardNew() {
 
   const { data: payments = [] } = trpc.payments.myPayments.useQuery(undefined, {
     enabled: !!student,
+  });
+
+  const { data: myBookings = [], refetch: refetchMyBookings } = trpc.bookings.myBookings.useQuery(undefined, {
+    enabled: !!student,
+  });
+
+  const cancelBooking = trpc.bookings.cancel.useMutation({
+    onSuccess: () => {
+      toast.success("Agendamento cancelado com sucesso!");
+      setCancelBookingId(null);
+      refetchMyBookings();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao cancelar agendamento");
+    },
   });
 
   useEffect(() => {
@@ -110,6 +128,11 @@ export default function StudentDashboardNew() {
     }
   };
 
+  const DAYS_SHORT: Record<string, string> = {
+    monday: "Seg", tuesday: "Ter", wednesday: "Qua",
+    thursday: "Qui", friday: "Sex", saturday: "Sáb", sunday: "Dom",
+  };
+
   const renderScreen = () => {
     switch (currentScreen) {
       case "profile":
@@ -134,6 +157,86 @@ export default function StudentDashboardNew() {
             onBack={() => setCurrentScreen("dashboard")}
             onSuccess={refetchStudent}
           />
+        );
+
+      case "schedule":
+        return (
+          <div className="px-4 pt-4 pb-6">
+            <div className="flex items-center gap-3 mb-6">
+              <button
+                onClick={() => setCurrentScreen("dashboard")}
+                className="p-2 rounded-lg bg-white shadow-sm"
+              >
+                <Calendar className="w-5 h-5 text-blue-600" />
+              </button>
+              <h2 className="text-xl font-bold text-gray-900">Meus Horários</h2>
+            </div>
+
+            {myBookings.length === 0 ? (
+              <Card className="bg-white/90 rounded-2xl shadow-lg p-8 text-center">
+                <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">Nenhum agendamento encontrado.</p>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {myBookings.map((booking: any) => (
+                  <Card key={booking.id} className="bg-white/90 rounded-2xl shadow-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{booking.scheduleName || booking.className || "Aula"}</h3>
+                        <p className="text-sm text-gray-600">
+                          {booking.dayOfWeek ? DAYS_SHORT[booking.dayOfWeek] || booking.dayOfWeek : ""} - {booking.startTime?.slice(0, 5) || ""}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString("pt-BR") : ""}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        {booking.status !== 'cancelled' && (
+                          <button
+                            onClick={() => setCancelBookingId(booking.id)}
+                            className="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
+                          >
+                            Cancelar
+                          </button>
+                        )}
+                        {booking.status === 'cancelled' && (
+                          <span className="px-3 py-1.5 text-sm bg-gray-100 text-gray-500 rounded-lg">
+                            Cancelado
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Cancel Confirmation */}
+            <AlertDialog open={cancelBookingId !== null} onOpenChange={(open) => { if (!open) setCancelBookingId(null); }}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancelar Agendamento</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Não</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      if (cancelBookingId) {
+                        cancelBooking.mutate({ id: cancelBookingId });
+                      }
+                    }}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Sim, Cancelar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         );
 
       case "dashboard":

@@ -78,7 +78,9 @@ export default function AdminSchedule() {
     bookingDate: new Date().toISOString().split('T')[0],
   });
 
-  const [bookingType, setBookingType] = useState<"student" | "visitor">("student");
+  const [bookingType, setBookingType] = useState<"student" | "visitor" | "bulk">("student");
+  const [bulkEnrollOpen, setBulkEnrollOpen] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [visitorForm, setVisitorForm] = useState({
     name: "",
     email: "",
@@ -199,6 +201,19 @@ export default function AdminSchedule() {
     },
   });
 
+  const enrollMultiple = trpc.enrollments.enrollMultiple.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.enrolled} aluno(s) matriculado(s) com sucesso!${data.errors?.length ? ` ${data.errors.length} erro(s).` : ''}`);
+      setBulkEnrollOpen(false);
+      setSelectedStudentIds([]);
+      refetchBookings();
+      refetchSchedules();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro na matrícula em lote");
+    },
+  });
+
   const resetScheduleForm = () => {
     setScheduleForm({
       name: "",
@@ -211,12 +226,24 @@ export default function AdminSchedule() {
     });
   };
 
+  const handleBulkEnroll = () => {
+    if (selectedStudentIds.length === 0) {
+      toast.error("Selecione pelo menos um aluno");
+      return;
+    }
+    enrollMultiple.mutate({
+      scheduleId: selectedSchedule.id,
+      studentIds: selectedStudentIds.map(Number),
+    });
+  };
+
   const resetBookingForm = () => {
     setBookingForm({
       studentId: "",
       bookingDate: new Date().toISOString().split('T')[0],
     });
     setBookingType("student");
+    setSelectedStudentIds([]);
     setVisitorForm({
       name: "",
       email: "",
@@ -263,6 +290,11 @@ export default function AdminSchedule() {
   const handleCreateBooking = async () => {
     if (!bookingForm.bookingDate) {
       toast.error("Selecione uma data");
+      return;
+    }
+
+    if (bookingType === "bulk") {
+      handleBulkEnroll();
       return;
     }
 
@@ -601,7 +633,7 @@ export default function AdminSchedule() {
               {/* Tipo de Agendamento */}
               <div>
                 <Label>Tipo de Agendamento</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2">
+                <div className="grid grid-cols-3 gap-2 mt-2">
                   <Button
                     type="button"
                     variant={bookingType === "student" ? "default" : "outline"}
@@ -609,6 +641,14 @@ export default function AdminSchedule() {
                     className="w-full"
                   >
                     Aluno Cadastrado
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={bookingType === "bulk" ? "default" : "outline"}
+                    onClick={() => setBookingType("bulk")}
+                    className="w-full"
+                  >
+                    Matrícula em Lote
                   </Button>
                   <Button
                     type="button"
@@ -651,6 +691,35 @@ export default function AdminSchedule() {
                       💡 Cadastre alunos em "Gestão de Alunos" primeiro ou use "Visitante/Experimental"
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* Formulário para Matrícula em Lote */}
+              {bookingType === "bulk" && (
+                <div className="space-y-3">
+                  <Label>Selecionar Alunos (múltiplos)</Label>
+                  <div className="border rounded-md max-h-60 overflow-y-auto p-2 space-y-1">
+                    {students?.map((student: any) => (
+                      <label key={student.id} className="flex items-center gap-2 p-2 hover:bg-muted rounded cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedStudentIds.includes(student.id.toString())}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedStudentIds([...selectedStudentIds, student.id.toString()]);
+                            } else {
+                              setSelectedStudentIds(selectedStudentIds.filter(id => id !== student.id.toString()));
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm">{student.name} {student.email ? `(${student.email})` : ""}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedStudentIds.length} aluno(s) selecionado(s)
+                  </p>
                 </div>
               )}
 

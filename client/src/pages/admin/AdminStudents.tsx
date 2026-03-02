@@ -673,8 +673,8 @@ export default function AdminStudents() {
                       </SelectTrigger>
                       <SelectContent>
                         {professors?.map((professor: any) => (
-                          <SelectItem key={professor.id} value={professor.id.toString()}>
-                            {professor.name}
+                          <SelectItem key={professor.id} value={professor.userId.toString()}>
+                            {professor.userName || professor.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1363,8 +1363,8 @@ export default function AdminStudents() {
                     </SelectTrigger>
                     <SelectContent>
                       {professors?.map((professor: any) => (
-                        <SelectItem key={professor.id} value={professor.id.toString()}>
-                          {professor.name}
+                        <SelectItem key={professor.id} value={professor.userId.toString()}>
+                          {professor.userName || professor.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

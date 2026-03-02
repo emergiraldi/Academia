@@ -45,7 +45,12 @@ import {
   ChevronRight,
   Eye,
   Edit,
-  Trash2
+  Trash2,
+  Video,
+  Upload,
+  Link,
+  X,
+  Loader2,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -71,6 +76,12 @@ export default function ProfessorDashboard() {
   const [isExerciseDetailOpen, setIsExerciseDetailOpen] = useState(false);
   const [editingExercise, setEditingExercise] = useState<any>(null);
   const [isEditExerciseDialogOpen, setIsEditExerciseDialogOpen] = useState(false);
+
+  // Video management state
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Assessment form state
   const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
@@ -252,6 +263,89 @@ export default function ProfessorDashboard() {
       toast.error(error.message || "Erro ao atualizar exercício");
     },
   });
+
+  // Video queries & mutations - funciona tanto no detail quanto no edit dialog
+  const videoExerciseId = selectedExercise?.id || editingExercise?.id || 0;
+  const videoQueryEnabled = (!!selectedExercise?.id && isExerciseDetailOpen) || (!!editingExercise?.id && isEditExerciseDialogOpen);
+  const { data: exerciseVideos = [], refetch: refetchVideos } = trpc.exercises.videos.list.useQuery(
+    { exerciseId: videoExerciseId },
+    { enabled: videoQueryEnabled }
+  );
+
+  const addVideoMutation = trpc.exercises.videos.add.useMutation({
+    onSuccess: () => {
+      toast.success("Vídeo enviado com sucesso!");
+      refetchVideos();
+      setVideoFile(null);
+      setIsUploadingVideo(false);
+      setUploadProgress(0);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao enviar vídeo");
+      setIsUploadingVideo(false);
+      setUploadProgress(0);
+    },
+  });
+
+  const addVideoUrlMutation = trpc.exercises.videos.addUrl.useMutation({
+    onSuccess: () => {
+      toast.success("Vídeo adicionado com sucesso!");
+      refetchVideos();
+      setVideoUrl("");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao adicionar vídeo");
+    },
+  });
+
+  const deleteVideoMutation = trpc.exercises.videos.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Vídeo removido com sucesso!");
+      refetchVideos();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao remover vídeo");
+    },
+  });
+
+  const handleUploadVideo = async () => {
+    const exerciseId = selectedExercise?.id || editingExercise?.id;
+    if (!videoFile || !exerciseId) return;
+    if (videoFile.size > 100 * 1024 * 1024) {
+      toast.error("Vídeo muito grande. Máximo 100MB.");
+      return;
+    }
+
+    setIsUploadingVideo(true);
+    setUploadProgress(10);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        setUploadProgress(50);
+        const base64 = (reader.result as string).split(",")[1];
+        await addVideoMutation.mutateAsync({
+          exerciseId,
+          videoData: base64,
+          title: videoFile.name,
+        });
+      };
+      reader.readAsDataURL(videoFile);
+    } catch (err) {
+      setIsUploadingVideo(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleAddVideoUrl = () => {
+    const exerciseId = selectedExercise?.id || editingExercise?.id;
+    if (!videoUrl || !exerciseId) return;
+    addVideoUrlMutation.mutate({
+      exerciseId,
+      videoUrl,
+      title: "Vídeo externo",
+    });
+  };
 
   const deleteWorkoutMutation = trpc.workouts.delete.useMutation({
     onSuccess: () => {
@@ -1362,6 +1456,135 @@ export default function ProfessorDashboard() {
                   )}
                 </div>
 
+                {/* Seção de Vídeos */}
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                    <Video className="w-5 h-5 text-blue-600" />
+                    Vídeos de Demonstração
+                  </h4>
+
+                  {/* Lista de vídeos existentes */}
+                  {exerciseVideos.length > 0 ? (
+                    <div className="space-y-3 mb-4">
+                      {exerciseVideos.map((vid: any) => {
+                        const isYoutube = vid.videoUrl?.includes("youtube.com") || vid.videoUrl?.includes("youtu.be");
+                        const isVimeo = vid.videoUrl?.includes("vimeo.com");
+                        const isEmbed = isYoutube || isVimeo;
+
+                        let embedUrl = vid.videoUrl;
+                        if (isYoutube) {
+                          const match = vid.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+                          if (match) embedUrl = `https://www.youtube.com/embed/${match[1]}`;
+                        } else if (isVimeo) {
+                          const match = vid.videoUrl.match(/vimeo\.com\/(\d+)/);
+                          if (match) embedUrl = `https://player.vimeo.com/video/${match[1]}`;
+                        }
+
+                        return (
+                          <div key={vid.id} className="border rounded-lg p-3 bg-gray-50">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium truncate flex-1">
+                                {vid.title || "Vídeo sem título"}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteVideoMutation.mutate({ videoId: vid.id })}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            {isEmbed ? (
+                              <div className="aspect-video rounded overflow-hidden bg-black">
+                                <iframe
+                                  src={embedUrl}
+                                  className="w-full h-full"
+                                  allowFullScreen
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                />
+                              </div>
+                            ) : (
+                              <video
+                                src={vid.videoUrl}
+                                controls
+                                className="w-full rounded max-h-64"
+                                preload="metadata"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 mb-4">Nenhum vídeo cadastrado para este exercício.</p>
+                  )}
+
+                  {/* Upload de vídeo */}
+                  <div className="space-y-3 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <p className="text-sm font-semibold text-blue-800">Adicionar Vídeo</p>
+
+                    {/* Opção 1: Upload de arquivo */}
+                    <div className="space-y-2">
+                      <Label className="text-sm text-blue-700">Gravar ou enviar vídeo do celular</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="file"
+                          accept="video/*"
+                          capture="environment"
+                          onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                          className="flex-1 text-sm"
+                          disabled={isUploadingVideo}
+                        />
+                        <Button
+                          onClick={handleUploadVideo}
+                          disabled={!videoFile || isUploadingVideo}
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          {isUploadingVideo ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                      {isUploadingVideo && (
+                        <div className="w-full bg-blue-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all"
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                      )}
+                      <p className="text-xs text-blue-600">Máximo 100MB. Formatos: MP4, MOV, WEBM</p>
+                    </div>
+
+                    {/* Opção 2: URL do YouTube/Vimeo */}
+                    <div className="space-y-2 border-t border-blue-200 pt-3">
+                      <Label className="text-sm text-blue-700">Ou cole um link do YouTube/Vimeo</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="url"
+                          placeholder="https://youtube.com/watch?v=..."
+                          value={videoUrl}
+                          onChange={(e) => setVideoUrl(e.target.value)}
+                          className="flex-1 text-sm"
+                        />
+                        <Button
+                          onClick={handleAddVideoUrl}
+                          disabled={!videoUrl || addVideoUrlMutation.isPending}
+                          size="sm"
+                          variant="outline"
+                          className="border-blue-300"
+                        >
+                          <Link className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex justify-end gap-2 pt-4 border-t">
                   <Button variant="outline" onClick={() => setIsExerciseDetailOpen(false)}>
                     Fechar
@@ -1443,6 +1666,13 @@ export default function ProfessorDashboard() {
                 accept="image/*"
                 onChange={(e) => setExerciseImageFile(e.target.files?.[0] || null)}
               />
+            </div>
+
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-700 flex items-center gap-2">
+                <Video className="w-4 h-4" />
+                Para adicionar vídeos, primeiro crie o exercício e depois edite-o.
+              </p>
             </div>
 
             <Button
@@ -1548,6 +1778,70 @@ export default function ProfessorDashboard() {
                   accept="image/*"
                   onChange={(e) => setExerciseImageFile(e.target.files?.[0] || null)}
                 />
+              </div>
+
+              {/* Seção de Vídeos no Edit */}
+              <div className="border-t pt-4">
+                <h4 className="font-semibold text-base mb-3 flex items-center gap-2">
+                  <Video className="w-4 h-4 text-blue-600" />
+                  Vídeos de Demonstração
+                </h4>
+
+                {exerciseVideos.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {exerciseVideos.map((vid: any) => {
+                      const isYoutube = vid.videoUrl?.includes("youtube.com") || vid.videoUrl?.includes("youtu.be");
+                      const isVimeo = vid.videoUrl?.includes("vimeo.com");
+                      const isEmbed = isYoutube || isVimeo;
+                      let embedUrl = vid.videoUrl;
+                      if (isYoutube) {
+                        const match = vid.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+                        if (match) embedUrl = `https://www.youtube.com/embed/${match[1]}`;
+                      } else if (isVimeo) {
+                        const match = vid.videoUrl.match(/vimeo\.com\/(\d+)/);
+                        if (match) embedUrl = `https://player.vimeo.com/video/${match[1]}`;
+                      }
+                      return (
+                        <div key={vid.id} className="border rounded-lg p-2 bg-gray-50">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium truncate flex-1">{vid.title || "Vídeo"}</span>
+                            <Button variant="ghost" size="sm" onClick={() => deleteVideoMutation.mutate({ videoId: vid.id })} className="text-red-500 hover:text-red-700 h-7 w-7 p-0">
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          {isEmbed ? (
+                            <div className="aspect-video rounded overflow-hidden bg-black">
+                              <iframe src={embedUrl} className="w-full h-full" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
+                            </div>
+                          ) : (
+                            <video src={vid.videoUrl} controls className="w-full rounded max-h-48" preload="metadata" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="space-y-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <p className="text-xs font-semibold text-blue-800">Adicionar Vídeo</p>
+                  <div className="flex gap-2">
+                    <Input type="file" accept="video/*" capture="environment" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} className="flex-1 text-xs" disabled={isUploadingVideo} />
+                    <Button onClick={handleUploadVideo} disabled={!videoFile || isUploadingVideo} size="sm" className="bg-blue-600 hover:bg-blue-700">
+                      {isUploadingVideo ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                    </Button>
+                  </div>
+                  {isUploadingVideo && (
+                    <div className="w-full bg-blue-200 rounded-full h-1.5">
+                      <div className="bg-blue-600 h-1.5 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
+                    </div>
+                  )}
+                  <div className="flex gap-2 border-t border-blue-200 pt-2">
+                    <Input type="url" placeholder="https://youtube.com/watch?v=..." value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} className="flex-1 text-xs" />
+                    <Button onClick={handleAddVideoUrl} disabled={!videoUrl || addVideoUrlMutation.isPending} size="sm" variant="outline" className="border-blue-300">
+                      <Link className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-2">

@@ -20,7 +20,13 @@ import {
   Users,
   BookOpen,
   Clipboard,
-  LayoutDashboard
+  LayoutDashboard,
+  Video,
+  Upload,
+  Link,
+  X,
+  Loader2,
+  Play
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -31,6 +37,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ExerciseMediaModal } from "@/components/ExerciseMediaModal";
 
 interface WorkoutExercise {
   exerciseId: number;
@@ -78,7 +91,96 @@ export default function WorkoutBuilder() {
   );
 
   const createWorkoutMutation = trpc.workouts.create.useMutation();
+  const updateWorkoutMutation = trpc.workouts.update.useMutation();
   const addExerciseMutation = trpc.workouts.addExercise.useMutation();
+
+  // Video management state
+  const [videoExerciseId, setVideoExerciseId] = useState<number | null>(null);
+  const [videoExerciseName, setVideoExerciseName] = useState("");
+  const [isVideoDialogOpen, setIsVideoDialogOpen] = useState(false);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  // Video preview modal
+  const [previewExerciseId, setPreviewExerciseId] = useState<number | null>(null);
+  const [previewExerciseName, setPreviewExerciseName] = useState("");
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // Video queries & mutations
+  const { data: exerciseVideos = [], refetch: refetchVideos } = trpc.exercises.videos.list.useQuery(
+    { exerciseId: videoExerciseId! },
+    { enabled: !!videoExerciseId && isVideoDialogOpen }
+  );
+
+  const { data: previewVideos = [] } = trpc.exercises.videos.list.useQuery(
+    { exerciseId: previewExerciseId! },
+    { enabled: !!previewExerciseId && isPreviewOpen }
+  );
+
+  const addVideoMutation = trpc.exercises.videos.add.useMutation({
+    onSuccess: () => { refetchVideos(); toast.success("Vídeo enviado!"); },
+  });
+  const addVideoUrlMutation = trpc.exercises.videos.addUrl.useMutation({
+    onSuccess: () => { refetchVideos(); toast.success("URL adicionada!"); },
+  });
+  const deleteVideoMutation = trpc.exercises.videos.delete.useMutation({
+    onSuccess: () => { refetchVideos(); toast.success("Vídeo removido!"); },
+  });
+
+  const handleOpenVideoDialog = (exerciseId: number, exerciseName: string) => {
+    setVideoExerciseId(exerciseId);
+    setVideoExerciseName(exerciseName);
+    setIsVideoDialogOpen(true);
+    setVideoUrl("");
+    setVideoFile(null);
+  };
+
+  const handleUploadVideo = async () => {
+    if (!videoFile || !videoExerciseId) return;
+    if (videoFile.size > 100 * 1024 * 1024) {
+      toast.error("Arquivo muito grande (máximo 100MB)");
+      return;
+    }
+    setIsUploadingVideo(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(videoFile);
+      });
+      await addVideoMutation.mutateAsync({
+        exerciseId: videoExerciseId,
+        videoData: base64,
+        title: videoFile.name,
+      });
+      setVideoFile(null);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao enviar vídeo");
+    } finally {
+      setIsUploadingVideo(false);
+    }
+  };
+
+  const handleAddVideoUrl = async () => {
+    if (!videoUrl.trim() || !videoExerciseId) return;
+    try {
+      await addVideoUrlMutation.mutateAsync({
+        exerciseId: videoExerciseId,
+        videoUrl: videoUrl.trim(),
+        title: "Vídeo de demonstração",
+      });
+      setVideoUrl("");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao adicionar URL");
+    }
+  };
+
+  const handlePreviewVideo = (exerciseId: number, exerciseName: string) => {
+    setPreviewExerciseId(exerciseId);
+    setPreviewExerciseName(exerciseName);
+    setIsPreviewOpen(true);
+  };
 
   // Load workout data when editing
   useEffect(() => {
@@ -210,35 +312,49 @@ export default function WorkoutBuilder() {
     }
 
     try {
-      // 1. Criar o treino
-      const workout = await createWorkoutMutation.mutateAsync({
-        studentId: workoutForm.studentId,
-        name: workoutForm.name,
-        description: workoutForm.description,
-        startDate: workoutForm.startDate,
-        endDate: workoutForm.endDate || undefined,
-      });
+      let targetWorkoutId: number;
 
-      // 2. Adicionar exercícios de todas as divisões (A, B, C, D)
+      if (workoutId) {
+        // EDITAR treino existente (update, não cria novo)
+        const result = await updateWorkoutMutation.mutateAsync({
+          workoutId,
+          name: workoutForm.name,
+          description: workoutForm.description,
+          startDate: workoutForm.startDate,
+          endDate: workoutForm.endDate || undefined,
+        });
+        targetWorkoutId = result.workoutId;
+      } else {
+        // CRIAR novo treino
+        const result = await createWorkoutMutation.mutateAsync({
+          studentId: workoutForm.studentId,
+          name: workoutForm.name,
+          description: workoutForm.description,
+          startDate: workoutForm.startDate,
+          endDate: workoutForm.endDate || undefined,
+        });
+        targetWorkoutId = result.workoutId;
+      }
+
+      // Adicionar exercícios de todas as divisões (A, B, C, D)
       const allExercises = Object.entries(selectedExercises).flatMap(([day, exercises]) =>
         exercises.map((ex, index) => ({
-          workoutId: workout.workoutId, // Corrigido: usar workoutId em vez de id
+          workoutId: targetWorkoutId,
           exerciseId: ex.exerciseId,
           dayOfWeek: day,
           sets: ex.sets,
-          reps: ex.reps.toString(), // Corrigido: converter para string
-          load: ex.load ? ex.load.toString() : undefined, // Corrigido: converter para string
+          reps: ex.reps.toString(),
+          load: ex.load ? ex.load.toString() : undefined,
           restSeconds: ex.restSeconds,
           orderIndex: index,
         }))
       );
 
-      // Adicionar exercícios em lote
       for (const exercise of allExercises) {
         await addExerciseMutation.mutateAsync(exercise);
       }
 
-      toast.success(`Treino "${workoutForm.name}" criado com sucesso! (${totalExercises} exercícios)`);
+      toast.success(`Treino "${workoutForm.name}" ${workoutId ? 'atualizado' : 'criado'} com sucesso! (${totalExercises} exercícios)`);
       setLocation("/professor/dashboard");
     } catch (error: any) {
       toast.error(error.message || "Erro ao salvar treino");
@@ -707,14 +823,34 @@ export default function WorkoutBuilder() {
                                 </div>
                               </div>
 
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveExercise(day, index)}
-                                className="flex-shrink-0"
-                              >
-                                <Trash2 className="w-4 h-4 text-destructive" />
-                              </Button>
+                              <div className="flex flex-col gap-1 flex-shrink-0">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleOpenVideoDialog(exercise.exerciseId, exercise.exerciseName)}
+                                  className="h-8 w-8"
+                                  title="Gerenciar vídeos"
+                                >
+                                  <Video className="w-4 h-4 text-blue-500" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handlePreviewVideo(exercise.exerciseId, exercise.exerciseName)}
+                                  className="h-8 w-8"
+                                  title="Ver vídeo"
+                                >
+                                  <Play className="w-4 h-4 text-green-500" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveExercise(day, index)}
+                                  className="h-8 w-8"
+                                >
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
@@ -728,6 +864,111 @@ export default function WorkoutBuilder() {
         </div>
       </div>
       </div>
+
+      {/* Dialog de gerenciamento de vídeos do exercício */}
+      <Dialog open={isVideoDialogOpen} onOpenChange={setIsVideoDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Video className="w-5 h-5" />
+              Vídeos - {videoExerciseName}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Lista de vídeos existentes */}
+            {exerciseVideos.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Vídeos cadastrados:</h4>
+                {exerciseVideos.map((v: any) => (
+                  <div key={v.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Play className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      <span className="text-sm truncate">{v.title || v.videoUrl}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 flex-shrink-0"
+                      onClick={() => deleteVideoMutation.mutate({ videoId: v.id })}
+                    >
+                      <X className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {exerciseVideos.length === 0 && (
+              <div className="text-center py-6 text-muted-foreground">
+                <Video className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Nenhum vídeo cadastrado</p>
+              </div>
+            )}
+
+            {/* Upload de arquivo */}
+            <div className="border rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-medium flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Enviar vídeo (arquivo ou câmera)
+              </h4>
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  accept="video/*"
+                  capture="environment"
+                  onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleUploadVideo}
+                  disabled={!videoFile || isUploadingVideo}
+                  size="sm"
+                >
+                  {isUploadingVideo ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">MP4, MOV, WEBM - Máximo 100MB</p>
+            </div>
+
+            {/* URL do YouTube/Vimeo */}
+            <div className="border rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-medium flex items-center gap-2">
+                <Link className="w-4 h-4" />
+                URL do YouTube ou Vimeo
+              </h4>
+              <div className="flex gap-2">
+                <Input
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="https://youtube.com/watch?v=..."
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleAddVideoUrl}
+                  disabled={!videoUrl.trim() || addVideoUrlMutation.isPending}
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de preview de vídeo */}
+      <ExerciseMediaModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        exerciseName={previewExerciseName}
+        type="video"
+        videos={previewVideos}
+      />
     </div>
   );
 }

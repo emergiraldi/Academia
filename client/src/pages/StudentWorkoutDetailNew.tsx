@@ -95,6 +95,7 @@ export default function StudentWorkoutDetailNew() {
   });
 
   const [completionModal, setCompletionModal] = useState(false);
+  const [videoExerciseId, setVideoExerciseId] = useState<number | null>(null);
 
   // Data fetching
   const { data: workoutData } = trpc.workouts.getById.useQuery({ workoutId });
@@ -108,8 +109,16 @@ export default function StudentWorkoutDetailNew() {
   });
   const completedToday = completionData?.completed || false;
 
-  // Mutation to save workout completion
+  // Query de vídeos do exercício selecionado
+  const { data: exerciseVideos = [] } = trpc.exercises.videos.list.useQuery(
+    { exerciseId: videoExerciseId || 0 },
+    { enabled: !!videoExerciseId }
+  );
+
+  // Mutations
   const completeWorkoutMutation = trpc.workouts.completeWorkoutDay.useMutation();
+  const markExerciseCompleteMutation = trpc.workouts.markExerciseComplete.useMutation();
+  const startWorkoutDayMutation = trpc.workouts.startWorkoutDay.useMutation();
 
   // Filtrar exercícios pelo dia selecionado
   const dayExercises = allExercises.filter(
@@ -146,14 +155,16 @@ export default function StudentWorkoutDetailNew() {
     return () => clearInterval(interval);
   }, [isResting, restTimer]);
 
-  // Inicializar dados das séries
+  // Inicializar dados das séries - considerar exercícios já completados
   useEffect(() => {
     const initialData: Record<number, SetData[]> = {};
     dayExercises.forEach((ex: any) => {
       if (!exerciseSetsData[ex.id]) {
+        // Se exercício já foi marcado como completado no servidor E treino de hoje foi concluído
+        const isServerCompleted = ex.completed && completedToday;
         initialData[ex.id] = Array(ex.sets).fill(null).map(() => ({
-          completed: false,
-          reps: ex.reps || 0, // Usar o valor definido pelo professor
+          completed: isServerCompleted,
+          reps: ex.reps || 0,
           weight: ex.load || 0,
         }));
       }
@@ -161,7 +172,7 @@ export default function StudentWorkoutDetailNew() {
     if (Object.keys(initialData).length > 0) {
       setExerciseSetsData(prev => ({ ...prev, ...initialData }));
     }
-  }, [dayExercises]);
+  }, [dayExercises, completedToday]);
 
   // Detectar conclusão do treino
   useEffect(() => {
@@ -196,7 +207,7 @@ export default function StudentWorkoutDetailNew() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const startWorkout = () => {
+  const startWorkout = async () => {
     const todayWorkoutDay = getDayOfWeek();
 
     // Check if workout was already completed today
@@ -210,6 +221,25 @@ export default function StudentWorkoutDetailNew() {
       toast.error(`Você só pode iniciar o treino de ${todayDayName}. Hoje é treino ${todayWorkoutDay}.`);
       return;
     }
+
+    // Resetar exercícios do dia (limpa completed de sessões anteriores)
+    try {
+      await startWorkoutDayMutation.mutateAsync({ workoutId, dayOfWeek: selectedDay });
+    } catch (err) {
+      console.error("Erro ao resetar exercícios:", err);
+    }
+
+    // Limpar estado local das séries
+    const freshData: Record<number, SetData[]> = {};
+    dayExercises.forEach((ex: any) => {
+      freshData[ex.id] = Array(ex.sets).fill(null).map(() => ({
+        completed: false,
+        reps: ex.reps || 0,
+        weight: ex.load || 0,
+      }));
+    });
+    setExerciseSetsData(freshData);
+
     setWorkoutStarted(true);
     setWorkoutPaused(false);
     toast.success("Treino iniciado! Boa sorte!");
@@ -228,15 +258,24 @@ export default function StudentWorkoutDetailNew() {
   };
 
   const toggleSetComplete = (exerciseId: number, setIndex: number) => {
+    if (!workoutStarted) return; // Só pode marcar se treino iniciado
+
     setExerciseSetsData(prev => {
       const newData = { ...prev };
       if (!newData[exerciseId]) return prev;
 
       newData[exerciseId] = [...newData[exerciseId]];
+      const newCompleted = !newData[exerciseId][setIndex].completed;
       newData[exerciseId][setIndex] = {
         ...newData[exerciseId][setIndex],
-        completed: !newData[exerciseId][setIndex].completed,
+        completed: newCompleted,
       };
+
+      // Se todos os sets do exercício estão completos, salvar no servidor
+      const allSetsComplete = newData[exerciseId].every(s => s.completed);
+      if (allSetsComplete) {
+        markExerciseCompleteMutation.mutate({ workoutExerciseId: exerciseId });
+      }
 
       return newData;
     });
@@ -282,11 +321,12 @@ export default function StudentWorkoutDetailNew() {
     });
   };
 
-  const openVideoModal = (exercise: any) => {
+  const openVideoModal = (exercise: any, videoUrlOverride?: string) => {
+    setVideoExerciseId(exercise.exerciseId);
     setMediaModal({
       isOpen: true,
       exerciseName: exercise.exerciseName || 'Exercício',
-      videoUrl: exercise.exerciseVideoUrl,
+      videoUrl: videoUrlOverride || exercise.exerciseVideoUrl,
       type: 'video',
       description: exercise.exerciseDescription
     });
@@ -530,9 +570,12 @@ export default function StudentWorkoutDetailNew() {
                         <div className="flex items-center gap-3 w-full sm:w-auto">
                           <button
                             onClick={() => toggleSetComplete(exercise.id, setIndex)}
+                            disabled={completedToday || !workoutStarted}
                             className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 ${
                               setData.completed
                                 ? 'bg-green-500 border-green-500 shadow-lg'
+                                : completedToday || !workoutStarted
+                                ? 'border-gray-200 bg-gray-100 cursor-not-allowed'
                                 : 'border-gray-300 hover:border-primary hover:shadow-md'
                             }`}
                           >
@@ -641,17 +684,15 @@ export default function StudentWorkoutDetailNew() {
                         Ver Foto
                       </Button>
                     )}
-                    {exercise.exerciseVideoUrl && (
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        onClick={() => openVideoModal(exercise)}
-                        className="flex-1 h-12 touch-manipulation"
-                      >
-                        <VideoIcon className="w-5 h-5 mr-2" />
-                        Ver Vídeo
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => openVideoModal(exercise)}
+                      className="flex-1 h-12 touch-manipulation text-blue-600 border-blue-200 hover:bg-blue-50"
+                    >
+                      <VideoIcon className="w-5 h-5 mr-2" />
+                      Ver Vídeo
+                    </Button>
                   </div>
 
                   {exercise.notes && (
@@ -676,12 +717,13 @@ export default function StudentWorkoutDetailNew() {
       {/* Modal de Mídia */}
       <ExerciseMediaModal
         isOpen={mediaModal.isOpen}
-        onClose={closeModal}
+        onClose={() => { closeModal(); setVideoExerciseId(null); }}
         exerciseName={mediaModal.exerciseName}
         photoUrl={mediaModal.photoUrl}
         videoUrl={mediaModal.videoUrl}
         type={mediaModal.type}
         description={mediaModal.description}
+        videos={mediaModal.type === 'video' ? exerciseVideos : []}
       />
 
       {/* Modal de Conclusão do Treino */}

@@ -38,6 +38,7 @@ import AdminPaymentMethods from "./pages/admin/AdminPaymentMethods";
 import AdminAccessLogs from "./pages/admin/AdminAccessLogs";
 import AdminBankAccounts from "./pages/admin/AdminBankAccounts";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminWhatsApp from "./pages/admin/AdminWhatsApp";
 import AdminWellhubMembers from "./pages/admin/AdminWellhubMembers";
 import AdminWellhubCheckIn from "./pages/admin/AdminWellhubCheckIn";
 import ProfessorLogin from "./pages/ProfessorLogin";
@@ -124,6 +125,7 @@ function Router() {
       <Route path="/admin/payment-methods" component={AdminPaymentMethods} />
       <Route path="/admin/bank-accounts" component={AdminBankAccounts} />
       <Route path="/admin/settings" component={AdminSettings} />
+      <Route path="/admin/whatsapp" component={AdminWhatsApp} />
       <Route path="/admin/wellhub/members" component={AdminWellhubMembers} />
       <Route path="/admin/wellhub/checkin" component={AdminWellhubCheckIn} />
       <Route path="/admin/access-logs" component={AdminAccessLogs} />

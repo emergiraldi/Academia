@@ -899,6 +899,17 @@ export async function getProfessorById(id: number, gymId: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getProfessorByCpf(gymId: number, cpf: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(professors)
+    .where(and(eq(professors.gymId, gymId), eq(professors.cpf, cpf)))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function listProfessors(gymId: number) {
   const db = await getDb();
   if (!db) return [];
@@ -1479,6 +1490,22 @@ export async function getWorkoutById(id: number, gymId: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function updateWorkout(id: number, gymId: number, data: { name?: string; description?: string | null; startDate?: Date; endDate?: Date | null; active?: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(workouts)
+    .set(data)
+    .where(and(eq(workouts.id, id), eq(workouts.gymId, gymId)));
+  return { success: true };
+}
+
+export async function removeAllWorkoutExercises(workoutId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(workoutExercises).where(eq(workoutExercises.workoutId, workoutId));
+  return { success: true };
+}
+
 export async function deleteWorkout(id: number, gymId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -1725,6 +1752,17 @@ export async function markExerciseComplete(id: number) {
     .where(eq(workoutExercises.id, id));
 }
 
+export async function resetDayExercises(workoutId: number, dayOfWeek: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(workoutExercises)
+    .set({ completed: false, completedAt: null })
+    .where(and(
+      eq(workoutExercises.workoutId, workoutId),
+      eq(workoutExercises.dayOfWeek, dayOfWeek)
+    ));
+}
+
 export async function updateWorkoutExercise(id: number, updates: Partial<InsertWorkoutExercise>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -1760,6 +1798,8 @@ export async function getWorkoutWithExercises(workoutId: number, gymId: number) 
     restSeconds: workoutExercises.restSeconds,
     notes: workoutExercises.notes,
     orderIndex: workoutExercises.orderIndex,
+    completed: workoutExercises.completed,
+    completedAt: workoutExercises.completedAt,
     exerciseName: exercises.name,
     exerciseMuscleGroup: exercises.muscleGroup,
     exerciseImageUrl: exercises.imageUrl,
@@ -2927,6 +2967,16 @@ export async function deleteLead(id: number, gymId: number) {
 
 // ============ CLASS SCHEDULES ============
 
+const DAY_STRING_TO_INT: Record<string, number> = {
+  sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+  thursday: 4, friday: 5, saturday: 6,
+};
+
+function dayOfWeekToInt(day: string | number): number {
+  if (typeof day === 'number') return day;
+  return DAY_STRING_TO_INT[day] ?? 1;
+}
+
 export async function createClassSchedule(schedule: {
   name: string;
   type: string;
@@ -2940,7 +2990,7 @@ export async function createClassSchedule(schedule: {
   const conn = await getConnection();
   const [result] = await conn.execute(
     'INSERT INTO class_schedules (name, type, dayOfWeek, startTime, durationMinutes, capacity, professorId, gymId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [schedule.name, schedule.type, schedule.dayOfWeek, schedule.startTime, schedule.durationMinutes, schedule.capacity, schedule.professorId || null, schedule.gymId]
+    [schedule.name, schedule.type, dayOfWeekToInt(schedule.dayOfWeek), schedule.startTime, schedule.durationMinutes, schedule.capacity, schedule.professorId || null, schedule.gymId]
   );
   await conn.end();
   return { insertId: (result as any).insertId };
@@ -2951,6 +3001,7 @@ export async function getClassSchedulesByGym(gymId: number) {
   const [rows] = await conn.execute(
     `SELECT cs.*, u.name as professorName,
      (
+       (SELECT COUNT(*) FROM schedule_enrollments se WHERE se.scheduleId = cs.id AND se.status = 'active') +
        (SELECT COUNT(*) FROM class_bookings cb WHERE cb.scheduleId = cs.id AND cb.status IN ('confirmed', 'attended')) +
        (SELECT COUNT(*) FROM visitor_bookings vb WHERE vb.scheduleId = cs.id AND vb.status IN ('confirmed', 'attended'))
      ) as enrolledCount
@@ -2971,6 +3022,7 @@ export async function getClassScheduleById(id: number, gymId: number) {
   const [rows] = await conn.execute(
     `SELECT cs.*, u.name as professorName,
      (
+       (SELECT COUNT(*) FROM schedule_enrollments se WHERE se.scheduleId = cs.id AND se.status = 'active') +
        (SELECT COUNT(*) FROM class_bookings cb WHERE cb.scheduleId = cs.id AND cb.status IN ('confirmed', 'attended')) +
        (SELECT COUNT(*) FROM visitor_bookings vb WHERE vb.scheduleId = cs.id AND vb.status IN ('confirmed', 'attended'))
      ) as enrolledCount
@@ -2999,7 +3051,7 @@ export async function updateClassSchedule(id: number, gymId: number, updates: {
 
   if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
   if (updates.type !== undefined) { fields.push('type = ?'); values.push(updates.type); }
-  if (updates.dayOfWeek !== undefined) { fields.push('dayOfWeek = ?'); values.push(updates.dayOfWeek); }
+  if (updates.dayOfWeek !== undefined) { fields.push('dayOfWeek = ?'); values.push(dayOfWeekToInt(updates.dayOfWeek)); }
   if (updates.startTime !== undefined) { fields.push('startTime = ?'); values.push(updates.startTime); }
   if (updates.durationMinutes !== undefined) { fields.push('durationMinutes = ?'); values.push(updates.durationMinutes); }
   if (updates.capacity !== undefined) { fields.push('capacity = ?'); values.push(updates.capacity); }
@@ -3048,29 +3100,57 @@ export async function createClassBooking(booking: {
 
 export async function getClassBookingsBySchedule(scheduleId: number, bookingDate?: string) {
   const conn = await getConnection();
-  let query = `
-    SELECT cb.*,
+
+  // Bookings (reservas por data)
+  let bookingQuery = `
+    SELECT cb.id, cb.scheduleId, cb.status, cb.createdAt,
+           'booking' as source,
            s.id as studentTableId,
            u.name as studentName,
            u.email as studentEmail,
            s.phone as studentPhone
     FROM class_bookings cb
-    INNER JOIN users u ON cb.studentId = u.id
-    LEFT JOIN students s ON s.userId = u.id
+    INNER JOIN students s ON cb.studentId = s.id
+    INNER JOIN users u ON s.userId = u.id
     WHERE cb.scheduleId = ?
   `;
-  const params: any[] = [scheduleId];
+  const bookingParams: any[] = [scheduleId];
 
   if (bookingDate) {
-    query += ' AND cb.bookingDate = ?';
-    params.push(bookingDate);
+    bookingQuery += ' AND DATE(cb.bookingDate) = ?';
+    bookingParams.push(bookingDate);
   }
 
-  query += ' ORDER BY cb.bookingDate DESC, u.name';
+  // Enrollments (matrículas fixas)
+  const enrollQuery = `
+    SELECT se.id, se.scheduleId, se.status, se.createdAt,
+           'enrollment' as source,
+           s.id as studentTableId,
+           u.name as studentName,
+           u.email as studentEmail,
+           s.phone as studentPhone
+    FROM schedule_enrollments se
+    INNER JOIN students s ON se.studentId = s.id
+    INNER JOIN users u ON s.userId = u.id
+    WHERE se.scheduleId = ? AND se.status = 'active'
+  `;
 
-  const [rows] = await conn.execute(query, params);
+  const [bookingRows] = await conn.execute(bookingQuery, bookingParams);
+  const [enrollRows] = await conn.execute(enrollQuery, [scheduleId]);
   await conn.end();
-  return rows;
+
+  // Combinar, sem duplicar (enrollment tem prioridade)
+  const enrollStudentIds = new Set((enrollRows as any[]).map(r => r.studentTableId));
+  const filteredBookings = (bookingRows as any[]).filter(b => !enrollStudentIds.has(b.studentTableId));
+
+  return [...(enrollRows as any[]), ...filteredBookings];
+}
+
+export async function getClassBookingById(id: number) {
+  const conn = await getConnection();
+  const [rows] = await conn.execute('SELECT * FROM class_bookings WHERE id = ? LIMIT 1', [id]);
+  await conn.end();
+  return (rows as any[])[0] || null;
 }
 
 export async function getClassBookingsByStudent(studentId: number, gymId: number) {
@@ -3092,6 +3172,44 @@ export async function getClassBookingsByStudent(studentId: number, gymId: number
   );
   await conn.end();
   return rows;
+}
+
+export async function getStudentScheduleAndBookings(studentId: number, gymId: number) {
+  const conn = await getConnection();
+
+  // Bookings (reservas por data) - exclui cancelados
+  const [bookings] = await conn.execute(
+    `SELECT cb.id, cb.scheduleId, cb.bookingDate, cb.status, cb.createdAt,
+            'booking' as source,
+            cs.name as className, cs.type as classType,
+            cs.dayOfWeek, cs.startTime, cs.durationMinutes,
+            u.name as professorName
+     FROM class_bookings cb
+     INNER JOIN class_schedules cs ON cb.scheduleId = cs.id
+     LEFT JOIN users u ON cs.professorId = u.id
+     WHERE cb.studentId = ? AND cs.gymId = ? AND cb.status != 'cancelled'
+     ORDER BY cb.bookingDate DESC, cs.startTime`,
+    [studentId, gymId]
+  );
+
+  // Enrollments (matrículas fixas ativas)
+  const [enrollments] = await conn.execute(
+    `SELECT se.id, se.scheduleId, se.status, se.createdAt,
+            'enrollment' as source,
+            NULL as bookingDate,
+            cs.name as className, cs.type as classType,
+            cs.dayOfWeek, cs.startTime, cs.durationMinutes,
+            u.name as professorName
+     FROM schedule_enrollments se
+     INNER JOIN class_schedules cs ON se.scheduleId = cs.id
+     LEFT JOIN users u ON cs.professorId = u.id
+     WHERE se.studentId = ? AND se.gymId = ? AND se.status = 'active'
+     ORDER BY cs.dayOfWeek, cs.startTime`,
+    [studentId, gymId]
+  );
+
+  await conn.end();
+  return [...(enrollments as any[]), ...(bookings as any[])];
 }
 
 export async function getUpcomingClassBookings(gymId: number, limit: number = 50) {
@@ -3158,6 +3276,91 @@ export async function getBookingCountForDate(scheduleId: number, bookingDate: st
   );
   await conn.end();
   return ((rows as any[])[0]?.count || 0);
+}
+
+// ============ SCHEDULE ENROLLMENTS (Matrículas em Turmas) ============
+
+export async function getEnrollmentCountForSchedule(scheduleId: number) {
+  const conn = await getConnection();
+  const [rows] = await conn.execute(
+    'SELECT COUNT(*) as count FROM schedule_enrollments WHERE scheduleId = ? AND status = ?',
+    [scheduleId, 'active']
+  );
+  await conn.end();
+  return (rows as any[])[0]?.count || 0;
+}
+
+export async function getEnrollmentByStudentAndSchedule(studentId: number, scheduleId: number, gymId: number) {
+  const conn = await getConnection();
+  const [rows] = await conn.execute(
+    'SELECT * FROM schedule_enrollments WHERE studentId = ? AND scheduleId = ? AND gymId = ? AND status = ?',
+    [studentId, scheduleId, gymId, 'active']
+  );
+  await conn.end();
+  return (rows as any[])[0] || null;
+}
+
+export async function createScheduleEnrollment(enrollment: {
+  gymId: number;
+  studentId: number;
+  scheduleId: number;
+  enrolledBy: number;
+}) {
+  const conn = await getConnection();
+  const [result] = await conn.execute(
+    'INSERT INTO schedule_enrollments (gymId, scheduleId, studentId, enrolledBy, status) VALUES (?, ?, ?, ?, ?)',
+    [enrollment.gymId, enrollment.scheduleId, enrollment.studentId, enrollment.enrolledBy, 'active']
+  );
+  await conn.end();
+  return { insertId: (result as any).insertId };
+}
+
+export async function getEnrollmentById(enrollmentId: number, gymId: number) {
+  const conn = await getConnection();
+  const [rows] = await conn.execute(
+    `SELECT se.*, cs.name as scheduleName, cs.dayOfWeek, cs.startTime, cs.professorId
+     FROM schedule_enrollments se
+     JOIN class_schedules cs ON se.scheduleId = cs.id
+     WHERE se.id = ? AND se.gymId = ?`,
+    [enrollmentId, gymId]
+  );
+  await conn.end();
+  return (rows as any[])[0] || null;
+}
+
+export async function cancelScheduleEnrollment(enrollmentId: number, gymId: number) {
+  const conn = await getConnection();
+  const [result] = await conn.execute(
+    'UPDATE schedule_enrollments SET status = ? WHERE id = ? AND gymId = ?',
+    ['cancelled', enrollmentId, gymId]
+  );
+  await conn.end();
+  return { affectedRows: (result as any).affectedRows };
+}
+
+export async function getProfessorPhoneByUserId(professorUserId: number, gymId: number) {
+  const conn = await getConnection();
+  const [rows] = await conn.execute(
+    `SELECT p.phone FROM professors p WHERE p.userId = ? AND p.gymId = ?`,
+    [professorUserId, gymId]
+  );
+  await conn.end();
+  return (rows as any[])[0]?.phone || null;
+}
+
+export async function getEnrollmentsBySchedule(scheduleId: number, gymId: number) {
+  const conn = await getConnection();
+  const [rows] = await conn.execute(
+    `SELECT se.*, s.id as studentId, u.name as studentName, u.email as studentEmail, s.phone as studentPhone
+     FROM schedule_enrollments se
+     JOIN students s ON se.studentId = s.id
+     JOIN users u ON s.userId = u.id
+     WHERE se.scheduleId = ? AND se.gymId = ? AND se.status = ?
+     ORDER BY u.name`,
+    [scheduleId, gymId, 'active']
+  );
+  await conn.end();
+  return rows;
 }
 
 // ============ VISITOR BOOKINGS (Agendamentos de Visitantes) ============
@@ -3455,7 +3658,9 @@ export async function updateGymSettings(gymId: number, settings: any) {
       smtpFromEmail = ?,
       smtpFromName = ?,
       smtpUseTls = ?,
-      smtpUseSsl = ?
+      smtpUseSsl = ?,
+      allowStudentCancelBooking = ?,
+      minHoursToCancel = ?
     WHERE gymId = ?`,
     [
       settings.daysToBlockAfterDue,
@@ -3476,6 +3681,8 @@ export async function updateGymSettings(gymId: number, settings: any) {
       settings.smtpFromName || 'Academia',
       settings.smtpUseTls ?? true,
       settings.smtpUseSsl ?? false,
+      settings.allowStudentCancelBooking ?? true,
+      settings.minHoursToCancel ?? 0,
       gymId
     ]
   );

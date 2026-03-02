@@ -3,6 +3,12 @@ import { X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
+interface VideoItem {
+  id: number;
+  videoUrl: string;
+  title?: string | null;
+}
+
 interface ExerciseMediaModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -11,6 +17,52 @@ interface ExerciseMediaModalProps {
   videoUrl?: string;
   type: 'photo' | 'video';
   description?: string;
+  videos?: VideoItem[];
+}
+
+function convertToEmbed(url: string): { embedUrl: string; isEmbed: boolean } {
+  // YouTube
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)?.[1];
+    if (videoId) return { embedUrl: `https://www.youtube.com/embed/${videoId}`, isEmbed: true };
+  }
+  // Vimeo
+  if (url.includes('vimeo.com')) {
+    const videoId = url.match(/vimeo\.com\/(\d+)/)?.[1];
+    if (videoId) return { embedUrl: `https://player.vimeo.com/video/${videoId}`, isEmbed: true };
+  }
+  return { embedUrl: url, isEmbed: false };
+}
+
+function VideoPlayer({ url, title }: { url: string; title: string }) {
+  const { embedUrl, isEmbed } = convertToEmbed(url);
+
+  if (isEmbed) {
+    return (
+      <div className="aspect-video bg-black rounded-lg overflow-hidden">
+        <iframe
+          src={embedUrl}
+          title={title}
+          className="w-full h-full"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+
+  return (
+    <video
+      src={url}
+      controls
+      className="w-full rounded-lg max-h-96"
+      preload="metadata"
+      playsInline
+    >
+      Seu navegador não suporta vídeo.
+    </video>
+  );
 }
 
 /**
@@ -23,7 +75,8 @@ export function ExerciseMediaModal({
   photoUrl,
   videoUrl,
   type,
-  description
+  description,
+  videos = [],
 }: ExerciseMediaModalProps) {
   const renderContent = () => {
     if (type === 'photo' && photoUrl) {
@@ -42,40 +95,43 @@ export function ExerciseMediaModal({
       );
     }
 
-    if (type === 'video' && videoUrl) {
-      // Detectar se é YouTube ou Vimeo e converter para embed URL
-      let embedUrl = videoUrl;
+    if (type === 'video') {
+      // Combinar vídeo direto do exercício + vídeos da tabela exercise_videos
+      const allVideos: { url: string; title: string }[] = [];
 
-      // YouTube
-      if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
-        const videoId = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)?.[1];
-        if (videoId) {
-          embedUrl = `https://www.youtube.com/embed/${videoId}`;
-        }
+      if (videoUrl) {
+        allVideos.push({ url: videoUrl, title: "Vídeo principal" });
       }
-      // Vimeo
-      else if (videoUrl.includes('vimeo.com')) {
-        const videoId = videoUrl.match(/vimeo\.com\/(\d+)/)?.[1];
-        if (videoId) {
-          embedUrl = `https://player.vimeo.com/video/${videoId}`;
+
+      videos.forEach((v) => {
+        // Evitar duplicatas
+        if (v.videoUrl && v.videoUrl !== videoUrl) {
+          allVideos.push({ url: v.videoUrl, title: v.title || "Vídeo de demonstração" });
         }
+      });
+
+      if (allVideos.length === 0) {
+        return (
+          <div className="flex items-center justify-center bg-muted rounded-lg p-12 text-muted-foreground">
+            <p>Nenhum vídeo disponível para este exercício.</p>
+          </div>
+        );
       }
 
       return (
-        <div className="aspect-video bg-black rounded-lg overflow-hidden">
-          <iframe
-            src={embedUrl}
-            title={`Vídeo: ${exerciseName}`}
-            className="w-full h-full"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          ></iframe>
+        <div className="space-y-4">
+          {allVideos.map((v, i) => (
+            <div key={i}>
+              {allVideos.length > 1 && (
+                <p className="text-sm font-medium text-gray-600 mb-2">{v.title}</p>
+              )}
+              <VideoPlayer url={v.url} title={`${exerciseName} - ${v.title}`} />
+            </div>
+          ))}
         </div>
       );
     }
 
-    // Fallback caso não tenha mídia
     return (
       <div className="flex items-center justify-center bg-muted rounded-lg p-12 text-muted-foreground">
         <p>

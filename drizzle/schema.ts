@@ -42,6 +42,10 @@ export const gyms = mysqlTable("gyms", {
   merchantName: varchar("merchantName", { length: 200 }), // Nome do beneficiário PIX
   merchantCity: varchar("merchantCity", { length: 100 }), // Cidade do beneficiário PIX
 
+  // WAHA (WhatsApp) integration
+  wahaUrl: varchar("wahaUrl", { length: 500 }),
+  wahaApiKey: varchar("wahaApiKey", { length: 255 }),
+
   // Wellhub integration
   wellhubApiKey: varchar("wellhubApiKey", { length: 255 }),
   wellhubWebhookSecret: varchar("wellhubWebhookSecret", { length: 255 }),
@@ -1025,3 +1029,41 @@ export const landingPageScreenshots = mysqlTable("landing_page_screenshots", {
 
 export type LandingPageScreenshot = typeof landingPageScreenshots.$inferSelect;
 export type InsertLandingPageScreenshot = typeof landingPageScreenshots.$inferInsert;
+
+/**
+ * WhatsApp Billing Logs - logs de cobrança enviados via WhatsApp
+ */
+export const whatsappBillingLogs = mysqlTable("whatsapp_billing_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
+  paymentId: int("paymentId").notNull().references(() => payments.id, { onDelete: "cascade" }),
+  studentId: int("studentId").notNull().references(() => students.id, { onDelete: "cascade" }),
+  stage: varchar("stage", { length: 50 }).notNull(),
+  message: text("message"),
+  status: mysqlEnum("status", ["sent", "failed", "pending"]).default("pending").notNull(),
+  errorMessage: text("errorMessage"),
+  sentAt: timestamp("sentAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WhatsappBillingLog = typeof whatsappBillingLogs.$inferSelect;
+export type InsertWhatsappBillingLog = typeof whatsappBillingLogs.$inferInsert;
+
+/**
+ * Billing Stages - etapas customizáveis de cobrança por academia
+ */
+export const billingStages = mysqlTable("billing_stages", {
+  id: int("id").autoincrement().primaryKey(),
+  gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  triggerType: mysqlEnum("triggerType", ["before", "on", "after"]).notNull(),
+  daysOffset: int("daysOffset").notNull().default(0),
+  message: text("message").notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  displayOrder: int("displayOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BillingStage = typeof billingStages.$inferSelect;
+export type InsertBillingStage = typeof billingStages.$inferInsert;

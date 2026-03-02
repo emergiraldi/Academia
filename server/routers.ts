@@ -596,7 +596,7 @@ export const appRouter = router({
           registrationNumber,
           cpf: input.cpf,
           phone: input.phone || null,
-          birthDate: input.birthDate && input.birthDate.trim() !== '' ? new Date(input.birthDate) : null,
+          birthDate: input.birthDate && input.birthDate.trim() !== '' ? input.birthDate : null,
           membershipStatus: "inactive",
         });
 
@@ -917,7 +917,7 @@ export const appRouter = router({
           userId: userResult.insertId,
           cpf: input.cpf,
           phone: input.phone || null,
-          birthDate: input.dateOfBirth && input.dateOfBirth.trim() !== '' ? new Date(input.dateOfBirth) : null,
+          birthDate: input.dateOfBirth && input.dateOfBirth.trim() !== '' ? input.dateOfBirth : null,
           address: input.address || null,
           number: input.number || null,
           complement: input.complement || null,
@@ -1005,7 +1005,9 @@ export const appRouter = router({
         const studentUpdates: any = {};
         if (input.cpf !== undefined) studentUpdates.cpf = input.cpf;
         if (input.phone !== undefined) studentUpdates.phone = input.phone;
-        if (input.dateOfBirth !== undefined) studentUpdates.birthDate = input.dateOfBirth && input.dateOfBirth.trim() !== '' ? new Date(input.dateOfBirth) : null;
+        if (input.dateOfBirth !== undefined) {
+          studentUpdates.birthDate = input.dateOfBirth && input.dateOfBirth.trim() !== '' ? input.dateOfBirth : null;
+        }
         if (input.address !== undefined) studentUpdates.address = input.address;
         if (input.number !== undefined) studentUpdates.number = input.number;
         if (input.complement !== undefined) studentUpdates.complement = input.complement;
@@ -2433,6 +2435,18 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Iniciar treino do dia - reseta exercícios se não foi completado hoje
+    startWorkoutDay: studentProcedure
+      .input(z.object({
+        workoutId: z.number(),
+        dayOfWeek: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+        await db.resetDayExercises(input.workoutId, input.dayOfWeek);
+        return { success: true };
+      }),
+
     addExercise: professorProcedure
       .input(z.object({
         workoutId: z.number(),
@@ -2618,6 +2632,33 @@ export const appRouter = router({
         } finally {
           conn.release();
         }
+      }),
+
+    update: professorProcedure
+      .input(z.object({
+        workoutId: z.number(),
+        name: z.string(),
+        description: z.string().optional(),
+        startDate: z.string(),
+        endDate: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        }
+        const existing = await db.getWorkoutById(input.workoutId, ctx.user.gymId);
+        if (!existing) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Treino não encontrado" });
+        }
+        await db.updateWorkout(input.workoutId, ctx.user.gymId, {
+          name: input.name,
+          description: input.description || null,
+          startDate: new Date(input.startDate),
+          endDate: input.endDate ? new Date(input.endDate) : null,
+        });
+        // Remove all existing exercises and re-add (simplest approach for full edit)
+        await db.removeAllWorkoutExercises(input.workoutId);
+        return { success: true, workoutId: input.workoutId };
       }),
 
     delete: professorProcedure
@@ -2820,7 +2861,7 @@ export const appRouter = router({
 
     // Videos
     videos: router({
-      list: professorProcedure
+      list: protectedProcedure
         .input(z.object({ exerciseId: z.number() }))
         .query(async ({ input }) => {
           return await db.getExerciseVideos(input.exerciseId);
@@ -2883,6 +2924,25 @@ export const appRouter = router({
 
           await db.deleteExerciseVideo(input.videoId);
           return { success: true };
+        }),
+
+      // Adicionar vídeo por URL (YouTube/Vimeo)
+      addUrl: professorProcedure
+        .input(z.object({
+          exerciseId: z.number(),
+          videoUrl: z.string().url(),
+          title: z.string().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+          const result = await db.addExerciseVideo({
+            exerciseId: input.exerciseId,
+            createdBy: ctx.user.id,
+            videoUrl: input.videoUrl,
+            thumbnailUrl: null,
+            title: input.title || null,
+            durationSeconds: null,
+          });
+          return { success: true, videoId: result.insertId };
         }),
     }),
   }),
@@ -3160,7 +3220,7 @@ export const appRouter = router({
 
   // Professors Management
   professors: router({
-    list: gymAdminProcedure
+    list: protectedProcedure
       .input(z.object({ gymSlug: z.string() }))
       .query(async ({ ctx }) => {
         if (!ctx.user.gymId) throw new TRPCError({ code: "FORBIDDEN" });
@@ -3219,6 +3279,12 @@ export const appRouter = router({
             throw new TRPCError({ code: "CONFLICT", message: "Email já está em uso nesta academia" });
           }
 
+          // Check if CPF already exists for another professor in this gym
+          const existingCpf = await db.getProfessorByCpf(ctx.user.gymId, input.cpf);
+          if (existingCpf) {
+            throw new TRPCError({ code: "CONFLICT", message: "CPF já está cadastrado para outro professor nesta academia" });
+          }
+
           // Hash password
           const hashedPassword = await bcrypt.hash(input.password, 10);
 
@@ -3247,7 +3313,7 @@ export const appRouter = router({
             registrationNumber,
             cpf: input.cpf,
             phone: input.phone || null,
-            birthDate: input.birthDate && input.birthDate.trim() !== '' ? new Date(input.birthDate) : null,
+            birthDate: input.birthDate && input.birthDate.trim() !== '' ? input.birthDate : null,
             address: input.address || null,
             number: input.number || null,
             complement: input.complement || null,
@@ -3340,7 +3406,7 @@ export const appRouter = router({
         const professorUpdates: any = {};
         if (input.cpf) professorUpdates.cpf = input.cpf;
         if (input.phone !== undefined) professorUpdates.phone = input.phone;
-        if (input.birthDate !== undefined) professorUpdates.birthDate = input.birthDate && input.birthDate.trim() !== '' ? new Date(input.birthDate) : null;
+        if (input.birthDate !== undefined) professorUpdates.birthDate = input.birthDate && input.birthDate.trim() !== '' ? input.birthDate : null;
         if (input.address !== undefined) professorUpdates.address = input.address;
         if (input.number !== undefined) professorUpdates.number = input.number;
         if (input.complement !== undefined) professorUpdates.complement = input.complement;
@@ -3682,7 +3748,7 @@ export const appRouter = router({
             registrationNumber,
             cpf: input.cpf,
             phone: input.phone || null,
-            birthDate: input.birthDate && input.birthDate.trim() !== '' ? new Date(input.birthDate) : null,
+            birthDate: input.birthDate && input.birthDate.trim() !== '' ? input.birthDate : null,
             address: input.address || null,
             number: input.number || null,
             complement: input.complement || null,
@@ -3769,7 +3835,7 @@ export const appRouter = router({
         const staffUpdates: any = {};
         if (input.cpf) staffUpdates.cpf = input.cpf;
         if (input.phone !== undefined) staffUpdates.phone = input.phone;
-        if (input.birthDate !== undefined) staffUpdates.birthDate = input.birthDate && input.birthDate.trim() !== '' ? new Date(input.birthDate) : null;
+        if (input.birthDate !== undefined) staffUpdates.birthDate = input.birthDate && input.birthDate.trim() !== '' ? input.birthDate : null;
         if (input.address !== undefined) staffUpdates.address = input.address;
         if (input.number !== undefined) staffUpdates.number = input.number;
         if (input.complement !== undefined) staffUpdates.complement = input.complement;
@@ -4830,6 +4896,17 @@ export const appRouter = router({
 
   // ============ GYM SETTINGS (Parâmetros do Sistema) ============
   gymSettings: router({
+    // Regras de cancelamento (acessível pelo aluno)
+    getCancelRules: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (!ctx.user.gymId) return { allowStudentCancelBooking: true, minHoursToCancel: 0 };
+        const settings = await db.getGymSettings(ctx.user.gymId);
+        return {
+          allowStudentCancelBooking: settings?.allowStudentCancelBooking ?? true,
+          minHoursToCancel: settings?.minHoursToCancel ?? 0,
+        };
+      }),
+
     get: gymAdminProcedure
       .input(z.object({
         gymSlug: z.string(),
@@ -4871,6 +4948,9 @@ export const appRouter = router({
         smtpUseSsl: z.boolean().optional(),
         // Logo da Academia
         logoUrl: z.string().optional(),
+        // Regras de Agendamento
+        allowStudentCancelBooking: z.boolean().optional(),
+        minHoursToCancel: z.number().min(0).max(72).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
@@ -5102,7 +5182,36 @@ export const appRouter = router({
         id: z.number(),
       }))
       .mutation(async ({ ctx, input }) => {
-        await db.cancelClassBooking(input.id, ctx.user.id);
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+
+        // Verificar regras de cancelamento da academia
+        const settings = await db.getGymSettings(ctx.user.gymId);
+        if (settings && !settings.allowStudentCancelBooking && ctx.user.role === 'student') {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Esta academia não permite cancelamento de agendamentos pelo aluno." });
+        }
+
+        // Verificar antecedência mínima
+        if (settings && settings.minHoursToCancel > 0 && ctx.user.role === 'student') {
+          const booking = await db.getClassBookingById(input.id);
+          if (booking) {
+            const schedule = await db.getClassScheduleById(booking.scheduleId, ctx.user.gymId);
+            if (schedule && booking.bookingDate) {
+              const bookingDate = new Date(booking.bookingDate);
+              const [hours, minutes] = (schedule.startTime || '00:00').split(':').map(Number);
+              bookingDate.setHours(hours, minutes, 0, 0);
+              const hoursUntilClass = (bookingDate.getTime() - Date.now()) / (1000 * 60 * 60);
+              if (hoursUntilClass < settings.minHoursToCancel) {
+                throw new TRPCError({ code: "FORBIDDEN", message: `Cancelamento permitido apenas até ${settings.minHoursToCancel}h antes da aula.` });
+              }
+            }
+          }
+        }
+
+        // Buscar student.id a partir de ctx.user.id
+        const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+        if (!student) throw new TRPCError({ code: "NOT_FOUND", message: "Aluno não encontrado" });
+
+        await db.cancelClassBooking(input.id, student.id);
         return { success: true };
       }),
 
@@ -5112,7 +5221,9 @@ export const appRouter = router({
         if (!ctx.user.gymId) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
         }
-        return await db.getClassBookingsByStudent(ctx.user.id, ctx.user.gymId);
+        const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+        if (!student) return [];
+        return await db.getStudentScheduleAndBookings(student.id, ctx.user.gymId);
       }),
   }),
 
@@ -6331,6 +6442,381 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
         }
         return await db.deleteWorkoutLog(input.logId, ctx.user.gymId);
+      }),
+  }),
+
+  // ============ SCHEDULE ENROLLMENTS (Matriculas em Turmas) ============
+  enrollments: router({
+    // Matricular aluno em turma (admin/professor)
+    enroll: gymAdminOrStaffProcedure
+      .input(z.object({
+        scheduleId: z.number(),
+        studentId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+
+        const schedule = await db.getClassScheduleById(input.scheduleId, ctx.user.gymId);
+        if (!schedule || !schedule.active) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Horario nao encontrado" });
+        }
+
+        const currentCount = await db.getEnrollmentCountForSchedule(input.scheduleId);
+        if (currentCount >= schedule.capacity) {
+          throw new TRPCError({ code: "CONFLICT", message: "Turma lotada! Nao ha vagas disponiveis." });
+        }
+
+        const existing = await db.getEnrollmentByStudentAndSchedule(input.studentId, input.scheduleId, ctx.user.gymId);
+        if (existing) {
+          throw new TRPCError({ code: "CONFLICT", message: "Aluno ja esta matriculado nesta turma" });
+        }
+
+        await db.createScheduleEnrollment({
+          gymId: ctx.user.gymId,
+          studentId: input.studentId,
+          scheduleId: input.scheduleId,
+          enrolledBy: ctx.user.id,
+        });
+
+        return { success: true };
+      }),
+
+    // Matricula em lote (admin/professor)
+    enrollMultiple: gymAdminOrStaffProcedure
+      .input(z.object({
+        scheduleId: z.number(),
+        studentIds: z.array(z.number()).min(1).max(50),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+
+        const schedule = await db.getClassScheduleById(input.scheduleId, ctx.user.gymId);
+        if (!schedule || !schedule.active) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Horario nao encontrado" });
+        }
+
+        const currentCount = await db.getEnrollmentCountForSchedule(input.scheduleId);
+        const availableSlots = schedule.capacity - currentCount;
+
+        if (availableSlots <= 0) {
+          throw new TRPCError({ code: "CONFLICT", message: "Turma lotada! Nao ha vagas disponiveis." });
+        }
+
+        if (input.studentIds.length > availableSlots) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `Apenas ${availableSlots} vaga(s) disponivel(is), mas ${input.studentIds.length} aluno(s) selecionado(s).`,
+          });
+        }
+
+        let enrolled = 0;
+        const errors: string[] = [];
+
+        for (const studentId of input.studentIds) {
+          try {
+            const existing = await db.getEnrollmentByStudentAndSchedule(studentId, input.scheduleId, ctx.user.gymId);
+            if (existing) {
+              errors.push(`Aluno ID ${studentId} ja esta matriculado`);
+              continue;
+            }
+
+            await db.createScheduleEnrollment({
+              gymId: ctx.user.gymId,
+              studentId,
+              scheduleId: input.scheduleId,
+              enrolledBy: ctx.user.id,
+            });
+            enrolled++;
+          } catch (err: any) {
+            errors.push(`Aluno ID ${studentId}: ${err.message}`);
+          }
+        }
+
+        return { enrolled, errors, total: input.studentIds.length };
+      }),
+
+    // Trocar turma do aluno
+    changeSchedule: studentProcedure
+      .input(z.object({
+        enrollmentId: z.number(),
+        newScheduleId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+
+        const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+        if (!student) throw new TRPCError({ code: "NOT_FOUND", message: "Aluno nao encontrado" });
+
+        const enrollment = await db.getEnrollmentById(input.enrollmentId, ctx.user.gymId);
+        if (!enrollment || enrollment.studentId !== student.id || enrollment.status !== 'active') {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Matricula nao encontrada" });
+        }
+
+        const newSchedule = await db.getClassScheduleById(input.newScheduleId, ctx.user.gymId);
+        if (!newSchedule || !newSchedule.active) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Novo horario nao encontrado" });
+        }
+
+        const currentCount = await db.getEnrollmentCountForSchedule(input.newScheduleId);
+        if (currentCount >= newSchedule.capacity) {
+          throw new TRPCError({ code: "CONFLICT", message: "Turma lotada!" });
+        }
+
+        await db.cancelScheduleEnrollment(input.enrollmentId, ctx.user.gymId);
+        await db.createScheduleEnrollment({
+          gymId: ctx.user.gymId,
+          studentId: student.id,
+          scheduleId: input.newScheduleId,
+          enrolledBy: ctx.user.id,
+        });
+
+        return { success: true };
+      }),
+
+    // Cancelar matricula (aluno cancela propria matricula)
+    cancelMyEnrollment: studentProcedure
+      .input(z.object({ enrollmentId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+
+        // Verificar regras de cancelamento da academia
+        const settings = await db.getGymSettings(ctx.user.gymId);
+        if (settings && !settings.allowStudentCancelBooking) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Esta academia não permite cancelamento de agendamentos pelo aluno." });
+        }
+
+        const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
+        if (!student) throw new TRPCError({ code: "NOT_FOUND", message: "Aluno nao encontrado" });
+
+        // Verificar matricula pertence ao aluno
+        const enrollment = await db.getEnrollmentById(input.enrollmentId, ctx.user.gymId);
+        if (!enrollment || enrollment.studentId !== student.id || enrollment.status !== 'active') {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Matricula nao encontrada ou nao pertence a voce" });
+        }
+
+        // Cancelar matricula
+        await db.cancelScheduleEnrollment(input.enrollmentId, ctx.user.gymId);
+
+        // Notificar professor via WhatsApp (fire-and-forget)
+        try {
+          if (enrollment.professorId) {
+            const profPhone = await db.getProfessorPhoneByUserId(enrollment.professorId, ctx.user.gymId);
+            if (profPhone) {
+              const studentUser = await db.getUserById(ctx.user.id);
+              const DAY_LABELS: Record<string, string> = {
+                monday: "Segunda", tuesday: "Terca", wednesday: "Quarta",
+                thursday: "Quinta", friday: "Sexta", saturday: "Sabado", sunday: "Domingo",
+              };
+              const message =
+                `*Aluno cancelou matricula*\n\n` +
+                `O aluno *${studentUser?.name || "Aluno"}* cancelou sua matricula na turma *${enrollment.scheduleName}* (${DAY_LABELS[enrollment.dayOfWeek] || enrollment.dayOfWeek} as ${enrollment.startTime}).\n\n` +
+                `_Mensagem automatica do sistema._`;
+              const { sendTextMessage } = await import("./whatsapp");
+              await sendTextMessage(profPhone, message, ctx.user.gymId);
+            }
+          }
+        } catch (whatsappError: any) {
+          console.error("[cancelMyEnrollment] WhatsApp error:", whatsappError.message);
+        }
+
+        return { success: true };
+      }),
+
+    // Listar matriculados de uma turma
+    listBySchedule: gymAdminOrStaffProcedure
+      .input(z.object({ scheduleId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        return await db.getEnrollmentsBySchedule(input.scheduleId, ctx.user.gymId);
+      }),
+  }),
+
+  // ============ WHATSAPP BILLING (Cobranca Automatica por WhatsApp) ============
+  whatsappBilling: router({
+    // Obter configuração WAHA da academia
+    getConfig: gymAdminProcedure
+      .input(z.object({ gymSlug: z.string() }))
+      .query(async ({ ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        const database = await (await import("./db")).getDb();
+        if (!database) return { wahaUrl: null, wahaApiKey: null };
+        const { gyms } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        const [gym] = await database.select({ wahaUrl: gyms.wahaUrl, wahaApiKey: gyms.wahaApiKey }).from(gyms).where(eq(gyms.id, ctx.user.gymId));
+        return { wahaUrl: gym?.wahaUrl || null, wahaApiKey: gym?.wahaApiKey || null };
+      }),
+
+    // Status da sessão WhatsApp
+    getStatus: gymAdminProcedure
+      .input(z.object({ gymSlug: z.string() }))
+      .query(async ({ ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        const { getSessionStatus } = await import("./whatsapp");
+        return await getSessionStatus(ctx.user.gymId);
+      }),
+
+    // Iniciar sessão WhatsApp
+    startSession: gymAdminProcedure
+      .input(z.object({ gymSlug: z.string() }))
+      .mutation(async ({ ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        const { startSession } = await import("./whatsapp");
+        return await startSession(ctx.user.gymId);
+      }),
+
+    // Obter QR Code
+    getQr: gymAdminProcedure
+      .input(z.object({ gymSlug: z.string() }))
+      .mutation(async ({ ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        const { getQrCode } = await import("./whatsapp");
+        return await getQrCode(ctx.user.gymId);
+      }),
+
+    // Enviar mensagem de teste para um telefone
+    sendTest: gymAdminProcedure
+      .input(z.object({
+        gymSlug: z.string(),
+        phone: z.string().min(10),
+        message: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        const { sendMessage } = await import("./whatsapp");
+        return await sendMessage(ctx.user.gymId, input.phone, input.message);
+      }),
+
+    // Salvar configuração WAHA da academia
+    updateConfig: gymAdminProcedure
+      .input(z.object({
+        gymSlug: z.string(),
+        wahaUrl: z.string().min(1),
+        wahaApiKey: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        const database = await (await import("./db")).getDb();
+        if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        const { gyms } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        await database.update(gyms).set({ wahaUrl: input.wahaUrl, wahaApiKey: input.wahaApiKey }).where(eq(gyms.id, ctx.user.gymId));
+        return { success: true };
+      }),
+
+    runBilling: gymAdminProcedure
+      .input(z.object({ gymSlug: z.string() }))
+      .mutation(async ({ ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        const { processAutomaticBilling } = await import("./whatsappBilling");
+        return await processAutomaticBilling(ctx.user.gymId, true);
+      }),
+
+    getLogs: gymAdminProcedure
+      .input(z.object({
+        gymSlug: z.string(),
+        stage: z.string().optional(),
+        limit: z.number().default(50),
+      }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        const database = await (await import("./db")).getDb();
+        if (!database) return [];
+        const { whatsappBillingLogs } = await import("../drizzle/schema");
+        const { eq, and, desc } = await import("drizzle-orm");
+        const conditions = [eq(whatsappBillingLogs.gymId, ctx.user.gymId)];
+        if (input.stage) {
+          conditions.push(eq(whatsappBillingLogs.stage, input.stage));
+        }
+        return await database.select().from(whatsappBillingLogs).where(and(...conditions)).orderBy(desc(whatsappBillingLogs.sentAt)).limit(input.limit);
+      }),
+
+    logoutSession: gymAdminProcedure
+      .input(z.object({ gymSlug: z.string() }))
+      .mutation(async ({ ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        const { logoutSession } = await import("./whatsapp");
+        return await logoutSession(ctx.user.gymId);
+      }),
+
+    listStages: gymAdminProcedure
+      .input(z.object({ gymSlug: z.string() }))
+      .query(async ({ ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        const database = await (await import("./db")).getDb();
+        if (!database) return [];
+        const { billingStages } = await import("../drizzle/schema");
+        const { eq, asc } = await import("drizzle-orm");
+        return await database.select().from(billingStages).where(eq(billingStages.gymId, ctx.user.gymId)).orderBy(asc(billingStages.displayOrder));
+      }),
+
+    createStage: gymAdminProcedure
+      .input(z.object({
+        gymSlug: z.string(),
+        name: z.string().min(1),
+        triggerType: z.enum(["before", "on", "after"]),
+        daysOffset: z.number().min(0),
+        message: z.string().min(1),
+        enabled: z.boolean().default(true),
+        displayOrder: z.number().default(0),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        const database = await (await import("./db")).getDb();
+        if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        const { billingStages } = await import("../drizzle/schema");
+        const result = await database.insert(billingStages).values({
+          gymId: ctx.user.gymId,
+          name: input.name,
+          triggerType: input.triggerType,
+          daysOffset: input.daysOffset,
+          message: input.message,
+          enabled: input.enabled,
+          displayOrder: input.displayOrder,
+        });
+        return { success: true, id: result[0].insertId };
+      }),
+
+    updateStage: gymAdminProcedure
+      .input(z.object({
+        gymSlug: z.string(),
+        stageId: z.number(),
+        name: z.string().min(1).optional(),
+        triggerType: z.enum(["before", "on", "after"]).optional(),
+        daysOffset: z.number().min(0).optional(),
+        message: z.string().min(1).optional(),
+        enabled: z.boolean().optional(),
+        displayOrder: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        const database = await (await import("./db")).getDb();
+        if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        const { billingStages } = await import("../drizzle/schema");
+        const { eq, and } = await import("drizzle-orm");
+        const updates: any = {};
+        if (input.name !== undefined) updates.name = input.name;
+        if (input.triggerType !== undefined) updates.triggerType = input.triggerType;
+        if (input.daysOffset !== undefined) updates.daysOffset = input.daysOffset;
+        if (input.message !== undefined) updates.message = input.message;
+        if (input.enabled !== undefined) updates.enabled = input.enabled;
+        if (input.displayOrder !== undefined) updates.displayOrder = input.displayOrder;
+        await database.update(billingStages).set(updates).where(and(eq(billingStages.id, input.stageId), eq(billingStages.gymId, ctx.user.gymId)));
+        return { success: true };
+      }),
+
+    deleteStage: gymAdminProcedure
+      .input(z.object({
+        gymSlug: z.string(),
+        stageId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        const database = await (await import("./db")).getDb();
+        if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        const { billingStages } = await import("../drizzle/schema");
+        const { eq, and } = await import("drizzle-orm");
+        await database.delete(billingStages).where(and(eq(billingStages.id, input.stageId), eq(billingStages.gymId, ctx.user.gymId)));
+        return { success: true };
       }),
   }),
 

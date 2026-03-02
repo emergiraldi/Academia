@@ -51,6 +51,7 @@ import {
   Dumbbell,
   DoorOpen,
   Loader2,
+  MessageCircle,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -146,6 +147,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const bottomMenuItems = [
     { icon: Users, label: "Wellhub - Membros", path: "/admin/wellhub/members" },
     { icon: UserCheck, label: "Wellhub - Check-in", path: "/admin/wellhub/checkin" },
+    { icon: MessageCircle, label: "WhatsApp", path: "/admin/whatsapp" },
     { icon: FileText, label: "Relatórios", path: "/admin/reports" },
     { icon: Settings, label: "Parâmetros", path: "/admin/settings" },
   ];
