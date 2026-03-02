@@ -472,15 +472,19 @@ export const appRouter = router({
       return { success: true } as const;
     }),
 
-    // Student/Professor/Gym Admin login with email/password
+    // Student/Professor/Gym Admin login with email or CPF + password
     login: publicProcedure
       .input(z.object({
-        email: z.string().email(),
+        email: z.string().min(1), // Aceita email ou CPF
         password: z.string().min(6),
         gymSlug: z.string().optional(), // For multi-tenant selection
       }))
       .mutation(async ({ input, ctx }) => {
-        const user = await db.getUserByEmail(input.email);
+        // Detectar se é CPF (só números ou formato XXX.XXX.XXX-XX) ou email
+        const isCpf = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(input.email.trim());
+        const user = isCpf
+          ? await db.getUserByCpf(input.email.trim())
+          : await db.getUserByEmail(input.email);
         if (!user || !user.password) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
         }

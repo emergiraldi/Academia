@@ -61,17 +61,17 @@ export default function StudentLogin() {
             </div>
             <CardTitle className="text-2xl">Área do Aluno</CardTitle>
             <CardDescription>
-              Entre com seu email e senha para acessar
+              Entre com seu email ou CPF e senha para acessar
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email ou CPF</Label>
                 <Input
                   id="email"
-                  type="email"
-                  placeholder="seu@email.com"
+                  type="text"
+                  placeholder="seu@email.com ou 000.000.000-00"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

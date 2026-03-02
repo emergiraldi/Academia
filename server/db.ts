@@ -390,6 +390,20 @@ export async function getUserByEmail(email: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getUserByCpf(cpf: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  // CPF está na tabela students, buscar student → userId → user
+  const cleanCpf = cpf.replace(/\D/g, '');
+  const result = await db
+    .select({ student: students, user: users })
+    .from(students)
+    .innerJoin(users, eq(students.userId, users.id))
+    .where(or(eq(students.cpf, cleanCpf), eq(students.cpf, cpf)))
+    .limit(1);
+  return result.length > 0 ? result[0].user : undefined;
+}
+
 export async function getUserByEmailAndGym(email: string, gymId: number) {
   const db = await getDb();
   if (!db) return undefined;

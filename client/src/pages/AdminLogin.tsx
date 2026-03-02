@@ -67,11 +67,11 @@ export default function AdminLogin() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email ou CPF</Label>
                 <Input
                   id="email"
-                  type="email"
-                  placeholder="admin@email.com"
+                  type="text"
+                  placeholder="admin@email.com ou 000.000.000-00"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
