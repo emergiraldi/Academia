@@ -3652,6 +3652,10 @@ export async function getGymSettings(gymId: number) {
 }
 
 export async function updateGymSettings(gymId: number, settings: any) {
+  // Merge with current settings to avoid undefined values
+  const current = await getGymSettings(gymId);
+  const merged = { ...current, ...settings };
+
   const conn = await getConnection();
   const [result] = await conn.execute(
     `UPDATE gym_settings SET
@@ -3678,27 +3682,27 @@ export async function updateGymSettings(gymId: number, settings: any) {
       autoGeneratePayment = ?
     WHERE gymId = ?`,
     [
-      settings.daysToBlockAfterDue,
-      settings.blockOnExpiredExam,
-      settings.examValidityDays,
-      settings.minimumAge,
-      settings.daysToStartInterest,
-      settings.interestRatePerMonth,
-      settings.lateFeePercentage,
-      settings.allowInstallments,
-      settings.maxInstallments,
-      settings.minimumInstallmentValue,
-      settings.smtpHost || null,
-      settings.smtpPort || 587,
-      settings.smtpUser || null,
-      settings.smtpPassword || null,
-      settings.smtpFromEmail || null,
-      settings.smtpFromName || 'Academia',
-      settings.smtpUseTls ?? true,
-      settings.smtpUseSsl ?? false,
-      settings.allowStudentCancelBooking ?? true,
-      settings.minHoursToCancel ?? 0,
-      settings.autoGeneratePayment ?? true,
+      merged.daysToBlockAfterDue ?? 7,
+      merged.blockOnExpiredExam ?? true,
+      merged.examValidityDays ?? 90,
+      merged.minimumAge ?? 16,
+      merged.daysToStartInterest ?? 1,
+      merged.interestRatePerMonth ?? 2.00,
+      merged.lateFeePercentage ?? 2.00,
+      merged.allowInstallments ?? true,
+      merged.maxInstallments ?? 6,
+      merged.minimumInstallmentValue ?? 5000,
+      merged.smtpHost || null,
+      merged.smtpPort || 587,
+      merged.smtpUser || null,
+      merged.smtpPassword || null,
+      merged.smtpFromEmail || null,
+      merged.smtpFromName || 'Academia',
+      merged.smtpUseTls ?? true,
+      merged.smtpUseSsl ?? false,
+      merged.allowStudentCancelBooking ?? true,
+      merged.minHoursToCancel ?? 0,
+      merged.autoGeneratePayment ?? true,
       gymId
     ]
   );
