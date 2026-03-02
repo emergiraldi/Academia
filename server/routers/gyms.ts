@@ -536,6 +536,32 @@ export const gymsRouter = router({
           const result = await db.update(gyms).set(cleanData).where(eq(gyms.id, gymId));
           console.log("✅ [UPDATE GYMS] Update executado! Result:", result);
 
+          // Se o email da academia mudou, atualizar também o email do admin (users)
+          if (cleanData.email) {
+            const admins = await db
+              .select()
+              .from(users)
+              .where(and(eq(users.gymId, gymId), eq(users.role, "gym_admin")));
+
+            if (admins.length > 0) {
+              // Verificar se o novo email já existe em outro usuário
+              const [existingUser] = await db
+                .select()
+                .from(users)
+                .where(eq(users.email, cleanData.email as string));
+
+              if (!existingUser || existingUser.id === admins[0].id) {
+                await db
+                  .update(users)
+                  .set({ email: cleanData.email as string })
+                  .where(and(eq(users.gymId, gymId), eq(users.role, "gym_admin")));
+                console.log(`✅ [UPDATE GYMS] Email do admin atualizado para: ${cleanData.email}`);
+              } else {
+                console.log(`⚠️ [UPDATE GYMS] Email ${cleanData.email} já existe em outro usuário, admin não atualizado`);
+              }
+            }
+          }
+
           // Verificar dados salvos no banco
           const [updatedGym] = await db.select().from(gyms).where(eq(gyms.id, gymId));
           console.log("✅ [UPDATE GYMS] Dados salvos no banco:", JSON.stringify({
