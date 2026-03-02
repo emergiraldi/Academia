@@ -30,6 +30,7 @@ import {
   Copy,
   CheckCircle2,
   Key,
+  CalendarX2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -87,6 +88,9 @@ export default function AdminSettings() {
     smtpFromName: 'Academia',
     smtpUseTls: true,
     smtpUseSsl: false,
+    // Regras de Agendamento
+    allowStudentCancelBooking: true,
+    minHoursToCancel: 0,
     // Logo da Academia
     logoUrl: '',
   });
@@ -127,6 +131,9 @@ export default function AdminSettings() {
         smtpFromName: settings.smtpFromName || 'Academia',
         smtpUseTls: settings.smtpUseTls === 1,
         smtpUseSsl: settings.smtpUseSsl === 1,
+        // Regras de Agendamento
+        allowStudentCancelBooking: settings.allowStudentCancelBooking === 1 || settings.allowStudentCancelBooking === true,
+        minHoursToCancel: settings.minHoursToCancel || 0,
         // Logo da Academia
         logoUrl: settings.logoUrl || '',
       });
@@ -508,6 +515,63 @@ export default function AdminSettings() {
                 Alunos devem ter no mínimo {formData.minimumAge} anos para se cadastrar
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Regras de Agendamento */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CalendarX2 className="w-5 h-5 text-primary" />
+              <CardTitle>Regras de Agendamento</CardTitle>
+            </div>
+            <CardDescription>
+              Configure se alunos podem cancelar agendamentos e com qual antecedência
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Permitir aluno cancelar agendamento</Label>
+                <p className="text-sm text-muted-foreground">
+                  Se desativado, alunos não poderão cancelar seus agendamentos
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">{formData.allowStudentCancelBooking ? "Sim" : "Não"}</span>
+                <input
+                  type="checkbox"
+                  checked={formData.allowStudentCancelBooking}
+                  onChange={(e) => setFormData({ ...formData, allowStudentCancelBooking: e.target.checked })}
+                  className="h-5 w-5 rounded border-gray-300"
+                />
+              </div>
+            </div>
+
+            {formData.allowStudentCancelBooking && (
+              <div className="space-y-2 border-t pt-4">
+                <Label htmlFor="minHoursToCancel">Antecedência mínima para cancelamento (horas)</Label>
+                <Input
+                  id="minHoursToCancel"
+                  type="number"
+                  min="0"
+                  max="72"
+                  value={formData.minHoursToCancel}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      minHoursToCancel: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  className="max-w-xs"
+                />
+                <p className="text-sm text-muted-foreground">
+                  {formData.minHoursToCancel === 0
+                    ? "Aluno pode cancelar a qualquer momento"
+                    : `Aluno pode cancelar até ${formData.minHoursToCancel}h antes do horário da aula`}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
