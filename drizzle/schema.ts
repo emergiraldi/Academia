@@ -1,4 +1,4 @@
-import { boolean, decimal, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, date, decimal, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Gyms table - Multi-tenant support
@@ -241,7 +241,7 @@ export const students = mysqlTable("students", {
   registrationNumber: varchar("registrationNumber", { length: 50 }).notNull(),
   cpf: varchar("cpf", { length: 14 }).notNull(),
   phone: varchar("phone", { length: 20 }),
-  birthDate: timestamp("birthDate"),
+  birthDate: date("birthDate"),
   address: text("address"),
   number: varchar("number", { length: 20 }),
   complement: varchar("complement", { length: 100 }),
@@ -272,7 +272,7 @@ export const staff = mysqlTable("staff", {
   registrationNumber: varchar("registrationNumber", { length: 50 }).notNull(),
   cpf: varchar("cpf", { length: 14 }).notNull(),
   phone: varchar("phone", { length: 20 }),
-  birthDate: timestamp("birthDate"),
+  birthDate: date("birthDate"),
 
   // Address fields
   address: text("address"),
@@ -313,7 +313,7 @@ export const professors = mysqlTable("professors", {
   registrationNumber: varchar("registrationNumber", { length: 50 }).notNull(),
   cpf: varchar("cpf", { length: 14 }).notNull(),
   phone: varchar("phone", { length: 20 }),
-  birthDate: timestamp("birthDate"),
+  birthDate: date("birthDate"),
 
   // Address fields
   address: text("address"),
@@ -958,6 +958,23 @@ export const classSchedules = mysqlTable("class_schedules", {
 
 export type ClassSchedule = typeof classSchedules.$inferSelect;
 export type InsertClassSchedule = typeof classSchedules.$inferInsert;
+
+/**
+ * Schedule Enrollments - Matrículas permanentes de alunos em turmas
+ */
+export const scheduleEnrollments = mysqlTable("schedule_enrollments", {
+  id: int("id").autoincrement().primaryKey(),
+  gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
+  scheduleId: int("scheduleId").notNull().references(() => classSchedules.id, { onDelete: "cascade" }),
+  studentId: int("studentId").notNull().references(() => students.id, { onDelete: "cascade" }),
+  enrolledBy: int("enrolledBy").references(() => users.id, { onDelete: "set null" }),
+  status: mysqlEnum("status", ["active", "cancelled"]).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ScheduleEnrollment = typeof scheduleEnrollments.$inferSelect;
+export type InsertScheduleEnrollment = typeof scheduleEnrollments.$inferInsert;
 
 /**
  * Class Bookings - Reservas de alunos em aulas coletivas

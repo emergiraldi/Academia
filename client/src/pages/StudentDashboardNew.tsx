@@ -31,6 +31,9 @@ export default function StudentDashboardNew() {
   const [currentScreen, setCurrentScreen] = useState("dashboard");
   const [showNotifications, setShowNotifications] = useState(false);
   const [cancelBookingId, setCancelBookingId] = useState<number | null>(null);
+  const [cancelSource, setCancelSource] = useState<string>("booking");
+  const [swapEnrollmentId, setSwapEnrollmentId] = useState<number | null>(null);
+  const [swapScheduleId, setSwapScheduleId] = useState<string>("");
 
   // Queries
   const { data: student, refetch: refetchStudent } = trpc.students.me.useQuery(undefined, {
@@ -49,6 +52,28 @@ export default function StudentDashboardNew() {
     enabled: !!student,
   });
 
+  const { data: cancelRules } = trpc.gymSettings.getCancelRules.useQuery(undefined, {
+    enabled: !!student,
+  });
+
+  const { data: availableSchedules = [] } = trpc.schedules.list.useQuery({} as any, {
+    enabled: swapEnrollmentId !== null,
+  });
+
+  const canCancelBooking = (booking: any) => {
+    if (booking.status === 'cancelled') return false;
+    // Se cancelRules ainda carregando, permitir (backend valida de qualquer forma)
+    if (cancelRules && !cancelRules.allowStudentCancelBooking) return false;
+    if (cancelRules && cancelRules.minHoursToCancel > 0 && booking.bookingDate && booking.startTime) {
+      const bookingDate = new Date(booking.bookingDate);
+      const [h, m] = (booking.startTime || '00:00').split(':').map(Number);
+      bookingDate.setHours(h, m, 0, 0);
+      const hoursUntil = (bookingDate.getTime() - Date.now()) / (1000 * 60 * 60);
+      if (hoursUntil < cancelRules.minHoursToCancel) return false;
+    }
+    return true;
+  };
+
   const cancelBooking = trpc.bookings.cancel.useMutation({
     onSuccess: () => {
       toast.success("Agendamento cancelado com sucesso!");
@@ -57,6 +82,29 @@ export default function StudentDashboardNew() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Erro ao cancelar agendamento");
+    },
+  });
+
+  const cancelEnrollment = trpc.enrollments.cancelMyEnrollment.useMutation({
+    onSuccess: () => {
+      toast.success("Matrícula cancelada com sucesso!");
+      setCancelBookingId(null);
+      refetchMyBookings();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao cancelar matrícula");
+    },
+  });
+
+  const changeSchedule = trpc.enrollments.changeSchedule.useMutation({
+    onSuccess: () => {
+      toast.success("Horário trocado com sucesso!");
+      setSwapEnrollmentId(null);
+      setSwapScheduleId("");
+      refetchMyBookings();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao trocar horário");
     },
   });
 
@@ -131,6 +179,8 @@ export default function StudentDashboardNew() {
   const DAYS_SHORT: Record<string, string> = {
     monday: "Seg", tuesday: "Ter", wednesday: "Qua",
     thursday: "Qui", friday: "Sex", saturday: "Sáb", sunday: "Dom",
+    "0": "Dom", "1": "Seg", "2": "Ter", "3": "Qua",
+    "4": "Qui", "5": "Sex", "6": "Sáb",
   };
 
   const renderScreen = () => {
@@ -167,7 +217,7 @@ export default function StudentDashboardNew() {
                 onClick={() => setCurrentScreen("dashboard")}
                 className="p-2 rounded-lg bg-white shadow-sm"
               >
-                <Calendar className="w-5 h-5 text-blue-600" />
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
               </button>
               <h2 className="text-xl font-bold text-gray-900">Meus Horários</h2>
             </div>
@@ -180,25 +230,50 @@ export default function StudentDashboardNew() {
             ) : (
               <div className="space-y-3">
                 {myBookings.map((booking: any) => (
-                  <Card key={booking.id} className="bg-white/90 rounded-2xl shadow-lg p-4">
+                  <Card key={`${booking.source}-${booking.id}`} className="bg-white/90 rounded-2xl shadow-lg p-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-semibold text-gray-900">{booking.scheduleName || booking.className || "Aula"}</h3>
                         <p className="text-sm text-gray-600">
-                          {booking.dayOfWeek ? DAYS_SHORT[booking.dayOfWeek] || booking.dayOfWeek : ""} - {booking.startTime?.slice(0, 5) || ""}
+                          {booking.dayOfWeek != null ? DAYS_SHORT[String(booking.dayOfWeek)] || booking.dayOfWeek : ""} - {booking.startTime?.slice(0, 5) || ""}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString("pt-BR") : ""}
-                        </p>
+                        {booking.source === 'enrollment' && (
+                          <span className="text-xs text-blue-600 font-medium">Matrícula fixa</span>
+                        )}
+                        {booking.source === 'booking' && booking.bookingDate && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {new Date(booking.bookingDate).toLocaleDateString("pt-BR")}
+                          </p>
+                        )}
                       </div>
                       <div className="flex gap-2">
-                        {booking.status !== 'cancelled' && (
+                        {/* Botão Trocar - só para matrículas ativas */}
+                        {booking.source === 'enrollment' && booking.status === 'active' && (
                           <button
-                            onClick={() => setCancelBookingId(booking.id)}
+                            onClick={() => { setSwapEnrollmentId(booking.id); setSwapScheduleId(""); }}
+                            className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
+                          >
+                            Trocar
+                          </button>
+                        )}
+                        {/* Botão Cancelar */}
+                        {booking.status !== 'cancelled' && canCancelBooking(booking) && (
+                          <button
+                            onClick={() => { setCancelBookingId(booking.id); setCancelSource(booking.source || 'booking'); }}
                             className="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
                           >
                             Cancelar
                           </button>
+                        )}
+                        {booking.status !== 'cancelled' && !canCancelBooking(booking) && cancelRules && !cancelRules.allowStudentCancelBooking && (
+                          <span className="px-3 py-1.5 text-xs bg-gray-100 text-gray-400 rounded-lg">
+                            Cancelamento bloqueado
+                          </span>
+                        )}
+                        {booking.status !== 'cancelled' && !canCancelBooking(booking) && cancelRules?.allowStudentCancelBooking && cancelRules?.minHoursToCancel > 0 && (
+                          <span className="px-3 py-1.5 text-xs bg-yellow-50 text-yellow-600 rounded-lg">
+                            Prazo expirado
+                          </span>
                         )}
                         {booking.status === 'cancelled' && (
                           <span className="px-3 py-1.5 text-sm bg-gray-100 text-gray-500 rounded-lg">
@@ -216,9 +291,9 @@ export default function StudentDashboardNew() {
             <AlertDialog open={cancelBookingId !== null} onOpenChange={(open) => { if (!open) setCancelBookingId(null); }}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Cancelar Agendamento</AlertDialogTitle>
+                  <AlertDialogTitle>Cancelar {cancelSource === 'enrollment' ? 'Matrícula' : 'Agendamento'}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
+                    Tem certeza que deseja cancelar? Esta ação não pode ser desfeita.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -226,12 +301,55 @@ export default function StudentDashboardNew() {
                   <AlertDialogAction
                     onClick={() => {
                       if (cancelBookingId) {
-                        cancelBooking.mutate({ id: cancelBookingId });
+                        if (cancelSource === 'enrollment') {
+                          cancelEnrollment.mutate({ enrollmentId: cancelBookingId });
+                        } else {
+                          cancelBooking.mutate({ id: cancelBookingId });
+                        }
                       }
                     }}
                     className="bg-red-600 hover:bg-red-700"
                   >
                     Sim, Cancelar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Swap Schedule Dialog */}
+            <AlertDialog open={swapEnrollmentId !== null} onOpenChange={(open) => { if (!open) { setSwapEnrollmentId(null); setSwapScheduleId(""); } }}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Trocar Horário</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Escolha o novo horário para sua aula:
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="py-4 space-y-2 max-h-60 overflow-y-auto">
+                  {(availableSchedules as any[])
+                    .filter((s: any) => s.active && s.enrolledCount < s.capacity)
+                    .map((s: any) => (
+                      <label key={s.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition ${swapScheduleId === String(s.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                        <input type="radio" name="swapSchedule" value={s.id} checked={swapScheduleId === String(s.id)} onChange={() => setSwapScheduleId(String(s.id))} className="text-blue-600" />
+                        <div>
+                          <p className="font-medium text-sm">{s.name} - {s.type}</p>
+                          <p className="text-xs text-gray-500">{DAYS_SHORT[String(s.dayOfWeek)] || s.dayOfWeek} às {s.startTime?.slice(0, 5)} ({s.enrolledCount}/{s.capacity} vagas)</p>
+                        </div>
+                      </label>
+                    ))}
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      if (swapEnrollmentId && swapScheduleId) {
+                        changeSchedule.mutate({ enrollmentId: swapEnrollmentId, newScheduleId: parseInt(swapScheduleId) });
+                      }
+                    }}
+                    disabled={!swapScheduleId}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Confirmar Troca
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

@@ -53,10 +53,19 @@ const DAYS_MAP: Record<string, string> = {
   friday: "Sexta",
   saturday: "Sábado",
   sunday: "Domingo",
+  "0": "Domingo",
+  "1": "Segunda",
+  "2": "Terça",
+  "3": "Quarta",
+  "4": "Quinta",
+  "5": "Sexta",
+  "6": "Sábado",
 };
 
 export default function AdminSchedule() {
   const [createScheduleOpen, setCreateScheduleOpen] = useState(false);
+  const [editScheduleOpen, setEditScheduleOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<any>(null);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [participantsModalOpen, setParticipantsModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
@@ -97,10 +106,10 @@ export default function AdminSchedule() {
     },
   });
 
-  const { data: professors } = trpc.professors.list.useQuery({ gymSlug }, {
+  const { data: professors = [] } = trpc.professors.list.useQuery({ gymSlug: gymSlug || '' }, {
     enabled: !!gymSlug,
     retry: false,
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Erro ao carregar professores:", error.message);
     },
   });
@@ -191,6 +200,18 @@ export default function AdminSchedule() {
     },
   });
 
+  const updateSchedule = trpc.schedules.update.useMutation({
+    onSuccess: () => {
+      toast.success("Horário atualizado!");
+      setEditScheduleOpen(false);
+      setEditingSchedule(null);
+      refetchSchedules();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao atualizar horário");
+    },
+  });
+
   const deleteSchedule = trpc.schedules.delete.useMutation({
     onSuccess: () => {
       toast.success("Horário excluído!");
@@ -260,6 +281,37 @@ export default function AdminSchedule() {
     createSchedule.mutate({
       ...scheduleForm,
       professorId: scheduleForm.professorId ? parseInt(scheduleForm.professorId) : undefined,
+    });
+  };
+
+  const DAY_INT_TO_STRING: Record<number, string> = {
+    0: "sunday", 1: "monday", 2: "tuesday", 3: "wednesday",
+    4: "thursday", 5: "friday", 6: "saturday",
+  };
+
+  const handleEditSchedule = (schedule: any) => {
+    setEditingSchedule(schedule);
+    const dayValue = typeof schedule.dayOfWeek === 'number'
+      ? DAY_INT_TO_STRING[schedule.dayOfWeek] || "monday"
+      : schedule.dayOfWeek || "monday";
+    setScheduleForm({
+      name: schedule.name || "",
+      type: schedule.type || "",
+      dayOfWeek: dayValue,
+      startTime: schedule.startTime?.slice(0, 5) || "",
+      durationMinutes: schedule.durationMinutes || 60,
+      capacity: schedule.capacity || 20,
+      professorId: schedule.professorId ? schedule.professorId.toString() : "",
+    });
+    setEditScheduleOpen(true);
+  };
+
+  const handleUpdateSchedule = () => {
+    if (!editingSchedule) return;
+    updateSchedule.mutate({
+      id: editingSchedule.id,
+      ...scheduleForm,
+      professorId: scheduleForm.professorId && scheduleForm.professorId !== "none" ? parseInt(scheduleForm.professorId) : undefined,
     });
   };
 
@@ -474,8 +526,8 @@ export default function AdminSchedule() {
                         <SelectContent>
                           <SelectItem value="none">Nenhum</SelectItem>
                           {professors?.map((prof: any) => (
-                            <SelectItem key={prof.id} value={prof.id.toString()}>
-                              {prof.name}
+                            <SelectItem key={prof.id} value={prof.userId.toString()}>
+                              {prof.userName}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -598,6 +650,13 @@ export default function AdminSchedule() {
                           >
                             <UserPlus className="h-4 w-4 mr-1" />
                             Agendar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditSchedule(schedule)}
+                          >
+                            <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -800,15 +859,15 @@ export default function AdminSchedule() {
 
         {/* Modal de Participantes/Presença */}
         <Dialog open={participantsModalOpen} onOpenChange={setParticipantsModalOpen}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Lista de Participantes</DialogTitle>
               <DialogDescription>
-                {selectedSchedule?.name} - {bookingForm.bookingDate}
+                {selectedSchedule?.name} - {DAYS_MAP[selectedSchedule?.dayOfWeek] || ''} às {selectedSchedule?.startTime?.slice(0, 5)}
               </DialogDescription>
             </DialogHeader>
-            <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
-              <div>
+            <div className="space-y-4">
+              <div className="w-48">
                 <Label>Data</Label>
                 <Input
                   type="date"
@@ -946,6 +1005,78 @@ export default function AdminSchedule() {
                   Nenhum participante agendado para esta data.
                 </div>
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+        {/* Modal de Editar Horário */}
+        <Dialog open={editScheduleOpen} onOpenChange={(open) => { setEditScheduleOpen(open); if (!open) setEditingSchedule(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Horário de Aula</DialogTitle>
+              <DialogDescription>Altere os dados do horário</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Nome da Aula *</Label>
+                  <Input value={scheduleForm.name} onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Tipo *</Label>
+                  <Input value={scheduleForm.type} onChange={(e) => setScheduleForm({ ...scheduleForm, type: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Dia da Semana *</Label>
+                  <Select value={scheduleForm.dayOfWeek} onValueChange={(value) => setScheduleForm({ ...scheduleForm, dayOfWeek: value })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monday">Segunda-feira</SelectItem>
+                      <SelectItem value="tuesday">Terça-feira</SelectItem>
+                      <SelectItem value="wednesday">Quarta-feira</SelectItem>
+                      <SelectItem value="thursday">Quinta-feira</SelectItem>
+                      <SelectItem value="friday">Sexta-feira</SelectItem>
+                      <SelectItem value="saturday">Sábado</SelectItem>
+                      <SelectItem value="sunday">Domingo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Horário *</Label>
+                  <Input type="time" value={scheduleForm.startTime} onChange={(e) => setScheduleForm({ ...scheduleForm, startTime: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Duração (min) *</Label>
+                  <Input type="number" value={scheduleForm.durationMinutes} onChange={(e) => setScheduleForm({ ...scheduleForm, durationMinutes: parseInt(e.target.value) })} />
+                </div>
+                <div>
+                  <Label>Capacidade *</Label>
+                  <Input type="number" value={scheduleForm.capacity} onChange={(e) => setScheduleForm({ ...scheduleForm, capacity: parseInt(e.target.value) })} />
+                </div>
+                <div>
+                  <Label>Professor</Label>
+                  <Select
+                    value={scheduleForm.professorId || "none"}
+                    onValueChange={(value) => setScheduleForm({ ...scheduleForm, professorId: value === "none" ? "" : value })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {professors?.map((prof: any) => (
+                        <SelectItem key={prof.id} value={prof.userId.toString()}>
+                          {prof.userName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button onClick={handleUpdateSchedule} disabled={updateSchedule.isPending} className="w-full">
+                {updateSchedule.isPending ? "Salvando..." : "Salvar Alterações"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

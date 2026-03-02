@@ -356,7 +356,7 @@ export default function AdminStudents() {
       gymSlug,
       ...formData,
       planId: parseInt(formData.planId),
-      professorId: formData.professorId ? parseInt(formData.professorId) : undefined,
+      professorId: formData.professorId && formData.professorId !== "none" ? parseInt(formData.professorId) : undefined,
     });
   };
 
@@ -382,7 +382,7 @@ export default function AdminStudents() {
       studentId: editingStudent.id,
       ...formData,
       planId: formData.planId ? parseInt(formData.planId) : undefined,
-      professorId: formData.professorId ? parseInt(formData.professorId) : null,
+      professorId: formData.professorId && formData.professorId !== "none" ? parseInt(formData.professorId) : null,
     });
   };
 
@@ -672,9 +672,10 @@ export default function AdminStudents() {
                         <SelectValue placeholder="Selecione um professor (opcional)" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
                         {professors?.map((professor: any) => (
                           <SelectItem key={professor.id} value={professor.userId.toString()}>
-                            {professor.userName || professor.name}
+                            {professor.userName}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1345,7 +1346,7 @@ export default function AdminStudents() {
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um plano" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" className="z-[9999]">
                       {plans?.map((plan) => (
                         <SelectItem key={plan.id} value={plan.id.toString()}>
                           {plan.name} - R$ {(plan.priceInCents / 100).toFixed(2)}
@@ -1361,10 +1362,11 @@ export default function AdminStudents() {
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um professor (opcional)" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" className="z-[9999]">
+                      <SelectItem value="none">Nenhum</SelectItem>
                       {professors?.map((professor: any) => (
                         <SelectItem key={professor.id} value={professor.userId.toString()}>
-                          {professor.userName || professor.name}
+                          {professor.userName}
                         </SelectItem>
                       ))}
                     </SelectContent>
