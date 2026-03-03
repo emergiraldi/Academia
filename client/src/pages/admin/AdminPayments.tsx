@@ -183,16 +183,32 @@ export default function AdminPayments() {
     setCurrentPage(1);
   };
 
-  // Calculate totals - usar totalAmountInCents que inclui juros/multas
-  const totalReceived = payments
+  // Calculate totals based on date-filtered payments (respects period filter)
+  const periodFiltered = payments.filter((p: any) => {
+    let matchesPeriod = true;
+    const dueDate = new Date(p.dueDate);
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      matchesPeriod = matchesPeriod && dueDate >= fromDate;
+    }
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      matchesPeriod = matchesPeriod && dueDate <= toDate;
+    }
+    return matchesPeriod;
+  });
+
+  const totalReceived = periodFiltered
     .filter((p: any) => p.status === "paid")
     .reduce((sum: number, p: any) => sum + p.amountInCents, 0);
 
-  const totalPending = payments
+  const totalPending = periodFiltered
     .filter((p: any) => p.status === "pending")
     .reduce((sum: number, p: any) => sum + (p.totalAmountInCents || p.amountInCents), 0);
 
-  const totalOverdue = payments
+  const totalOverdue = periodFiltered
     .filter((p: any) => {
       if (p.status !== "pending") return false;
       return new Date(p.dueDate) < new Date();
@@ -943,7 +959,7 @@ export default function AdminPayments() {
                 })}
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                {payments.filter((p: any) => p.status === "paid").length} pagamentos
+                {periodFiltered.filter((p: any) => p.status === "paid").length} pagamentos
               </p>
             </CardContent>
           </Card>
@@ -965,7 +981,7 @@ export default function AdminPayments() {
                 })}
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                {payments.filter((p: any) => p.status === "pending").length} pagamentos
+                {periodFiltered.filter((p: any) => p.status === "pending").length} pagamentos
               </p>
             </CardContent>
           </Card>
@@ -988,7 +1004,7 @@ export default function AdminPayments() {
               </div>
               <p className="text-sm text-muted-foreground mt-1">
                 {
-                  payments.filter(
+                  periodFiltered.filter(
                     (p: any) => p.status === "pending" && new Date(p.dueDate) < new Date()
                   ).length
                 }{" "}
