@@ -1000,12 +1000,9 @@ export default function AdminPayments() {
 
         {/* Filters and Search */}
         <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle>Filtros</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
-              <div>
+          <CardContent className="pt-6">
+            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5 items-end">
+              <div className="space-y-1.5">
                 <Label>Buscar Aluno</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -1018,11 +1015,11 @@ export default function AdminPayments() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label>Período</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Button variant="outline" className="w-full justify-start text-left font-normal h-10">
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {dateFrom && dateTo ? (
                         <>
@@ -1079,7 +1076,7 @@ export default function AdminPayments() {
                 </Popover>
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <Label>Status</Label>
                 <Select value={statusFilter} onValueChange={(v) => handleFilterChange(setStatusFilter, v)}>
                   <SelectTrigger>
@@ -1096,7 +1093,7 @@ export default function AdminPayments() {
                 </Select>
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <Label>Método</Label>
                 <Select value={methodFilter} onValueChange={(v) => handleFilterChange(setMethodFilter, v)}>
                   <SelectTrigger>
@@ -1113,7 +1110,7 @@ export default function AdminPayments() {
                 </Select>
               </div>
 
-              <div className="flex items-end">
+              <div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="w-full">
