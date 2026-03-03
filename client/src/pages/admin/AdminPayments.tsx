@@ -1001,8 +1001,8 @@ export default function AdminPayments() {
         {/* Filters and Search */}
         <Card className="shadow-md">
           <CardContent className="pt-6">
-            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5 items-end">
-              <div className="space-y-1.5">
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="space-y-1.5 w-full sm:w-auto sm:min-w-[180px] sm:flex-1">
                 <Label>Buscar Aluno</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -1015,23 +1015,25 @@ export default function AdminPayments() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 w-full sm:w-auto">
                 <Label>Período</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal h-10">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                    <Button variant="outline" className="w-full justify-start text-left font-normal h-10 min-w-[160px]">
+                      <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                      <span className="truncate">
                       {dateFrom && dateTo ? (
                         <>
-                          {format(dateFrom, "dd/MM/yyyy", { locale: ptBR })} - {format(dateTo, "dd/MM/yyyy", { locale: ptBR })}
+                          {format(dateFrom, "dd/MM/yy", { locale: ptBR })} - {format(dateTo, "dd/MM/yy", { locale: ptBR })}
                         </>
                       ) : dateFrom ? (
-                        <>Desde {format(dateFrom, "dd/MM/yyyy", { locale: ptBR })}</>
+                        <>Desde {format(dateFrom, "dd/MM/yy", { locale: ptBR })}</>
                       ) : dateTo ? (
-                        <>Até {format(dateTo, "dd/MM/yyyy", { locale: ptBR })}</>
+                        <>Até {format(dateTo, "dd/MM/yy", { locale: ptBR })}</>
                       ) : (
-                        <span className="text-muted-foreground">Selecione o período</span>
+                        <span className="text-muted-foreground">Selecione</span>
                       )}
+                      </span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -1076,7 +1078,7 @@ export default function AdminPayments() {
                 </Popover>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 w-[calc(50%-6px)] sm:w-auto sm:min-w-[120px]">
                 <Label>Status</Label>
                 <Select value={statusFilter} onValueChange={(v) => handleFilterChange(setStatusFilter, v)}>
                   <SelectTrigger>
@@ -1093,7 +1095,7 @@ export default function AdminPayments() {
                 </Select>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 w-[calc(50%-6px)] sm:w-auto sm:min-w-[120px]">
                 <Label>Método</Label>
                 <Select value={methodFilter} onValueChange={(v) => handleFilterChange(setMethodFilter, v)}>
                   <SelectTrigger>
@@ -1110,10 +1112,10 @@ export default function AdminPayments() {
                 </Select>
               </div>
 
-              <div>
+              <div className="w-full sm:w-auto">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full sm:w-auto">
                       <Download className="w-4 h-4 mr-2" />
                       Exportar
                     </Button>
