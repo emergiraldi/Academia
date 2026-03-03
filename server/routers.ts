@@ -933,13 +933,9 @@ export const appRouter = router({
           professorId: input.professorId || null,
         });
 
-        // Check if gym auto-generates payment on student creation
-        const gymSettings = await db.getGymSettings(gym.id);
-        const autoGenerate = gymSettings?.autoGeneratePayment !== 0 && gymSettings?.autoGeneratePayment !== false;
-
-        // Create subscription and first payment (if enabled)
+        // Always create subscription (links student to plan)
         const plan = await db.getPlanById(input.planId, gym.id);
-        if (plan && autoGenerate) {
+        if (plan) {
           const subscriptionResult = await db.createSubscription({
             gymId: gym.id,
             studentId: studentResult.insertId,
@@ -949,16 +945,22 @@ export const appRouter = router({
             endDate: new Date(Date.now() + plan.durationDays * 24 * 60 * 60 * 1000),
           });
 
-          // Create first payment
-          await db.createPayment({
-            gymId: gym.id,
-            studentId: studentResult.insertId,
-            subscriptionId: subscriptionResult.insertId,
-            amountInCents: plan.priceInCents,
-            dueDate: new Date(),
-            status: "pending",
-            paymentMethod: "pix",
-          });
+          // Check if gym auto-generates first payment on student creation
+          const gymSettings = await db.getGymSettings(gym.id);
+          const autoGenerate = gymSettings?.autoGeneratePayment !== 0 && gymSettings?.autoGeneratePayment !== false;
+
+          if (autoGenerate) {
+            // Create first payment only if auto-generate is enabled
+            await db.createPayment({
+              gymId: gym.id,
+              studentId: studentResult.insertId,
+              subscriptionId: subscriptionResult.insertId,
+              amountInCents: plan.priceInCents,
+              dueDate: new Date(),
+              status: "pending",
+              paymentMethod: "pix",
+            });
+          }
         }
 
         return { success: true, studentId: studentResult.insertId };
