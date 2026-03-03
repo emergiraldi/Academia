@@ -62,10 +62,12 @@ import { useGym } from "@/_core/hooks/useGym";
 
 export default function AdminPayments() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [methodFilter, setMethodFilter] = useState<string>("all");
-  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
-  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [dateTo, setDateTo] = useState<Date | undefined>(() => new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0));
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
@@ -170,6 +172,16 @@ export default function AdminPayments() {
 
     return matchesSearch && matchesStatus && matchesMethod && matchesPeriod;
   });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredPayments.length / pageSize);
+  const paginatedPayments = filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // Reset page when filters change
+  const handleFilterChange = (setter: (v: any) => void, value: any) => {
+    setter(value);
+    setCurrentPage(1);
+  };
 
   // Calculate totals - usar totalAmountInCents que inclui juros/multas
   const totalReceived = payments
@@ -1000,7 +1012,7 @@ export default function AdminPayments() {
                   <Input
                     placeholder="Nome ou matrícula..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleFilterChange(setSearchTerm, e.target.value)}
                     className="pl-10"
                   />
                 </div>
@@ -1028,13 +1040,14 @@ export default function AdminPayments() {
                   <PopoverContent className="w-auto p-0" align="start">
                     <div className="p-3 space-y-2 border-b">
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>
+                        <Button variant="outline" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); setCurrentPage(1); }}>
                           Limpar
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => {
                           const now = new Date();
                           setDateFrom(new Date(now.getFullYear(), now.getMonth(), 1));
                           setDateTo(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+                          setCurrentPage(1);
                         }}>
                           Mês Atual
                         </Button>
@@ -1068,7 +1081,7 @@ export default function AdminPayments() {
 
               <div>
                 <Label>Status</Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select value={statusFilter} onValueChange={(v) => handleFilterChange(setStatusFilter, v)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -1085,7 +1098,7 @@ export default function AdminPayments() {
 
               <div>
                 <Label>Método</Label>
-                <Select value={methodFilter} onValueChange={setMethodFilter}>
+                <Select value={methodFilter} onValueChange={(v) => handleFilterChange(setMethodFilter, v)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -1160,7 +1173,7 @@ export default function AdminPayments() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredPayments.map((payment: any) => {
+                  paginatedPayments.map((payment: any) => {
                     const originalAmount = payment.originalAmountInCents || payment.amountInCents;
                     const lateFee = payment.lateFeeInCents || 0;
                     const interest = payment.interestInCents || 0;
@@ -1273,6 +1286,63 @@ export default function AdminPayments() {
                 )}
               </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {filteredPayments.length > 0 && (
+              <div className="flex items-center justify-between pt-4 border-t mt-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>Mostrando {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, filteredPayments.length)} de {filteredPayments.length}</span>
+                  <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
+                    <SelectTrigger className="w-20 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span>por página</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                  >
+                    «
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    ‹
+                  </Button>
+                  <span className="px-3 text-sm font-medium">
+                    {currentPage} / {totalPages || 1}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                  >
+                    ›
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage >= totalPages}
+                  >
+                    »
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
