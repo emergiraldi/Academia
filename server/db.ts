@@ -1205,15 +1205,16 @@ export async function updatePayment(id: number, gymId: number, data: Partial<Ins
  */
 export async function calculateLateFeeAndInterest(
   payment: Payment,
-  gymId: number
+  gymId: number,
+  preloadedSettings?: any
 ): Promise<{
   lateFeeInCents: number;
   interestInCents: number;
   totalAmountInCents: number;
   daysOverdue: number;
 }> {
-  // Get gym settings
-  const settings = await getGymSettings(gymId);
+  // Use preloaded settings if available, otherwise fetch from DB
+  const settings = preloadedSettings !== undefined ? preloadedSettings : await getGymSettings(gymId);
   if (!settings) {
     return {
       lateFeeInCents: 0,
