@@ -951,9 +951,9 @@ export const appRouter = router({
 
           if (autoGenerate) {
             // Create first payment only if auto-generate is enabled
-            // Use date string to avoid timezone shift (UTC vs Brazil UTC-3)
+            // Use date string with noon time to avoid timezone shift (UTC vs Brazil UTC-3)
             const now = new Date();
-            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} 12:00:00`;
             await db.createPayment({
               gymId: gym.id,
               studentId: studentResult.insertId,

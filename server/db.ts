@@ -1434,8 +1434,8 @@ export async function generateMonthlyPayments(
         const startDate = new Date(sub.startDate);
         dueDayToUse = startDate.getDate();
       }
-      // Use date string to avoid timezone shift (UTC vs Brazil UTC-3)
-      const dueDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dueDayToUse).padStart(2, '0')}`;
+      // Use date string with noon time to avoid timezone shift (UTC vs Brazil UTC-3)
+      const dueDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dueDayToUse).padStart(2, '0')} 12:00:00`;
 
       // Check if payment already exists for this month
       const [existing] = await conn.execute(`
