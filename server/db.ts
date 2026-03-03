@@ -3683,13 +3683,13 @@ export async function updateGymSettings(gymId: number, settings: any) {
     WHERE gymId = ?`,
     [
       merged.daysToBlockAfterDue ?? 7,
-      merged.blockOnExpiredExam ?? true,
+      merged.blockOnExpiredExam ? 1 : 0,
       merged.examValidityDays ?? 90,
       merged.minimumAge ?? 16,
       merged.daysToStartInterest ?? 1,
-      merged.interestRatePerMonth ?? 2.00,
-      merged.lateFeePercentage ?? 2.00,
-      merged.allowInstallments ?? true,
+      Number(merged.interestRatePerMonth) || 0,
+      Number(merged.lateFeePercentage) || 0,
+      merged.allowInstallments ? 1 : 0,
       merged.maxInstallments ?? 6,
       merged.minimumInstallmentValue ?? 5000,
       merged.smtpHost || null,
@@ -3698,11 +3698,11 @@ export async function updateGymSettings(gymId: number, settings: any) {
       merged.smtpPassword || null,
       merged.smtpFromEmail || null,
       merged.smtpFromName || 'Academia',
-      merged.smtpUseTls ?? true,
-      merged.smtpUseSsl ?? false,
-      merged.allowStudentCancelBooking ?? true,
+      merged.smtpUseTls ? 1 : 0,
+      merged.smtpUseSsl ? 1 : 0,
+      merged.allowStudentCancelBooking ? 1 : 0,
       merged.minHoursToCancel ?? 0,
-      merged.autoGeneratePayment ?? true,
+      merged.autoGeneratePayment ? 1 : 0,
       gymId
     ]
   );

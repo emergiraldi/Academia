@@ -114,16 +114,16 @@ export default function AdminSettings() {
   useEffect(() => {
     if (settings && isInitialLoad) {
       setFormData({
-        daysToBlockAfterDue: settings.daysToBlockAfterDue,
-        blockOnExpiredExam: settings.blockOnExpiredExam === 1,
-        examValidityDays: settings.examValidityDays,
-        minimumAge: settings.minimumAge,
-        daysToStartInterest: settings.daysToStartInterest,
-        interestRatePerMonth: parseFloat(settings.interestRatePerMonth),
-        lateFeePercentage: parseFloat(settings.lateFeePercentage),
-        allowInstallments: settings.allowInstallments === 1,
-        maxInstallments: settings.maxInstallments,
-        minimumInstallmentValue: settings.minimumInstallmentValue,
+        daysToBlockAfterDue: settings.daysToBlockAfterDue ?? 7,
+        blockOnExpiredExam: Number(settings.blockOnExpiredExam) === 1,
+        examValidityDays: settings.examValidityDays ?? 90,
+        minimumAge: settings.minimumAge ?? 16,
+        daysToStartInterest: settings.daysToStartInterest ?? 1,
+        interestRatePerMonth: parseFloat(settings.interestRatePerMonth) || 0,
+        lateFeePercentage: parseFloat(settings.lateFeePercentage) || 0,
+        allowInstallments: Number(settings.allowInstallments) === 1,
+        maxInstallments: settings.maxInstallments ?? 6,
+        minimumInstallmentValue: settings.minimumInstallmentValue ?? 5000,
         // Configurações SMTP
         smtpHost: settings.smtpHost || '',
         smtpPort: settings.smtpPort || 587,
@@ -131,13 +131,13 @@ export default function AdminSettings() {
         smtpPassword: settings.smtpPassword || '',
         smtpFromEmail: settings.smtpFromEmail || '',
         smtpFromName: settings.smtpFromName || 'Academia',
-        smtpUseTls: settings.smtpUseTls === 1,
-        smtpUseSsl: settings.smtpUseSsl === 1,
+        smtpUseTls: Number(settings.smtpUseTls) === 1,
+        smtpUseSsl: Number(settings.smtpUseSsl) === 1,
         // Regras de Agendamento
-        allowStudentCancelBooking: settings.allowStudentCancelBooking === 1 || settings.allowStudentCancelBooking === true,
+        allowStudentCancelBooking: Number(settings.allowStudentCancelBooking) === 1,
         minHoursToCancel: settings.minHoursToCancel || 0,
         // Gerar mensalidade ao criar aluno
-        autoGeneratePayment: settings.autoGeneratePayment === 1 || settings.autoGeneratePayment === true || settings.autoGeneratePayment === undefined || settings.autoGeneratePayment === null,
+        autoGeneratePayment: Number(settings.autoGeneratePayment) === 1,
         // Logo da Academia
         logoUrl: settings.logoUrl || '',
       });
