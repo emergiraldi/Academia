@@ -3652,9 +3652,15 @@ export async function getGymSettings(gymId: number) {
 }
 
 export async function updateGymSettings(gymId: number, settings: any) {
-  // Merge with current settings to avoid undefined values
+  // Check if row exists; if not, create it first
   const current = await getGymSettings(gymId);
-  const merged = { ...current, ...settings };
+  if (!current) {
+    await createGymSettings(gymId);
+  }
+
+  // Re-fetch after possible insert, then merge
+  const fresh = current || await getGymSettings(gymId);
+  const merged = { ...fresh, ...settings };
 
   const conn = await getConnection();
   const [result] = await conn.execute(
@@ -3716,8 +3722,10 @@ export async function createGymSettings(gymId: number) {
     `INSERT INTO gym_settings (
       gymId, daysToBlockAfterDue, blockOnExpiredExam, examValidityDays, minimumAge,
       daysToStartInterest, interestRatePerMonth, lateFeePercentage,
-      allowInstallments, maxInstallments, minimumInstallmentValue
-    ) VALUES (?, 7, 1, 90, 16, 1, 2.00, 2.00, 1, 6, 5000)`,
+      allowInstallments, maxInstallments, minimumInstallmentValue,
+      allowStudentCancelBooking, minHoursToCancel, autoGeneratePayment,
+      smtpUseTls, smtpUseSsl
+    ) VALUES (?, 7, 1, 90, 16, 1, 2.00, 2.00, 1, 6, 5000, 0, 0, 1, 0, 0)`,
     [gymId]
   );
   await conn.end();
