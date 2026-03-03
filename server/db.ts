@@ -1434,7 +1434,8 @@ export async function generateMonthlyPayments(
         const startDate = new Date(sub.startDate);
         dueDayToUse = startDate.getDate();
       }
-      const dueDate = new Date(year, month, dueDayToUse);
+      // Use date string to avoid timezone shift (UTC vs Brazil UTC-3)
+      const dueDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dueDayToUse).padStart(2, '0')}`;
 
       // Check if payment already exists for this month
       const [existing] = await conn.execute(`
@@ -1450,7 +1451,7 @@ export async function generateMonthlyPayments(
           INSERT INTO payments
           (gymId, subscriptionId, studentId, amountInCents, status, paymentMethod, dueDate)
           VALUES (?, ?, ?, ?, 'pending', 'pending', ?)
-        `, [gymId, sub.id, sub.studentId, sub.priceInCents, dueDate]);
+        `, [gymId, sub.id, sub.studentId, sub.priceInCents, dueDateStr]);
         generatedCount++;
       }
     }

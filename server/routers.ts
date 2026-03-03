@@ -951,12 +951,15 @@ export const appRouter = router({
 
           if (autoGenerate) {
             // Create first payment only if auto-generate is enabled
+            // Use date string to avoid timezone shift (UTC vs Brazil UTC-3)
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             await db.createPayment({
               gymId: gym.id,
               studentId: studentResult.insertId,
               subscriptionId: subscriptionResult.insertId,
               amountInCents: plan.priceInCents,
-              dueDate: new Date(),
+              dueDate: todayStr,
               status: "pending",
               paymentMethod: "pix",
             });
