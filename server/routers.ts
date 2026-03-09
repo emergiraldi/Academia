@@ -5189,7 +5189,9 @@ export const appRouter = router({
         bookingDate: z.string().optional(),
       }))
       .query(async ({ input }) => {
-        return await db.getClassBookingsBySchedule(input.scheduleId, input.bookingDate);
+        const result = await db.getClassBookingsBySchedule(input.scheduleId, input.bookingDate);
+        console.log(`[bookings.listBySchedule] scheduleId=${input.scheduleId} date=${input.bookingDate} => ${result.length} results`);
+        return result;
       }),
 
     // Listar próximos agendamentos da academia
