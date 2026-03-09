@@ -498,19 +498,29 @@ export const appRouter = router({
       return { success: true } as const;
     }),
 
-    // Student/Professor/Gym Admin login with email or CPF + password
+    // Student/Professor/Gym Admin login with email, CPF or phone + password
     login: publicProcedure
       .input(z.object({
-        email: z.string().min(1), // Aceita email ou CPF
+        email: z.string().min(1), // Aceita email, CPF ou telefone
         password: z.string().min(6),
         gymSlug: z.string().optional(), // For multi-tenant selection
       }))
       .mutation(async ({ input, ctx }) => {
-        // Detectar se é CPF (só números ou formato XXX.XXX.XXX-XX) ou email
-        const isCpf = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(input.email.trim());
-        const user = isCpf
-          ? await db.getUserByCpf(input.email.trim())
-          : await db.getUserByEmail(input.email);
+        const credential = input.email.trim();
+        // Detectar se é CPF (formato XXX.XXX.XXX-XX ou 11 dígitos)
+        const isCpf = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(credential);
+        // Detectar se é telefone (só números com 10-11 dígitos, ou formato (XX) XXXXX-XXXX)
+        const cleanDigits = credential.replace(/\D/g, '');
+        const isPhone = !isCpf && /^[\d\s\(\)\-\+]+$/.test(credential) && cleanDigits.length >= 10 && cleanDigits.length <= 13;
+
+        let user;
+        if (isCpf) {
+          user = await db.getUserByCpf(credential);
+        } else if (isPhone) {
+          user = await db.getUserByPhone(credential);
+        } else {
+          user = await db.getUserByEmail(credential);
+        }
         if (!user || !user.password) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
         }
@@ -580,14 +590,24 @@ export const appRouter = router({
     register: publicProcedure
       .input(z.object({
         gymSlug: z.string(),
-        name: z.string(),
-        email: z.string().email(),
+        name: z.string().min(1, "Nome é obrigatório"),
+        email: z.string().optional(),
         password: z.string().min(6),
-        cpf: z.string(),
+        cpf: z.string().optional(),
         phone: z.string().optional(),
         birthDate: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        // Precisa ter pelo menos email ou telefone
+        if (!input.email && !input.phone) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Informe pelo menos email ou telefone" });
+        }
+
+        // Validar email se fornecido
+        if (input.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Email inválido" });
+        }
+
         // Check if gym exists
         const gym = await db.getGymBySlug(input.gymSlug);
         if (!gym) {
@@ -595,9 +615,19 @@ export const appRouter = router({
         }
 
         // Check if email already exists in this gym
-        const existingUser = await db.getUserByEmailAndGym(input.email, gym.id);
-        if (existingUser) {
-          throw new TRPCError({ code: "CONFLICT", message: "Email already registered" });
+        if (input.email) {
+          const existingUser = await db.getUserByEmailAndGym(input.email, gym.id);
+          if (existingUser) {
+            throw new TRPCError({ code: "CONFLICT", message: "Email já cadastrado" });
+          }
+        }
+
+        // Check if phone already exists
+        if (input.phone) {
+          const existingByPhone = await db.getUserByPhone(input.phone);
+          if (existingByPhone) {
+            throw new TRPCError({ code: "CONFLICT", message: "Telefone já cadastrado" });
+          }
         }
 
         // Hash password
@@ -606,16 +636,19 @@ export const appRouter = router({
         // Generate unique openId for email/password users
         const openId = `email-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
+        // Gerar email placeholder se não fornecido (campo NOT NULL no banco)
+        const userEmail = input.email || `phone-${input.phone!.replace(/\D/g, '')}@placeholder.local`;
+
         // Create user
         const userResult = await db.createUser({
           gymId: gym.id,
           openId,
-          email: input.email,
+          email: userEmail,
           password: hashedPassword,
           name: input.name,
           phone: input.phone || null,
           role: "student",
-          loginMethod: "email",
+          loginMethod: input.email ? "email" : "phone",
         });
 
         // Create student profile
@@ -624,14 +657,16 @@ export const appRouter = router({
           gymId: gym.id,
           userId: userResult.insertId,
           registrationNumber,
-          cpf: input.cpf,
+          cpf: input.cpf || "",
           phone: input.phone || null,
           birthDate: input.birthDate && input.birthDate.trim() !== '' ? input.birthDate : null,
           membershipStatus: "inactive",
         });
 
         // Get the created user to create session
-        const user = await db.getUserByEmail(input.email);
+        const user = input.email
+          ? await db.getUserByEmail(input.email)
+          : await db.getUserByPhone(input.phone!);
         if (user) {
           // Create session token
           const { sdk } = await import("./_core/sdk");

@@ -404,6 +404,25 @@ export async function getUserByCpf(cpf: string) {
   return result.length > 0 ? result[0].user : undefined;
 }
 
+export async function getUserByPhone(phone: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const cleanPhone = phone.replace(/\D/g, '');
+  // Buscar na tabela users pelo phone
+  const result = await db.select().from(users).where(
+    or(eq(users.phone, cleanPhone), eq(users.phone, phone))
+  ).limit(1);
+  if (result.length > 0) return result[0];
+  // Buscar também na tabela students pelo phone
+  const studentResult = await db
+    .select({ student: students, user: users })
+    .from(students)
+    .innerJoin(users, eq(students.userId, users.id))
+    .where(or(eq(students.phone, cleanPhone), eq(students.phone, phone)))
+    .limit(1);
+  return studentResult.length > 0 ? studentResult[0].user : undefined;
+}
+
 export async function getUserByEmailAndGym(email: string, gymId: number) {
   const db = await getDb();
   if (!db) return undefined;
