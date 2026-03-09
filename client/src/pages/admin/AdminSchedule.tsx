@@ -135,22 +135,14 @@ export default function AdminSchedule() {
   const { data: bookings, refetch: refetchBookings } = trpc.bookings.listBySchedule.useQuery(
     { scheduleId: selectedSchedule?.id || 0, bookingDate: bookingForm.bookingDate },
     {
-      enabled: !!selectedSchedule,
-      retry: false,
-      onError: (error) => {
-        console.error("Erro ao carregar agendamentos:", error.message);
-      },
+      enabled: !!selectedSchedule && selectedSchedule.id > 0,
     }
   );
 
   const { data: visitorBookings, refetch: refetchVisitorBookings } = trpc.visitorBookings.listBySchedule.useQuery(
     { scheduleId: selectedSchedule?.id || 0, bookingDate: bookingForm.bookingDate },
     {
-      enabled: !!selectedSchedule,
-      retry: false,
-      onError: (error) => {
-        console.error("Erro ao carregar agendamentos de visitantes:", error.message);
-      },
+      enabled: !!selectedSchedule && selectedSchedule.id > 0,
     }
   );
 
