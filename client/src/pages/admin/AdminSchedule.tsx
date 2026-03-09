@@ -908,15 +908,15 @@ export default function AdminSchedule() {
 
         {/* Modal de Participantes/Presença */}
         <Dialog open={participantsModalOpen} onOpenChange={setParticipantsModalOpen}>
-          <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
-              <DialogTitle>Lista de Participantes</DialogTitle>
+              <DialogTitle className="text-lg">Lista de Participantes</DialogTitle>
               <DialogDescription>
                 {selectedSchedule?.name} - {DAYS_MAP[selectedSchedule?.dayOfWeek] || ''} às {selectedSchedule?.startTime?.slice(0, 5)}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="w-48">
+            <div className="space-y-3">
+              <div className="w-full sm:w-48">
                 <Label>Data</Label>
                 <Input
                   type="date"
@@ -928,144 +928,101 @@ export default function AdminSchedule() {
               {/* Alunos Cadastrados */}
               {bookings && bookings.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     Alunos Cadastrados ({bookings.length})
                   </h3>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Aluno</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Telefone</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Ação</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {bookings.map((booking: any) => (
-                        <TableRow key={booking.id}>
-                          <TableCell className="font-medium">{booking.studentName}</TableCell>
-                          <TableCell>{booking.studentEmail}</TableCell>
-                          <TableCell>{booking.studentPhone || "-"}</TableCell>
-                          <TableCell>
-                            {booking.status === 'confirmed' && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700">Confirmado</Badge>
+                  <div className="space-y-2">
+                    {bookings.map((booking: any) => (
+                      <div key={booking.id} className="border rounded-lg p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm truncate">{booking.studentName}</p>
+                            <p className="text-xs text-muted-foreground truncate">{booking.studentEmail}</p>
+                            {booking.studentPhone && (
+                              <p className="text-xs text-muted-foreground">{booking.studentPhone}</p>
                             )}
-                            {booking.status === 'attended' && (
-                              <Badge variant="outline" className="bg-green-50 text-green-700">Presente</Badge>
-                            )}
-                            {booking.status === 'no_show' && (
-                              <Badge variant="outline" className="bg-red-50 text-red-700">Faltou</Badge>
-                            )}
-                            {booking.status === 'cancelled' && (
-                              <Badge variant="outline" className="bg-gray-50 text-gray-700">Cancelado</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Select
-                                value={booking.status}
-                                onValueChange={(value) => handleStatusChange(booking.id, value)}
-                              >
-                                <SelectTrigger className="w-[130px]">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="confirmed">Confirmado</SelectItem>
-                                  <SelectItem value="attended">Presente</SelectItem>
-                                  <SelectItem value="no_show">Faltou</SelectItem>
-                                  <SelectItem value="cancelled">Cancelado</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 px-2"
-                                title="Mover para outro horário"
-                                onClick={() => handleMoveBooking(booking)}
-                              >
-                                <ArrowRightLeft className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2"
-                                title="Remover"
-                                onClick={() => handleRemoveBooking(booking.id, booking.source || 'booking')}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                              title="Mover para outro horário"
+                              onClick={() => handleMoveBooking(booking)}
+                            >
+                              <ArrowRightLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              title="Remover"
+                              onClick={() => handleRemoveBooking(booking.id, booking.source || 'booking')}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={booking.status}
+                            onValueChange={(value) => handleStatusChange(booking.id, value)}
+                          >
+                            <SelectTrigger className="h-8 text-xs flex-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="confirmed">Confirmado</SelectItem>
+                              <SelectItem value="attended">Presente</SelectItem>
+                              <SelectItem value="no_show">Faltou</SelectItem>
+                              <SelectItem value="cancelled">Cancelado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {/* Visitantes/Experimentais */}
               {visitorBookings && visitorBookings.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <UserPlus className="h-4 w-4" />
                     Visitantes/Experimentais ({visitorBookings.length})
                   </h3>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Telefone</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Ação</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {visitorBookings.map((booking: any) => (
-                        <TableRow key={booking.id}>
-                          <TableCell className="font-medium">{booking.visitorName}</TableCell>
-                          <TableCell>{booking.visitorPhone}</TableCell>
-                          <TableCell>{booking.visitorEmail || "-"}</TableCell>
-                          <TableCell>
-                            {booking.status === 'confirmed' && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700">Confirmado</Badge>
-                            )}
-                            {booking.status === 'attended' && (
-                              <Badge variant="outline" className="bg-green-50 text-green-700">Presente</Badge>
-                            )}
-                            {booking.status === 'no_show' && (
-                              <Badge variant="outline" className="bg-red-50 text-red-700">Faltou</Badge>
-                            )}
-                            {booking.status === 'cancelled' && (
-                              <Badge variant="outline" className="bg-gray-50 text-gray-700">Cancelado</Badge>
-                            )}
-                            {booking.status === 'converted' && (
-                              <Badge variant="outline" className="bg-purple-50 text-purple-700">Convertido em Aluno</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Select
-                              value={booking.status}
-                              onValueChange={(value) => handleVisitorStatusChange(booking.id, value)}
-                            >
-                              <SelectTrigger className="w-[160px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="confirmed">Confirmado</SelectItem>
-                                <SelectItem value="attended">Presente</SelectItem>
-                                <SelectItem value="no_show">Faltou</SelectItem>
-                                <SelectItem value="cancelled">Cancelado</SelectItem>
-                                <SelectItem value="converted">Convertido em Aluno</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className="space-y-2">
+                    {visitorBookings.map((booking: any) => (
+                      <div key={booking.id} className="border rounded-lg p-3 space-y-2">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{booking.visitorName}</p>
+                          {booking.visitorPhone && (
+                            <p className="text-xs text-muted-foreground">{booking.visitorPhone}</p>
+                          )}
+                          {booking.visitorEmail && (
+                            <p className="text-xs text-muted-foreground truncate">{booking.visitorEmail}</p>
+                          )}
+                        </div>
+                        <Select
+                          value={booking.status}
+                          onValueChange={(value) => handleVisitorStatusChange(booking.id, value)}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="confirmed">Confirmado</SelectItem>
+                            <SelectItem value="attended">Presente</SelectItem>
+                            <SelectItem value="no_show">Faltou</SelectItem>
+                            <SelectItem value="cancelled">Cancelado</SelectItem>
+                            <SelectItem value="converted">Convertido em Aluno</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
