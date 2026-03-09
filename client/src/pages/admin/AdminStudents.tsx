@@ -335,27 +335,24 @@ export default function AdminStudents() {
   };
 
   const handleCreate = () => {
-    if (!formData.name || !formData.email || !formData.password || !formData.cpf || !formData.planId) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return;
-    }
-
     if (!gymSlug) {
       toast.error("Academia não identificada");
       return;
     }
 
-    // Validar CPF antes de criar
-    const cleanCPF = formData.cpf.replace(/\D/g, '');
-    if (!validateCPF(cleanCPF)) {
-      toast.error("CPF inválido");
-      return;
+    // Validar CPF se preenchido
+    if (formData.cpf) {
+      const cleanCPF = formData.cpf.replace(/\D/g, '');
+      if (cleanCPF.length > 0 && !validateCPF(cleanCPF)) {
+        toast.error("CPF inválido");
+        return;
+      }
     }
 
     createStudent.mutate({
       gymSlug,
       ...formData,
-      planId: parseInt(formData.planId),
+      planId: formData.planId ? parseInt(formData.planId) : undefined,
       professorId: formData.professorId && formData.professorId !== "none" ? parseInt(formData.professorId) : undefined,
     });
   };
@@ -507,7 +504,7 @@ export default function AdminStudents() {
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Nome Completo *</Label>
+                    <Label htmlFor="name">Nome Completo</Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -516,7 +513,7 @@ export default function AdminStudents() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cpf">CPF *</Label>
+                    <Label htmlFor="cpf">CPF</Label>
                     <Input
                       id="cpf"
                       value={formData.cpf}
@@ -530,7 +527,7 @@ export default function AdminStudents() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
+                    <Label htmlFor="email">Email</Label>
                     <Input
                       id="email"
                       type="email"
@@ -540,7 +537,7 @@ export default function AdminStudents() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Senha *</Label>
+                    <Label htmlFor="password">Senha</Label>
                     <Input
                       id="password"
                       type="password"
@@ -650,7 +647,7 @@ export default function AdminStudents() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="planId">Plano de Mensalidade *</Label>
+                    <Label htmlFor="planId">Plano de Mensalidade</Label>
                     <Select value={formData.planId} onValueChange={(value) => setFormData({ ...formData, planId: value })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um plano" />

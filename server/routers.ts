@@ -915,10 +915,10 @@ export const appRouter = router({
     create: gymAdminProcedure
       .input(z.object({
         gymSlug: z.string(),
-        name: z.string(),
-        email: z.string().email(),
-        password: z.string().min(6),
-        cpf: z.string(),
+        name: z.string().optional(),
+        email: z.string().optional(),
+        password: z.string().optional(),
+        cpf: z.string().optional(),
         phone: z.string().optional(),
         dateOfBirth: z.string().optional(),
         address: z.string().optional(),
@@ -928,13 +928,13 @@ export const appRouter = router({
         city: z.string().optional(),
         state: z.string().optional(),
         zipCode: z.string().optional(),
-        planId: z.number(),
+        planId: z.number().optional(),
         professorId: z.number().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const gym = await validateGymAccess(input.gymSlug, ctx.user.gymId, ctx.user.role);
 
-        // Validate CPF
+        // Validate CPF if provided
         if (input.cpf && !isValidCPF(input.cpf)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -942,7 +942,7 @@ export const appRouter = router({
           });
         }
 
-        // Validate CEP
+        // Validate CEP if provided
         if (input.zipCode && !isValidCEP(input.zipCode)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -951,24 +951,33 @@ export const appRouter = router({
         }
 
         // Check if email already exists in this gym
-        const existingUser = await db.getUserByEmailAndGym(input.email, gym.id);
-        if (existingUser) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Email ${input.email} já está cadastrado nesta academia`
-          });
+        if (input.email) {
+          // Validar formato do email
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Email inválido" });
+          }
+          const existingUser = await db.getUserByEmailAndGym(input.email, gym.id);
+          if (existingUser) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Email ${input.email} já está cadastrado nesta academia`
+            });
+          }
         }
 
         // Create user first
-        const hashedPassword = await bcrypt.hash(input.password, 10);
+        const hashedPassword = input.password ? await bcrypt.hash(input.password, 10) : null;
+        const uniqueId = Date.now();
+        const userEmail = input.email || (input.phone ? `phone-${input.phone.replace(/\D/g, '')}@placeholder.local` : `user-${uniqueId}@placeholder.local`);
+
         const userResult = await db.createUser({
           openId: `student-${Date.now()}-${Math.random()}`,
-          email: input.email,
+          email: userEmail,
           password: hashedPassword,
-          name: input.name,
+          name: input.name || "",
           phone: input.phone || null,
           role: "student",
-          loginMethod: "email",
+          loginMethod: input.email ? "email" : (input.phone ? "phone" : "none"),
           gymId: gym.id,
         });
 
@@ -976,7 +985,7 @@ export const appRouter = router({
         const studentResult = await db.createStudent({
           gymId: gym.id,
           userId: userResult.insertId,
-          cpf: input.cpf,
+          cpf: input.cpf || "",
           phone: input.phone || null,
           birthDate: input.dateOfBirth && input.dateOfBirth.trim() !== '' ? input.dateOfBirth : null,
           address: input.address || null,
@@ -990,8 +999,8 @@ export const appRouter = router({
           professorId: input.professorId || null,
         });
 
-        // Always create subscription (links student to plan)
-        const plan = await db.getPlanById(input.planId, gym.id);
+        // Create subscription if plan was selected
+        const plan = input.planId ? await db.getPlanById(input.planId, gym.id) : null;
         if (plan) {
           const subscriptionResult = await db.createSubscription({
             gymId: gym.id,
