@@ -3158,7 +3158,7 @@ export async function getClassBookingsBySchedule(scheduleId: number, bookingDate
 
   // Enrollments (matrículas fixas)
   const enrollQuery = `
-    SELECT se.id, se.scheduleId, se.status, se.createdAt,
+    SELECT se.id, se.scheduleId, se.status, NOW() as createdAt,
            'enrollment' as source,
            s.id as studentTableId,
            u.name as studentName,
