@@ -5189,9 +5189,7 @@ export const appRouter = router({
         bookingDate: z.string().optional(),
       }))
       .query(async ({ input }) => {
-        const result = await db.getClassBookingsBySchedule(input.scheduleId, input.bookingDate);
-        console.log(`[bookings.listBySchedule] scheduleId=${input.scheduleId} date=${input.bookingDate} => ${result.length} results`);
-        return result;
+        return await db.getClassBookingsBySchedule(input.scheduleId, input.bookingDate);
       }),
 
     // Listar próximos agendamentos da academia
@@ -5305,6 +5303,54 @@ export const appRouter = router({
         } else {
           await db.cancelScheduleEnrollment(input.id, ctx.user.gymId);
         }
+        return { success: true };
+      }),
+
+    // Mover participante para outro horário
+    move: gymAdminOrStaffProcedure
+      .input(z.object({
+        id: z.number(),
+        source: z.enum(['booking', 'enrollment']),
+        targetScheduleId: z.number(),
+        targetDate: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+
+        let studentId: number;
+
+        if (input.source === 'booking') {
+          const booking = await db.getClassBookingById(input.id);
+          if (!booking) throw new TRPCError({ code: "NOT_FOUND", message: "Agendamento não encontrado" });
+          studentId = booking.studentId;
+          // Remove original booking
+          await db.deleteClassBooking(input.id, ctx.user.gymId);
+        } else {
+          const enrollment = await db.getEnrollmentById(input.id, ctx.user.gymId);
+          if (!enrollment) throw new TRPCError({ code: "NOT_FOUND", message: "Matrícula não encontrada" });
+          studentId = enrollment.studentId;
+          // Cancel original enrollment
+          await db.cancelScheduleEnrollment(input.id, ctx.user.gymId);
+        }
+
+        // Check if already booked in target
+        const existing = await db.checkBookingExists(input.targetScheduleId, studentId, input.targetDate);
+        if (existing && existing.status !== 'cancelled') {
+          throw new TRPCError({ code: "CONFLICT", message: "Aluno já agendado neste horário" });
+        }
+
+        if (existing && existing.status === 'cancelled') {
+          await db.updateClassBookingStatus(existing.id, 'confirmed');
+          return { success: true };
+        }
+
+        // Create new booking in target schedule
+        await db.createClassBooking({
+          scheduleId: input.targetScheduleId,
+          studentId,
+          bookingDate: input.targetDate,
+        });
+
         return { success: true };
       }),
 

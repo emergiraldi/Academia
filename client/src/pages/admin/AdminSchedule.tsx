@@ -40,6 +40,7 @@ import {
   Trash2,
   Edit,
   UserPlus,
+  ArrowRightLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -70,6 +71,10 @@ export default function AdminSchedule() {
   const [participantsModalOpen, setParticipantsModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
   const [dayFilter, setDayFilter] = useState<string>("all");
+  const [moveModalOpen, setMoveModalOpen] = useState(false);
+  const [movingBooking, setMovingBooking] = useState<any>(null);
+  const [moveTargetScheduleId, setMoveTargetScheduleId] = useState<string>("");
+  const [moveTargetDate, setMoveTargetDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Form states
   const [scheduleForm, setScheduleForm] = useState({
@@ -407,6 +412,38 @@ export default function AdminSchedule() {
     if (confirm("Tem certeza que deseja remover este participante?")) {
       removeBooking.mutate({ id, source: source as any });
     }
+  };
+
+  const moveBooking = trpc.bookings.move.useMutation({
+    onSuccess: () => {
+      toast.success("Participante movido com sucesso!");
+      setMoveModalOpen(false);
+      setMovingBooking(null);
+      refetchBookings();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao mover participante");
+    },
+  });
+
+  const handleMoveBooking = (booking: any) => {
+    setMovingBooking(booking);
+    setMoveTargetScheduleId("");
+    setMoveTargetDate(bookingForm.bookingDate);
+    setMoveModalOpen(true);
+  };
+
+  const confirmMoveBooking = () => {
+    if (!movingBooking || !moveTargetScheduleId) {
+      toast.error("Selecione o horário de destino");
+      return;
+    }
+    moveBooking.mutate({
+      id: movingBooking.id,
+      source: movingBooking.source || 'booking',
+      targetScheduleId: parseInt(moveTargetScheduleId),
+      targetDate: moveTargetDate,
+    });
   };
 
   const handleStatusChange = (bookingId: number, status: string) => {
@@ -944,7 +981,17 @@ export default function AdminSchedule() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 px-2"
+                                title="Mover para outro horário"
+                                onClick={() => handleMoveBooking(booking)}
+                              >
+                                <ArrowRightLeft className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2"
+                                title="Remover"
                                 onClick={() => handleRemoveBooking(booking.id, booking.source || 'booking')}
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -1030,6 +1077,49 @@ export default function AdminSchedule() {
             </div>
           </DialogContent>
         </Dialog>
+        {/* Modal de Mover Participante */}
+        <Dialog open={moveModalOpen} onOpenChange={setMoveModalOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Mover Participante</DialogTitle>
+              <DialogDescription>
+                Mover {movingBooking?.studentName} para outro horário
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Horário de Destino</Label>
+                <Select value={moveTargetScheduleId} onValueChange={setMoveTargetScheduleId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o horário" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {schedules?.filter((s: any) => s.id !== selectedSchedule?.id).map((s: any) => (
+                      <SelectItem key={s.id} value={s.id.toString()}>
+                        {s.name} - {DAYS_MAP[s.dayOfWeek] || s.dayOfWeek} às {s.startTime?.slice(0, 5)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <Input
+                  type="date"
+                  value={moveTargetDate}
+                  onChange={(e) => setMoveTargetDate(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setMoveModalOpen(false)}>Cancelar</Button>
+                <Button onClick={confirmMoveBooking} disabled={moveBooking.isLoading}>
+                  {moveBooking.isLoading ? "Movendo..." : "Mover"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Modal de Editar Horário */}
         <Dialog open={editScheduleOpen} onOpenChange={(open) => { setEditScheduleOpen(open); if (!open) setEditingSchedule(null); }}>
           <DialogContent>
