@@ -651,7 +651,6 @@ export default function AdminSchedule() {
                             variant="default"
                             size="sm"
                             onClick={() => handleBookClass(schedule)}
-                            disabled={schedule.enrolledCount >= schedule.capacity}
                           >
                             <UserPlus className="h-4 w-4 mr-1" />
                             Agendar
