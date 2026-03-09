@@ -323,6 +323,11 @@ export default function AdminSchedule() {
   const handleViewParticipants = (schedule: any) => {
     setSelectedSchedule(schedule);
     setParticipantsModalOpen(true);
+    // Forçar refetch ao abrir o modal
+    setTimeout(() => {
+      refetchBookings();
+      refetchVisitorBookings();
+    }, 100);
   };
 
   const createLead = trpc.leads.create.useMutation();
