@@ -590,19 +590,14 @@ export const appRouter = router({
     register: publicProcedure
       .input(z.object({
         gymSlug: z.string(),
-        name: z.string().min(1, "Nome é obrigatório"),
+        name: z.string().optional(),
         email: z.string().optional(),
-        password: z.string().min(6),
+        password: z.string().optional(),
         cpf: z.string().optional(),
         phone: z.string().optional(),
         birthDate: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        // Precisa ter pelo menos email ou telefone
-        if (!input.email && !input.phone) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Informe pelo menos email ou telefone" });
-        }
-
         // Validar email se fornecido
         if (input.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Email inválido" });
@@ -630,14 +625,15 @@ export const appRouter = router({
           }
         }
 
-        // Hash password
-        const hashedPassword = await bcrypt.hash(input.password, SALT_ROUNDS);
+        // Hash password se fornecida
+        const hashedPassword = input.password ? await bcrypt.hash(input.password, SALT_ROUNDS) : null;
 
-        // Generate unique openId for email/password users
+        // Generate unique openId
         const openId = `email-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
         // Gerar email placeholder se não fornecido (campo NOT NULL no banco)
-        const userEmail = input.email || `phone-${input.phone!.replace(/\D/g, '')}@placeholder.local`;
+        const uniqueId = Date.now();
+        const userEmail = input.email || (input.phone ? `phone-${input.phone.replace(/\D/g, '')}@placeholder.local` : `user-${uniqueId}@placeholder.local`);
 
         // Create user
         const userResult = await db.createUser({
@@ -645,10 +641,10 @@ export const appRouter = router({
           openId,
           email: userEmail,
           password: hashedPassword,
-          name: input.name,
+          name: input.name || "",
           phone: input.phone || null,
           role: "student",
-          loginMethod: input.email ? "email" : "phone",
+          loginMethod: input.email ? "email" : (input.phone ? "phone" : "none"),
         });
 
         // Create student profile

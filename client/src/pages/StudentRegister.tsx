@@ -36,11 +36,6 @@ export default function StudentRegister() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.email && !formData.phone) {
-      toast.error("Informe pelo menos email ou celular");
-      return;
-    }
-
     if (formData.password !== formData.confirmPassword) {
       toast.error("As senhas não coincidem");
       return;
@@ -55,10 +50,10 @@ export default function StudentRegister() {
     try {
       await registerMutation.mutateAsync({
         gymSlug,
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        cpf: formData.cpf,
+        name: formData.name || undefined,
+        email: formData.email || undefined,
+        password: formData.password || undefined,
+        cpf: formData.cpf || undefined,
         phone: formData.phone || undefined,
         birthDate: formData.birthDate || undefined,
       });
@@ -96,14 +91,13 @@ export default function StudentRegister() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Nome Completo *</Label>
+                <Label htmlFor="name">Nome Completo</Label>
                 <Input
                   id="name"
                   type="text"
                   placeholder="João Silva"
                   value={formData.name}
                   onChange={(e) => handleChange("name", e.target.value)}
-                  required
                 />
               </div>
 
@@ -151,26 +145,24 @@ export default function StudentRegister() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Senha *</Label>
+                <Label htmlFor="password">Senha</Label>
                 <Input
                   id="password"
                   type="password"
                   placeholder="Mínimo 6 caracteres"
                   value={formData.password}
                   onChange={(e) => handleChange("password", e.target.value)}
-                  required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
+                <Label htmlFor="confirmPassword">Confirmar Senha</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
                   placeholder="Digite a senha novamente"
                   value={formData.confirmPassword}
                   onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                  required
                 />
               </div>
 
