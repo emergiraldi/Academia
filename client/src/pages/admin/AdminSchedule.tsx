@@ -393,6 +393,22 @@ export default function AdminSchedule() {
     }
   };
 
+  const removeBooking = trpc.bookings.remove.useMutation({
+    onSuccess: () => {
+      toast.success("Participante removido com sucesso!");
+      refetchBookings();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao remover participante");
+    },
+  });
+
+  const handleRemoveBooking = (id: number, source: string) => {
+    if (confirm("Tem certeza que deseja remover este participante?")) {
+      removeBooking.mutate({ id, source: source as any });
+    }
+  };
+
   const handleStatusChange = (bookingId: number, status: string) => {
     updateBookingStatus.mutate({
       id: bookingId,
@@ -910,20 +926,30 @@ export default function AdminSchedule() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Select
-                              value={booking.status}
-                              onValueChange={(value) => handleStatusChange(booking.id, value)}
-                            >
-                              <SelectTrigger className="w-[140px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="confirmed">Confirmado</SelectItem>
-                                <SelectItem value="attended">Presente</SelectItem>
-                                <SelectItem value="no_show">Faltou</SelectItem>
-                                <SelectItem value="cancelled">Cancelado</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <div className="flex items-center gap-2">
+                              <Select
+                                value={booking.status}
+                                onValueChange={(value) => handleStatusChange(booking.id, value)}
+                              >
+                                <SelectTrigger className="w-[130px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="confirmed">Confirmado</SelectItem>
+                                  <SelectItem value="attended">Presente</SelectItem>
+                                  <SelectItem value="no_show">Faltou</SelectItem>
+                                  <SelectItem value="cancelled">Cancelado</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2"
+                                onClick={() => handleRemoveBooking(booking.id, booking.source || 'booking')}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}

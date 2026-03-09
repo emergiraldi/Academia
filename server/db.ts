@@ -3290,6 +3290,16 @@ export async function cancelClassBooking(id: number, studentId: number) {
   return { affectedRows: (result as any).affectedRows };
 }
 
+export async function deleteClassBooking(id: number, gymId: number) {
+  const conn = await getConnection();
+  const [result] = await conn.execute(
+    'DELETE FROM class_bookings WHERE id = ? AND scheduleId IN (SELECT id FROM class_schedules WHERE gymId = ?)',
+    [id, gymId]
+  );
+  await conn.end();
+  return { affectedRows: (result as any).affectedRows };
+}
+
 export async function checkBookingExists(scheduleId: number, studentId: number, bookingDate: string) {
   const conn = await getConnection();
   const [rows] = await conn.execute(

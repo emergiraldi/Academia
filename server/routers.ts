@@ -5292,6 +5292,22 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Remover agendamento (admin)
+    remove: gymAdminOrStaffProcedure
+      .input(z.object({
+        id: z.number(),
+        source: z.enum(['booking', 'enrollment']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+        if (input.source === 'booking') {
+          await db.deleteClassBooking(input.id, ctx.user.gymId);
+        } else {
+          await db.cancelScheduleEnrollment(input.id, ctx.user.gymId);
+        }
+        return { success: true };
+      }),
+
     // Listar agendamentos do aluno (para área do aluno)
     myBookings: studentProcedure
       .query(async ({ ctx }) => {
