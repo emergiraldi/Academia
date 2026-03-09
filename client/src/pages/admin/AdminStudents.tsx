@@ -649,7 +649,7 @@ export default function AdminStudents() {
                   <div className="space-y-2">
                     <Label htmlFor="planId">Plano de Mensalidade</Label>
                     <Select value={formData.planId} onValueChange={(value) => setFormData({ ...formData, planId: value })}>
-                      <SelectTrigger>
+                      <SelectTrigger className="truncate">
                         <SelectValue placeholder="Selecione um plano" />
                       </SelectTrigger>
                       <SelectContent>
