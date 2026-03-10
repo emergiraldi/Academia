@@ -537,6 +537,41 @@ export type WorkoutExercise = typeof workoutExercises.$inferSelect;
 export type InsertWorkoutExercise = typeof workoutExercises.$inferInsert;
 
 /**
+ * Workout Templates - reusable workout models
+ */
+export const workoutTemplates = mysqlTable("workout_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
+  professorId: int("professorId").notNull().references(() => users.id, { onDelete: "restrict" }),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export type WorkoutTemplate = typeof workoutTemplates.$inferSelect;
+export type InsertWorkoutTemplate = typeof workoutTemplates.$inferInsert;
+
+export const workoutTemplateExercises = mysqlTable("workout_template_exercises", {
+  id: int("id").autoincrement().primaryKey(),
+  templateId: int("templateId").notNull().references(() => workoutTemplates.id, { onDelete: "cascade" }),
+  exerciseId: int("exerciseId").notNull().references(() => exercises.id, { onDelete: "restrict" }),
+  dayOfWeek: varchar("dayOfWeek", { length: 20 }).notNull(),
+  sets: int("sets_count").notNull(),
+  reps: varchar("reps", { length: 50 }).notNull(),
+  load: varchar("load_value", { length: 100 }),
+  restSeconds: int("restSeconds"),
+  technique: mysqlEnum("technique", ["normal", "dropset", "superset", "giant_set", "rest_pause", "pyramidal"]).default("normal"),
+  notes: text("notes"),
+  orderIndex: int("orderIndex").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WorkoutTemplateExercise = typeof workoutTemplateExercises.$inferSelect;
+export type InsertWorkoutTemplateExercise = typeof workoutTemplateExercises.$inferInsert;
+
+/**
  * Physical Assessments - body measurements and progress tracking
  */
 export const physicalAssessments = mysqlTable("physical_assessments", {
@@ -544,39 +579,84 @@ export const physicalAssessments = mysqlTable("physical_assessments", {
   studentId: int("studentId").notNull().references(() => students.id, { onDelete: "cascade" }),
   professorId: int("professorId").notNull().references(() => users.id, { onDelete: "restrict" }),
   gymId: int("gymId").notNull().references(() => gyms.id, { onDelete: "cascade" }),
+  assessmentNumber: int("assessmentNumber").default(1), // 1-6 (Avaliação Física 1-6)
   assessmentDate: timestamp("assessmentDate").notNull(),
 
   // Body measurements
   weight: decimal("weight", { precision: 5, scale: 2 }), // kg
-  height: decimal("height", { precision: 5, scale: 2 }), // cm
-  bodyFat: decimal("bodyFat", { precision: 4, scale: 2 }), // %
-  muscleMass: decimal("muscleMass", { precision: 5, scale: 2 }), // kg
+  height: decimal("height", { precision: 5, scale: 2 }), // cm (stored as meters in form)
+  bodyFat: decimal("bodyFat", { precision: 5, scale: 2 }), // % (calculated)
+  muscleMass: decimal("muscleMass", { precision: 5, scale: 2 }), // kg (calculated)
 
-  // Circumferences (cm)
-  chest: decimal("chest", { precision: 5, scale: 2 }),
-  waist: decimal("waist", { precision: 5, scale: 2 }),
-  hips: decimal("hips", { precision: 5, scale: 2 }),
-  rightArm: decimal("rightArm", { precision: 5, scale: 2 }),
-  leftArm: decimal("leftArm", { precision: 5, scale: 2 }),
-  rightThigh: decimal("rightThigh", { precision: 5, scale: 2 }),
-  leftThigh: decimal("leftThigh", { precision: 5, scale: 2 }),
-  rightCalf: decimal("rightCalf", { precision: 5, scale: 2 }),
-  leftCalf: decimal("leftCalf", { precision: 5, scale: 2 }),
+  // Protocol selection
+  protocol: varchar("protocol", { length: 100 }).default("jackson_pollock_7"), // dropdown protocol
 
-  // Skinfolds - 7-fold protocol (mm)
-  tricepsSkinfold: decimal("tricepsSkinfold", { precision: 4, scale: 2 }),
+  // Circumferences / Perímetros (cm)
+  shoulder: decimal("shoulder", { precision: 5, scale: 2 }), // Ombro
+  chest: decimal("chest", { precision: 5, scale: 2 }), // Tórax
+  waist: decimal("waist", { precision: 5, scale: 2 }), // Cintura
+  abdomen: decimal("abdomen", { precision: 5, scale: 2 }), // Abdômen
+  hips: decimal("hips", { precision: 5, scale: 2 }), // Quadril
+  rightArm: decimal("rightArm", { precision: 5, scale: 2 }), // Braço direito
+  leftArm: decimal("leftArm", { precision: 5, scale: 2 }), // Braço esquerdo
+  rightForearm: decimal("rightForearm", { precision: 5, scale: 2 }), // Antebraço direito
+  leftForearm: decimal("leftForearm", { precision: 5, scale: 2 }), // Antebraço esquerdo
+  rightThigh: decimal("rightThigh", { precision: 5, scale: 2 }), // Coxa direita
+  leftThigh: decimal("leftThigh", { precision: 5, scale: 2 }), // Coxa esquerda
+  rightCalf: decimal("rightCalf", { precision: 5, scale: 2 }), // Panturrilha direita
+  leftCalf: decimal("leftCalf", { precision: 5, scale: 2 }), // Panturrilha esquerda
+  bust: decimal("bust", { precision: 5, scale: 2 }), // Busto
+
+  // Skinfolds / Dobras Cutâneas (mm) - 9 dobras
   subscapularSkinfold: decimal("subscapularSkinfold", { precision: 4, scale: 2 }),
+  tricepsSkinfold: decimal("tricepsSkinfold", { precision: 4, scale: 2 }),
+  bicepsSkinfold: decimal("bicepsSkinfold", { precision: 4, scale: 2 }),
   pectoralSkinfold: decimal("pectoralSkinfold", { precision: 4, scale: 2 }),
   midaxillarySkinfold: decimal("midaxillarySkinfold", { precision: 4, scale: 2 }),
   suprailiacSkinfold: decimal("suprailiacSkinfold", { precision: 4, scale: 2 }),
   abdominalSkinfold: decimal("abdominalSkinfold", { precision: 4, scale: 2 }),
   thighSkinfold: decimal("thighSkinfold", { precision: 4, scale: 2 }),
+  calfSkinfold: decimal("calfSkinfold", { precision: 4, scale: 2 }),
 
-  // Functional tests
-  flexibility: decimal("flexibility", { precision: 5, scale: 2 }), // cm (sit and reach)
-  pushups: int("pushups"), // repetitions
-  plankSeconds: int("plankSeconds"), // seconds
-  vo2max: decimal("vo2max", { precision: 5, scale: 2 }), // ml/kg/min
+  // Bone diameters / Diâmetros ósseos (cm)
+  humerusDiameter: decimal("humerusDiameter", { precision: 4, scale: 2 }), // Bi-epicôndilo umeral
+  wristDiameter: decimal("wristDiameter", { precision: 4, scale: 2 }), // Bi-estilóide
+  femurDiameter: decimal("femurDiameter", { precision: 4, scale: 2 }), // Bi-côndilo femural
+
+  // Blood pressure / Pressão Arterial
+  systolicBP: int("systolicBP"), // PAS (mmHg)
+  diastolicBP: int("diastolicBP"), // PAD (mmHg)
+  restingHR: int("restingHR"), // FC repouso (bpm)
+
+  // Functional tests / Testes Físicos
+  abdominalReps: int("abdominalReps"), // Potência abdominal (repetições)
+  pushupReps: int("pushupReps"), // Potência braço (repetições)
+  cooperDistance: decimal("cooperDistance", { precision: 6, scale: 2 }), // Teste Cooper distância (m)
+  cooperSpeed: decimal("cooperSpeed", { precision: 5, scale: 2 }), // Velocidade média
+  vo2max: decimal("vo2max", { precision: 5, scale: 2 }), // VO2max calculado
+  flexibility: decimal("flexibility", { precision: 5, scale: 2 }), // Flexibilidade geral (cm)
+
+  // Flexiteste - 14 movimentos (nível 0-4)
+  flexiteste: text("flexiteste"), // JSON: { abdHorizOmbros, abdOmbro, flexCotovelo, hiperextCotovelo, flexPunho, extPunho, flexQuadril, hiperextTronco, flexLatTronco, flexCoxa, extCoxa, flexJoelho, hiperextJoelho, dorsoFlexPlantar, flexPlantar }
+
+  // Postural Assessment / Avaliação Postural (text annotations)
+  posturalAssessment: text("posturalAssessment"), // JSON: { lateral: { lordoseCervical, ombros, abdomen, cifoseToracica, lordoseLombar, quadril, joelhos, pes }, posterior: { ombro, escapula, coluna, eips, pes }, anterior: { cabeca, eias, joelho, patela, tibia } }
+
+  // PAR-Q / Anamnese (questionnaire answers)
+  parq: text("parq"), // JSON: { familyDiseases, personalDiseases, exerciseRestrictions, surgeries, allergies, injuries, medications, bodyPain, smoking, diet, currentExercise, currentExerciseType, currentExerciseFreq, pastExercise, pastExerciseType, pastExerciseTime, pastExerciseFreq, heartProblem, chestPain, recentChestPain, dizziness, boneProblem, bpMedication, otherReason, objectives }
+
+  // Calculated results (stored for quick access)
+  bmi: decimal("bmi", { precision: 5, scale: 2 }), // IMC
+  rcq: decimal("rcq", { precision: 5, scale: 4 }), // Relação Cintura/Quadril
+  fatMass: decimal("fatMass", { precision: 5, scale: 2 }), // Massa gorda (kg)
+  leanMass: decimal("leanMass", { precision: 5, scale: 2 }), // Massa livre de gordura (kg)
+  residualMass: decimal("residualMass", { precision: 5, scale: 2 }), // Massa residual (kg)
+  boneMass: decimal("boneMass", { precision: 5, scale: 2 }), // Massa óssea (kg)
+  bmr: decimal("bmr", { precision: 7, scale: 2 }), // Taxa metabólica basal
+  somatotype: varchar("somatotype", { length: 100 }), // Tipo: Endomorfo, Mesomorfo, etc
+  endomorphy: decimal("endomorphy", { precision: 5, scale: 2 }),
+  mesomorphy: decimal("mesomorphy", { precision: 5, scale: 2 }),
+  ectomorphy: decimal("ectomorphy", { precision: 5, scale: 2 }),
 
   // Progress photos
   photoFront: varchar("photoFront", { length: 500 }),
@@ -584,8 +664,9 @@ export const physicalAssessments = mysqlTable("physical_assessments", {
   photoBack: varchar("photoBack", { length: 500 }),
 
   // Goals and notes
-  goals: text("goals"), // JSON array of strings
+  goals: text("goals"),
   notes: text("notes"),
+  considerations: text("considerations"), // Considerações finais
 
   // Next assessment
   nextAssessmentDate: timestamp("nextAssessmentDate"),

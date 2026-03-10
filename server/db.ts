@@ -21,6 +21,8 @@ import {
   exercisePhotos, InsertExercisePhoto,
   exerciseVideos, InsertExerciseVideo,
   workoutExercises, InsertWorkoutExercise,
+  workoutTemplates, InsertWorkoutTemplate,
+  workoutTemplateExercises, InsertWorkoutTemplateExercise,
   physicalAssessments, InsertPhysicalAssessment,
   workoutLogs, InsertWorkoutLog,
   workoutLogExercises, InsertWorkoutLogExercise,
@@ -671,10 +673,7 @@ export async function listStudentsByProfessor(professorId: number, gymId: number
       eq(subscriptions.studentId, students.id),
       eq(subscriptions.status, 'active')
     ))
-    .where(and(
-      eq(students.gymId, gymId),
-      eq(students.professorId, professorId)
-    ));
+    .where(eq(students.gymId, gymId));
   return result;
 }
 
@@ -1852,6 +1851,156 @@ export async function getWorkoutWithExercises(workoutId: number, gymId: number) 
   };
 }
 
+// ============ WORKOUT TEMPLATES ============
+
+export async function createWorkoutTemplate(template: InsertWorkoutTemplate) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(workoutTemplates).values(template);
+  return { insertId: result[0].insertId };
+}
+
+export async function getWorkoutTemplates(gymId: number, professorId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(workoutTemplates.gymId, gymId)];
+  if (professorId) conditions.push(eq(workoutTemplates.professorId, professorId));
+  return await db.select().from(workoutTemplates).where(and(...conditions)).orderBy(desc(workoutTemplates.createdAt));
+}
+
+export async function getWorkoutTemplateById(id: number, gymId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(workoutTemplates).where(and(eq(workoutTemplates.id, id), eq(workoutTemplates.gymId, gymId))).limit(1);
+  return result[0];
+}
+
+export async function updateWorkoutTemplate(id: number, gymId: number, data: Partial<InsertWorkoutTemplate>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(workoutTemplates).set(data).where(and(eq(workoutTemplates.id, id), eq(workoutTemplates.gymId, gymId)));
+  return { success: true };
+}
+
+export async function deleteWorkoutTemplate(id: number, gymId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(workoutTemplates).where(and(eq(workoutTemplates.id, id), eq(workoutTemplates.gymId, gymId)));
+  return { success: true };
+}
+
+export async function toggleWorkoutTemplate(id: number, gymId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const template = await getWorkoutTemplateById(id, gymId);
+  if (!template) throw new Error("Template not found");
+  await db.update(workoutTemplates).set({ active: !template.active }).where(eq(workoutTemplates.id, id));
+  return { success: true, active: !template.active };
+}
+
+export async function getTemplateExercises(templateId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select({
+      id: workoutTemplateExercises.id,
+      templateId: workoutTemplateExercises.templateId,
+      exerciseId: workoutTemplateExercises.exerciseId,
+      dayOfWeek: workoutTemplateExercises.dayOfWeek,
+      sets: workoutTemplateExercises.sets,
+      reps: workoutTemplateExercises.reps,
+      load: workoutTemplateExercises.load,
+      restSeconds: workoutTemplateExercises.restSeconds,
+      technique: workoutTemplateExercises.technique,
+      notes: workoutTemplateExercises.notes,
+      orderIndex: workoutTemplateExercises.orderIndex,
+      exerciseName: exercises.name,
+      exerciseMuscleGroup: exercises.muscleGroup,
+      exerciseImageUrl: exercises.imageUrl,
+    })
+    .from(workoutTemplateExercises)
+    .leftJoin(exercises, eq(workoutTemplateExercises.exerciseId, exercises.id))
+    .where(eq(workoutTemplateExercises.templateId, templateId))
+    .orderBy(asc(workoutTemplateExercises.orderIndex));
+}
+
+export async function addTemplateExercise(exercise: InsertWorkoutTemplateExercise) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(workoutTemplateExercises).values(exercise);
+  return { insertId: result[0].insertId };
+}
+
+export async function deleteTemplateExercise(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(workoutTemplateExercises).where(eq(workoutTemplateExercises.id, id));
+  return { success: true };
+}
+
+export async function clearTemplateExercises(templateId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(workoutTemplateExercises).where(eq(workoutTemplateExercises.templateId, templateId));
+  return { success: true };
+}
+
+export async function createTemplateFromWorkout(workoutId: number, gymId: number, professorId: number, templateName: string) {
+  const workout = await getWorkoutWithExercises(workoutId, gymId);
+  if (!workout) throw new Error("Workout not found");
+  const { insertId } = await createWorkoutTemplate({ gymId, professorId, name: templateName });
+  for (const ex of workout.exercises) {
+    await addTemplateExercise({
+      templateId: insertId,
+      exerciseId: ex.exerciseId,
+      dayOfWeek: ex.dayOfWeek,
+      sets: ex.sets,
+      reps: ex.reps,
+      load: ex.load || null,
+      restSeconds: ex.restSeconds || null,
+      technique: ex.technique || 'normal',
+      notes: ex.notes || null,
+      orderIndex: ex.orderIndex,
+    });
+  }
+  return { insertId };
+}
+
+export async function applyTemplateToStudents(templateId: number, gymId: number, professorId: number, studentIds: number[], startDate: string, endDate?: string) {
+  const template = await getWorkoutTemplateById(templateId, gymId);
+  if (!template) throw new Error("Template not found");
+  const templateExercises = await getTemplateExercises(templateId);
+  const results = [];
+  for (const studentId of studentIds) {
+    const { insertId: workoutId } = await createWorkout({
+      gymId,
+      studentId,
+      professorId,
+      name: template.name,
+      description: template.description,
+      startDate: new Date(startDate),
+      endDate: endDate ? new Date(endDate) : null,
+      active: true,
+    } as any);
+    for (const ex of templateExercises) {
+      await addExerciseToWorkout({
+        workoutId,
+        exerciseId: ex.exerciseId,
+        dayOfWeek: ex.dayOfWeek,
+        sets: ex.sets,
+        reps: ex.reps,
+        load: ex.load,
+        restSeconds: ex.restSeconds,
+        technique: ex.technique || 'normal',
+        notes: ex.notes,
+        orderIndex: ex.orderIndex,
+      } as any);
+    }
+    results.push({ studentId, workoutId });
+  }
+  return results;
+}
+
 // ============ PHYSICAL ASSESSMENTS ============
 
 export async function createPhysicalAssessment(assessment: InsertPhysicalAssessment) {
@@ -1886,46 +2035,8 @@ export async function getStudentAssessments(studentId: number, gymId: number) {
   if (!db) return [];
 
   const assessmentsList = await db
-    .select({
-      id: physicalAssessments.id,
-      studentId: physicalAssessments.studentId,
-      professorId: physicalAssessments.professorId,
-      assessmentDate: physicalAssessments.assessmentDate,
-      weight: physicalAssessments.weight,
-      height: physicalAssessments.height,
-      bodyFat: physicalAssessments.bodyFat,
-      muscleMass: physicalAssessments.muscleMass,
-      chest: physicalAssessments.chest,
-      waist: physicalAssessments.waist,
-      hips: physicalAssessments.hips,
-      rightArm: physicalAssessments.rightArm,
-      leftArm: physicalAssessments.leftArm,
-      rightThigh: physicalAssessments.rightThigh,
-      leftThigh: physicalAssessments.leftThigh,
-      rightCalf: physicalAssessments.rightCalf,
-      leftCalf: physicalAssessments.leftCalf,
-      tricepsSkinfold: physicalAssessments.tricepsSkinfold,
-      subscapularSkinfold: physicalAssessments.subscapularSkinfold,
-      pectoralSkinfold: physicalAssessments.pectoralSkinfold,
-      midaxillarySkinfold: physicalAssessments.midaxillarySkinfold,
-      suprailiacSkinfold: physicalAssessments.suprailiacSkinfold,
-      abdominalSkinfold: physicalAssessments.abdominalSkinfold,
-      thighSkinfold: physicalAssessments.thighSkinfold,
-      flexibility: physicalAssessments.flexibility,
-      pushups: physicalAssessments.pushups,
-      plankSeconds: physicalAssessments.plankSeconds,
-      vo2max: physicalAssessments.vo2max,
-      photoFront: physicalAssessments.photoFront,
-      photoSide: physicalAssessments.photoSide,
-      photoBack: physicalAssessments.photoBack,
-      goals: physicalAssessments.goals,
-      notes: physicalAssessments.notes,
-      nextAssessmentDate: physicalAssessments.nextAssessmentDate,
-      createdAt: physicalAssessments.createdAt,
-      professorName: users.name,
-    })
+    .select()
     .from(physicalAssessments)
-    .leftJoin(users, eq(physicalAssessments.professorId, users.id))
     .where(
       and(
         eq(physicalAssessments.studentId, studentId),
@@ -1934,31 +2045,7 @@ export async function getStudentAssessments(studentId: number, gymId: number) {
     )
     .orderBy(desc(physicalAssessments.assessmentDate));
 
-  // Map to frontend expected format and calculate BMI
-  return assessmentsList.map(assessment => {
-    const weightKg = assessment.weight || 0;
-    const heightCm = assessment.height || 0;
-    const heightM = heightCm / 100;
-    const bmi = heightM > 0 ? weightKg / (heightM * heightM) : 0;
-
-    return {
-      ...assessment,
-      weightKg,
-      heightCm,
-      bodyFatPercentage: assessment.bodyFat,
-      muscleMassKg: assessment.muscleMass,
-      bmi,
-      chestCm: assessment.chest,
-      waistCm: assessment.waist,
-      hipCm: assessment.hips,
-      rightArmCm: assessment.rightArm,
-      leftArmCm: assessment.leftArm,
-      rightThighCm: assessment.rightThigh,
-      leftThighCm: assessment.leftThigh,
-      rightCalfCm: assessment.rightCalf,
-      leftCalfCm: assessment.leftCalf,
-    };
-  });
+  return assessmentsList;
 }
 
 export async function getLatestAssessment(studentId: number, gymId: number) {

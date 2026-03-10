@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescription } from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -43,6 +44,7 @@ import {
   Weight,
   Target,
   ChevronRight,
+  ChevronLeft,
   Eye,
   Edit,
   Trash2,
@@ -51,16 +53,110 @@ import {
   Link,
   X,
   Loader2,
+  Menu,
+  Home,
+  Library,
+  ClipboardList,
+  GripVertical,
+  Play,
+  Copy,
+  Filter,
+  ArrowLeft,
+  User,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import PhysicalAssessmentForm from "@/components/PhysicalAssessmentForm";
+import AssessmentComparative from "@/components/AssessmentComparative";
 import { trpc } from "@/lib/trpc";
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 
+function AssessmentsList({ studentId, onEdit }: { studentId: number; onEdit: (assessment: any) => void }) {
+  const { data: assessments = [], isLoading } = trpc.assessments.getByStudent.useQuery({ studentId });
+
+  if (isLoading) {
+    return <div className="text-center py-8 text-gray-500">Carregando avaliações...</div>;
+  }
+
+  if (assessments.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <Activity className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+          <p className="text-gray-500">Nenhuma avaliação física registrada</p>
+          <p className="text-sm text-gray-400">Clique em "Nova Avaliação" para começar</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {(assessments as any[]).map((a: any) => (
+        <Card key={a.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => onEdit(a)}>
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <Badge variant="outline" className="text-xs">
+                {a.assessmentNumber ? `${a.assessmentNumber}ª Avaliação` : "Avaliação"}
+              </Badge>
+              <span className="text-xs text-gray-400">
+                {a.assessmentDate ? new Date(a.assessmentDate).toLocaleDateString("pt-BR") : ""}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {a.weight && <div><span className="text-gray-500">Peso:</span> <span className="font-medium">{a.weight}kg</span></div>}
+              {a.height && <div><span className="text-gray-500">Altura:</span> <span className="font-medium">{a.height}cm</span></div>}
+              {a.bmi && <div><span className="text-gray-500">IMC:</span> <span className="font-medium">{parseFloat(a.bmi).toFixed(1)}</span></div>}
+              {a.bodyFat && <div><span className="text-gray-500">%GC:</span> <span className="font-medium">{parseFloat(a.bodyFat).toFixed(1)}%</span></div>}
+            </div>
+            {a.protocol && (
+              <p className="text-[10px] text-gray-400 mt-2">Protocolo: {a.protocol.replace(/_/g, " ")}</p>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export default function ProfessorDashboard() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
-  const [currentScreen, setCurrentScreen] = useState<"dashboard" | "students" | "exercises" | "workouts" | "assessments">("dashboard");
+  const [currentScreen, setCurrentScreen] = useState<"alunos" | "todos-treinos" | "exercicios" | "modelos" | "criar-treino" | "treinos-aluno" | "editar-modelo" | "avaliacoes" | "avaliacao-form" | "comparativo">("alunos");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [selectedAluno, setSelectedAluno] = useState<any>(null);
+  const [editingWorkout, setEditingWorkout] = useState<any>(null);
+
+  // Workout creation state
+  const [workoutForm, setWorkoutForm] = useState({ name: "", startDate: "", endDate: "" });
+  const [workoutExercises, setWorkoutExercises] = useState<any[]>([]);
+  const [showBibliotecaModal, setShowBibliotecaModal] = useState(false);
+  const [bibliotecaSearch, setBibliotecaSearch] = useState("");
+  const [bibliotecaMuscle, setBibliotecaMuscle] = useState("all");
+  const [bibliotecaPage, setBibliotecaPage] = useState(1);
+  const BIBLIOTECA_PER_PAGE = 50;
+  const [viewMode, setViewMode] = useState<"list" | "byDay">("list");
+  const [videoModalExercicio, setVideoModalExercicio] = useState<any>(null);
+
+  // Template edit state
+  const [editingTemplate, setEditingTemplate] = useState<any>(null);
+  const [templateForm, setTemplateForm] = useState({ name: "", description: "", startDate: "", endDate: "" });
+  const [templateExercises, setTemplateExercises] = useState<any[]>([]);
+  const [templateSidebarSearch, setTemplateSidebarSearch] = useState("");
+  const [templateSidebarMuscle, setTemplateSidebarMuscle] = useState("all");
+
+  // Assessment state
+  const [editingAssessment, setEditingAssessment] = useState<any>(null);
+  const [assessmentStudentSearch, setAssessmentStudentSearch] = useState("");
+
+  // Template state
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
+  const [applyingTemplateId, setApplyingTemplateId] = useState<number | null>(null);
+  const [applyStudentIds, setApplyStudentIds] = useState<number[]>([]);
+  const [applyStartDate, setApplyStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [applyEndDate, setApplyEndDate] = useState("");
+  const [applySearch, setApplySearch] = useState("");
 
   // Exercise form state
   const [exerciseForm, setExerciseForm] = useState({
@@ -71,6 +167,11 @@ export default function ProfessorDashboard() {
     instructions: "",
   });
   const [exerciseImageFile, setExerciseImageFile] = useState<File | null>(null);
+  const [exerciseVideoFile, setExerciseVideoFile] = useState<File | null>(null);
+  const [exerciseMedia1Link, setExerciseMedia1Link] = useState("");
+  const [exerciseMedia2Link, setExerciseMedia2Link] = useState("");
+  const [exerciseMedia1Preview, setExerciseMedia1Preview] = useState<string | null>(null);
+  const [exerciseMedia2Preview, setExerciseMedia2Preview] = useState<string | null>(null);
   const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<any>(null);
   const [isExerciseDetailOpen, setIsExerciseDetailOpen] = useState(false);
@@ -124,6 +225,8 @@ export default function ProfessorDashboard() {
 
   // Workout filters state
   const [workoutPage, setWorkoutPage] = useState(1);
+  const [workoutStatusFilter, setWorkoutStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [workoutSearchTerm, setWorkoutSearchTerm] = useState("");
   const WORKOUTS_PER_PAGE = 10;
 
   // Queries
@@ -131,9 +234,56 @@ export default function ProfessorDashboard() {
   const { data: students = [] } = trpc.students.list.useQuery();
   const { data: workouts = [], refetch: refetchWorkouts } = trpc.workouts.list.useQuery();
   const { data: assessments = [], refetch: refetchAssessments } = trpc.assessments.list.useQuery({ studentId: undefined });
+  const { data: templates = [], refetch: refetchTemplates } = trpc.templates.list.useQuery();
+
+  // Query to get workout with exercises when editing
+  const workoutWithExercisesQuery = trpc.workouts.getWithExercises.useQuery(
+    { workoutId: editingWorkout?.id || 0 },
+    { enabled: !!editingWorkout?.id }
+  );
+
+  // Load exercises when editing workout changes
+  useEffect(() => {
+    if (workoutWithExercisesQuery.data && editingWorkout) {
+      const wData = workoutWithExercisesQuery.data as any;
+      const exs = (wData.exercises || []).map((ex: any, i: number) => ({
+        id: ex.id,
+        exerciseId: ex.exerciseId,
+        name: ex.exerciseName || ex.name || 'Exercício',
+        imageUrl: ex.exerciseImageUrl || ex.imageUrl,
+        videoUrl: ex.exerciseVideoUrl || ex.videoUrl,
+        muscleGroup: ex.exerciseMuscleGroup || ex.muscleGroup,
+        sets: ex.sets || 3,
+        reps: ex.reps || "12",
+        load: ex.load || "",
+        restSeconds: ex.restSeconds || 60,
+        dayOfWeek: ex.dayOfWeek || "Segunda",
+        technique: ex.technique || "normal",
+        notes: ex.notes || "",
+        orderIndex: ex.orderIndex ?? i,
+      }));
+      setWorkoutExercises(exs);
+      setEditingWorkout((prev: any) => prev ? { ...prev, exercises: wData.exercises || [] } : prev);
+    }
+  }, [workoutWithExercisesQuery.data]);
 
   // Dashboard queries
   const { data: dashboardMetrics } = trpc.professorDashboard.getMetrics.useQuery();
+
+  // Filter workouts for "Treinos Criados" screen
+  const filteredWorkouts = useMemo(() => {
+    let filtered = [...workouts];
+    if (workoutStatusFilter === "active") filtered = filtered.filter((w: any) => w.active);
+    else if (workoutStatusFilter === "inactive") filtered = filtered.filter((w: any) => !w.active);
+    if (workoutSearchTerm) {
+      const s = workoutSearchTerm.toLowerCase();
+      filtered = filtered.filter((w: any) => {
+        const student = students.find((st: any) => st.id === w.studentId);
+        return w.name?.toLowerCase().includes(s) || student?.name?.toLowerCase().includes(s);
+      });
+    }
+    return filtered;
+  }, [workouts, workoutStatusFilter, workoutSearchTerm, students]);
 
   // Filter exercises
   const filteredExercises = useMemo(() => {
@@ -222,6 +372,72 @@ export default function ProfessorDashboard() {
     setExercisePage(1);
   }, [exerciseFilters.searchTerm, exerciseFilters.muscleGroup]);
 
+  // Biblioteca modal filtered exercises
+  const bibliotecaFiltered = useMemo(() => {
+    let filtered = [...exercises];
+    if (bibliotecaSearch) {
+      const s = bibliotecaSearch.toLowerCase();
+      filtered = filtered.filter((ex: any) => ex.name.toLowerCase().includes(s) || ex.muscleGroup?.toLowerCase().includes(s));
+    }
+    if (bibliotecaMuscle !== "all") {
+      filtered = filtered.filter((ex: any) => ex.muscleGroup === bibliotecaMuscle);
+    }
+    return filtered;
+  }, [exercises, bibliotecaSearch, bibliotecaMuscle]);
+
+  const bibliotecaPaginated = useMemo(() => {
+    const start = (bibliotecaPage - 1) * BIBLIOTECA_PER_PAGE;
+    return bibliotecaFiltered.slice(start, start + BIBLIOTECA_PER_PAGE);
+  }, [bibliotecaFiltered, bibliotecaPage]);
+
+  const bibliotecaTotalPages = Math.ceil(bibliotecaFiltered.length / BIBLIOTECA_PER_PAGE);
+
+  // Days of week for workout exercises
+  const daysOfWeek = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+
+  // Group workout exercises by day
+  const exercisesByDay = useMemo(() => {
+    const grouped: Record<string, any[]> = {};
+    daysOfWeek.forEach(d => { grouped[d] = []; });
+    workoutExercises.forEach(ex => {
+      const day = ex.dayOfWeek || "Segunda";
+      if (!grouped[day]) grouped[day] = [];
+      grouped[day].push(ex);
+    });
+    return grouped;
+  }, [workoutExercises]);
+
+  // Add exercise from library to workout
+  const handleAddExerciseToWorkout = (exercise: any) => {
+    setWorkoutExercises(prev => [...prev, {
+      exerciseId: exercise.id,
+      name: exercise.name,
+      imageUrl: exercise.imageUrl,
+      videoUrl: exercise.videoUrl,
+      muscleGroup: exercise.muscleGroup,
+      sets: 3,
+      reps: "12",
+      load: "",
+      restSeconds: 60,
+      dayOfWeek: "Segunda",
+      technique: "normal",
+      notes: "",
+      orderIndex: prev.length,
+    }]);
+    setShowBibliotecaModal(false);
+    toast.success(`${exercise.name} adicionado ao treino`);
+  };
+
+  // Remove exercise from workout
+  const handleRemoveWorkoutExercise = (index: number) => {
+    setWorkoutExercises(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Update exercise in workout
+  const handleUpdateWorkoutExercise = (index: number, field: string, value: any) => {
+    setWorkoutExercises(prev => prev.map((ex, i) => i === index ? { ...ex, [field]: value } : ex));
+  };
+
   // Mutations
   const createExerciseMutation = trpc.exercises.create.useMutation({
     onSuccess: () => {
@@ -236,6 +452,11 @@ export default function ProfessorDashboard() {
         instructions: "",
       });
       setExerciseImageFile(null);
+      setExerciseVideoFile(null);
+      setExerciseMedia1Link("");
+      setExerciseMedia2Link("");
+      setExerciseMedia1Preview(null);
+      setExerciseMedia2Preview(null);
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao criar exercício");
@@ -357,6 +578,424 @@ export default function ProfessorDashboard() {
     },
   });
 
+  const cloneWorkoutMutation = trpc.workouts.clone.useMutation({
+    onSuccess: () => {
+      toast.success("Treino clonado com sucesso!");
+      refetchWorkouts();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao clonar treino");
+    },
+  });
+
+  const createWorkoutMutation = trpc.workouts.create.useMutation({
+    onError: (error) => {
+      toast.error(error.message || "Erro ao criar treino");
+    },
+  });
+
+  const updateWorkoutMutation = trpc.workouts.update.useMutation({
+    onError: (error) => {
+      toast.error(error.message || "Erro ao atualizar treino");
+    },
+  });
+
+  const addExerciseToWorkoutMutation = trpc.workouts.addExercise.useMutation({
+    onError: (error) => {
+      toast.error(error.message || "Erro ao adicionar exercício");
+    },
+  });
+
+  const updateWorkoutExerciseMutation = trpc.workouts.updateExercise.useMutation({
+    onError: (error) => {
+      toast.error(error.message || "Erro ao atualizar exercício");
+    },
+  });
+
+  const deleteWorkoutExerciseMutation = trpc.workouts.deleteExercise.useMutation({
+    onError: (error) => {
+      toast.error(error.message || "Erro ao remover exercício");
+    },
+  });
+
+  const handleSaveWorkout = async () => {
+    if (!selectedAluno || !workoutForm.name || !workoutForm.startDate) {
+      toast.error("Preencha o nome e a data de início");
+      return;
+    }
+    if (workoutExercises.length === 0) {
+      toast.error("Adicione pelo menos um exercício");
+      return;
+    }
+    try {
+      if (editingWorkout) {
+        // Update existing workout
+        await updateWorkoutMutation.mutateAsync({
+          workoutId: editingWorkout.id,
+          name: workoutForm.name,
+          startDate: workoutForm.startDate,
+          endDate: workoutForm.endDate || undefined,
+        });
+        // Delete existing exercises and re-add
+        const existingExercises = editingWorkout.exercises || [];
+        for (const ex of existingExercises) {
+          if (ex.id) await deleteWorkoutExerciseMutation.mutateAsync({ id: ex.id });
+        }
+        for (let i = 0; i < workoutExercises.length; i++) {
+          const ex = workoutExercises[i];
+          await addExerciseToWorkoutMutation.mutateAsync({
+            workoutId: editingWorkout.id,
+            exerciseId: ex.exerciseId,
+            dayOfWeek: ex.dayOfWeek || "Segunda",
+            sets: ex.sets || 3,
+            reps: ex.reps || "12",
+            load: ex.load || undefined,
+            restSeconds: ex.restSeconds || undefined,
+            technique: ex.technique || undefined,
+            notes: ex.notes || undefined,
+            orderIndex: i,
+          });
+        }
+        toast.success("Treino atualizado com sucesso!");
+      } else {
+        // Create new workout
+        const result = await createWorkoutMutation.mutateAsync({
+          studentId: selectedAluno.id,
+          name: workoutForm.name,
+          startDate: workoutForm.startDate,
+          endDate: workoutForm.endDate || undefined,
+        });
+        for (let i = 0; i < workoutExercises.length; i++) {
+          const ex = workoutExercises[i];
+          await addExerciseToWorkoutMutation.mutateAsync({
+            workoutId: result.workoutId,
+            exerciseId: ex.exerciseId,
+            dayOfWeek: ex.dayOfWeek || "Segunda",
+            sets: ex.sets || 3,
+            reps: ex.reps || "12",
+            load: ex.load || undefined,
+            restSeconds: ex.restSeconds || undefined,
+            technique: ex.technique || undefined,
+            notes: ex.notes || undefined,
+            orderIndex: i,
+          });
+        }
+        toast.success("Treino criado com sucesso!");
+      }
+      setWorkoutForm({ name: "", startDate: "", endDate: "" });
+      setWorkoutExercises([]);
+      setEditingWorkout(null);
+      refetchWorkouts();
+      setCurrentScreen("treinos-aluno");
+    } catch (err) {
+      // errors handled by mutation
+    }
+  };
+
+  // Save as template from workout form
+  const handleSaveAsTemplate = async () => {
+    if (!workoutForm.name || workoutExercises.length === 0) {
+      toast.error("Preencha o nome e adicione exercícios");
+      return;
+    }
+    try {
+      const result = await createTemplateMutation.mutateAsync({
+        name: workoutForm.name,
+        description: undefined,
+      });
+      // Add exercises to template
+      for (let i = 0; i < workoutExercises.length; i++) {
+        const ex = workoutExercises[i];
+        await addTemplateExerciseMutation.mutateAsync({
+          templateId: result.templateId,
+          exerciseId: ex.exerciseId,
+          dayOfWeek: ex.dayOfWeek || "Segunda",
+          sets: ex.sets || 3,
+          reps: ex.reps || "12",
+          load: ex.load || undefined,
+          restSeconds: ex.restSeconds || undefined,
+          technique: ex.technique || undefined,
+          notes: ex.notes || undefined,
+          orderIndex: i,
+        });
+      }
+      toast.success("Modelo salvo com sucesso!");
+    } catch (err) {
+      // handled by mutation
+    }
+  };
+
+  // Load workout exercises when editing
+  const handleEditWorkout = async (workout: any) => {
+    setEditingWorkout(workout);
+    setWorkoutForm({
+      name: workout.name || "",
+      startDate: workout.startDate ? new Date(workout.startDate).toISOString().split('T')[0] : "",
+      endDate: workout.endDate ? new Date(workout.endDate).toISOString().split('T')[0] : "",
+    });
+    // We need to fetch the exercises
+    try {
+      const data = await workoutWithExercisesQuery.refetch();
+      // This will be handled by the useEffect below
+    } catch (err) {
+      // handled
+    }
+    setCurrentScreen("criar-treino");
+  };
+
+  // Template mutations
+  const toggleTemplateMutation = trpc.templates.toggle.useMutation({
+    onSuccess: () => {
+      toast.success("Status do modelo atualizado!");
+      refetchTemplates();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao atualizar modelo");
+    },
+  });
+
+  const deleteTemplateMutation = trpc.templates.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Modelo excluído com sucesso!");
+      refetchTemplates();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao excluir modelo");
+    },
+  });
+
+  const createTemplateMutation = trpc.templates.create.useMutation({
+    onSuccess: (data: any, variables) => {
+      toast.success("Modelo criado com sucesso!");
+      refetchTemplates();
+      // Navigate to edit screen for the new template
+      if (data?.templateId) {
+        const newTemplate = { id: data.templateId, name: variables.name || "Novo Treino", description: variables.description || "", active: true };
+        handleOpenEditTemplate(newTemplate);
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao criar modelo");
+    },
+  });
+
+  const applyTemplateMutation = trpc.templates.applyToStudents.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Treino aplicado para ${data.results?.length || 0} aluno(s)!`);
+      setApplyModalOpen(false);
+      setApplyingTemplateId(null);
+      setApplyStudentIds([]);
+      refetchWorkouts();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao aplicar modelo");
+    },
+  });
+
+  const fromWorkoutMutation = trpc.templates.fromWorkout.useMutation({
+    onSuccess: () => {
+      toast.success("Modelo criado a partir do treino!");
+      refetchTemplates();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao criar modelo");
+    },
+  });
+
+  const cloneTemplateMutation = trpc.templates.clone.useMutation({
+    onSuccess: () => {
+      toast.success("Modelo duplicado com sucesso!");
+      refetchTemplates();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao duplicar modelo");
+    },
+  });
+
+  const addTemplateExerciseMutation = trpc.templates.addExercise.useMutation({
+    onError: (error) => {
+      toast.error(error.message || "Erro ao adicionar exercício ao modelo");
+    },
+  });
+
+  const deleteTemplateExerciseMutation = trpc.templates.deleteExercise.useMutation({
+    onError: (error) => {
+      toast.error(error.message || "Erro ao remover exercício do modelo");
+    },
+  });
+
+  const updateTemplateMutation = trpc.templates.update.useMutation({
+    onSuccess: () => {
+      toast.success("Modelo atualizado!");
+      refetchTemplates();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao atualizar modelo");
+    },
+  });
+
+  // Query template with exercises when editing
+  const templateWithExercisesQuery = trpc.templates.getById.useQuery(
+    { id: editingTemplate?.id || 0 },
+    { enabled: !!editingTemplate?.id }
+  );
+
+  // Load template exercises when data arrives
+  useEffect(() => {
+    if (templateWithExercisesQuery.data && editingTemplate) {
+      const tData = templateWithExercisesQuery.data as any;
+      setTemplateForm({
+        name: tData.name || "",
+        description: tData.description || "",
+        startDate: "",
+        endDate: "",
+      });
+      const exs = (tData.exercises || []).map((ex: any, i: number) => ({
+        id: ex.id,
+        exerciseId: ex.exerciseId,
+        name: ex.exerciseName || ex.name || 'Exercício',
+        imageUrl: ex.exerciseImageUrl || ex.imageUrl,
+        videoUrl: ex.exerciseVideoUrl || ex.videoUrl,
+        muscleGroup: ex.exerciseMuscleGroup || ex.muscleGroup,
+        sets: ex.sets_count || ex.sets || 3,
+        reps: ex.reps || "12",
+        load: ex.load_value || ex.load || "",
+        restSeconds: ex.restSeconds || 60,
+        technique: ex.technique || "normal",
+        notes: ex.notes || "",
+        orderIndex: ex.orderIndex ?? i,
+      }));
+      setTemplateExercises(exs);
+    }
+  }, [templateWithExercisesQuery.data]);
+
+  // Sidebar filtered exercises for template edit
+  const templateSidebarFiltered = useMemo(() => {
+    let filtered = [...exercises];
+    if (templateSidebarSearch) {
+      const s = templateSidebarSearch.toLowerCase();
+      filtered = filtered.filter((ex: any) => ex.name.toLowerCase().includes(s) || ex.muscleGroup?.toLowerCase().includes(s));
+    }
+    if (templateSidebarMuscle !== "all") {
+      filtered = filtered.filter((ex: any) => ex.muscleGroup === templateSidebarMuscle);
+    }
+    return filtered;
+  }, [exercises, templateSidebarSearch, templateSidebarMuscle]);
+
+  const handleOpenEditTemplate = (template: any) => {
+    setEditingTemplate(template);
+    setTemplateForm({ name: template.name || "", description: template.description || "", startDate: "", endDate: "" });
+    setTemplateExercises([]);
+    setTemplateSidebarSearch("");
+    setTemplateSidebarMuscle("all");
+    setCurrentScreen("editar-modelo");
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!editingTemplate || !templateForm.name) {
+      toast.error("Nome do modelo é obrigatório");
+      return;
+    }
+    try {
+      // Update template metadata
+      await updateTemplateMutation.mutateAsync({
+        id: editingTemplate.id,
+        name: templateForm.name,
+        description: templateForm.description || undefined,
+      });
+      // Clear old exercises and re-add
+      await clearTemplateExercisesMutation.mutateAsync({ templateId: editingTemplate.id });
+      for (let i = 0; i < templateExercises.length; i++) {
+        const ex = templateExercises[i];
+        await addTemplateExerciseMutation.mutateAsync({
+          templateId: editingTemplate.id,
+          exerciseId: ex.exerciseId,
+          dayOfWeek: ex.dayOfWeek || "Segunda",
+          sets: ex.sets || 3,
+          reps: ex.reps || "12",
+          load: ex.load || undefined,
+          restSeconds: ex.restSeconds || undefined,
+          technique: ex.technique || undefined,
+          notes: ex.notes || undefined,
+          orderIndex: i,
+        });
+      }
+      toast.success("Modelo salvo com sucesso!");
+      refetchTemplates();
+      setCurrentScreen("modelos");
+    } catch (err) {
+      // handled
+    }
+  };
+
+  const clearTemplateExercisesMutation = trpc.templates.clearExercises.useMutation({
+    onError: (error) => {
+      toast.error(error.message || "Erro ao limpar exercícios");
+    },
+  });
+
+  const handleAddExerciseToTemplate = (exercise: any) => {
+    setTemplateExercises(prev => [...prev, {
+      exerciseId: exercise.id,
+      name: exercise.name,
+      imageUrl: exercise.imageUrl,
+      videoUrl: exercise.videoUrl,
+      muscleGroup: exercise.muscleGroup,
+      sets: 3,
+      reps: "12",
+      load: "",
+      restSeconds: 60,
+      technique: "normal",
+      notes: "",
+      orderIndex: prev.length,
+    }]);
+    toast.success(`${exercise.name} adicionado`);
+  };
+
+  const handleApplyTemplate = () => {
+    if (!applyingTemplateId || applyStudentIds.length === 0) {
+      toast.error("Selecione pelo menos um aluno");
+      return;
+    }
+    if (!applyStartDate) {
+      toast.error("Informe a data de início");
+      return;
+    }
+    applyTemplateMutation.mutate({
+      templateId: applyingTemplateId,
+      studentIds: applyStudentIds,
+      startDate: applyStartDate,
+      endDate: applyEndDate || undefined,
+    });
+  };
+
+  const handleDeleteTemplate = (id: number) => {
+    if (confirm("Tem certeza que deseja excluir este modelo?")) {
+      deleteTemplateMutation.mutate({ id });
+    }
+  };
+
+  // Template search/filter
+  const [templateSearch, setTemplateSearch] = useState("");
+  const filteredTemplates = useMemo(() => {
+    if (!templateSearch) return templates;
+    const searchLower = templateSearch.toLowerCase();
+    return templates.filter((t: any) =>
+      t.name.toLowerCase().includes(searchLower) ||
+      t.description?.toLowerCase().includes(searchLower)
+    );
+  }, [templates, templateSearch]);
+
+  // Apply modal filtered students
+  const applyFilteredStudents = useMemo(() => {
+    if (!applySearch) return students;
+    const searchLower = applySearch.toLowerCase();
+    return students.filter((s: any) =>
+      s.name.toLowerCase().includes(searchLower) ||
+      s.email.toLowerCase().includes(searchLower)
+    );
+  }, [students, applySearch]);
+
   const createAssessmentMutation = trpc.assessments.create.useMutation({
     onSuccess: () => {
       toast.success("Avaliação cadastrada com sucesso!");
@@ -380,6 +1019,9 @@ export default function ProfessorDashboard() {
       return;
     }
 
+    // Determine videoUrl from media 2 (file or external link)
+    const videoUrlValue = exerciseMedia2Link || undefined;
+
     let imageData: string | undefined;
     if (exerciseImageFile) {
       const reader = new FileReader();
@@ -388,11 +1030,21 @@ export default function ProfessorDashboard() {
         await createExerciseMutation.mutateAsync({
           ...exerciseForm,
           imageData,
+          videoUrl: videoUrlValue,
         });
       };
       reader.readAsDataURL(exerciseImageFile);
+    } else if (exerciseMedia1Link) {
+      // Use external link as videoUrl for media 1 (image link)
+      await createExerciseMutation.mutateAsync({
+        ...exerciseForm,
+        videoUrl: videoUrlValue,
+      });
     } else {
-      await createExerciseMutation.mutateAsync(exerciseForm);
+      await createExerciseMutation.mutateAsync({
+        ...exerciseForm,
+        videoUrl: videoUrlValue,
+      });
     }
   };
 
@@ -411,6 +1063,7 @@ export default function ProfessorDashboard() {
       equipment: exercise.equipment || "",
       instructions: exercise.instructions || "",
       imageUrl: exercise.imageUrl || "",
+      videoUrl: exercise.videoUrl || "",
     });
     setIsEditExerciseDialogOpen(true);
   };
@@ -548,857 +1201,1573 @@ export default function ProfessorDashboard() {
     );
   }
 
-  const menuItems = [
-    { id: "dashboard", icon: Users, label: "Dashboard" },
-    { id: "students", icon: Users, label: "Alunos" },
-    { id: "workouts", icon: Dumbbell, label: "Treinos" },
-    { id: "exercises", icon: Activity, label: "Exercícios" },
-    { id: "assessments", icon: Clipboard, label: "Avaliações" },
-    { id: "medical", icon: FileText, label: "Exames" },
-    { id: "reports", icon: BarChart3, label: "Relatórios" },
-    { id: "settings", icon: Settings, label: "Configurações" },
+  const sidebarItems = [
+    { id: "alunos", icon: Home, label: "Sócio" },
+    { id: "todos-treinos", icon: FileText, label: "Treinos Criados" },
+    { id: "exercicios", icon: Dumbbell, label: "Exercicios" },
+    { id: "modelos", icon: Library, label: "Biblioteca De Treinos" },
+    { id: "criar-treino", icon: ClipboardList, label: "Programas" },
+    { id: "avaliacoes", icon: Activity, label: "Avaliação Física" },
   ];
 
+  const handleNavClick = (id: string) => {
+    if (id === "criar-treino") {
+      if (!selectedAluno) {
+        setCurrentScreen("alunos");
+        toast.error("Selecione um aluno primeiro");
+        return;
+      }
+      setEditingWorkout(null);
+    }
+    setCurrentScreen(id as any);
+    setMobileSidebarOpen(false);
+  };
+
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className="w-20 bg-gradient-to-b from-blue-600 to-blue-700 flex flex-col items-center py-6 space-y-6">
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar - Desktop */}
+      <aside className={`hidden md:flex flex-col bg-white border-r border-gray-200 transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-16'}`}>
         {/* Logo */}
-        <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-          <Dumbbell className="w-6 h-6 text-white" />
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          {sidebarOpen && (
+            <div className="flex items-center gap-2">
+              <Dumbbell className="w-7 h-7 text-blue-500" />
+              <span className="font-bold text-lg text-gray-800">SysFit Pro</span>
+            </div>
+          )}
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 hover:bg-gray-100 rounded-lg">
+            <ChevronLeft className={`w-5 h-5 text-gray-500 transition-transform ${!sidebarOpen ? 'rotate-180' : ''}`} />
+          </button>
         </div>
 
         {/* Menu Items */}
-        <nav className="flex-1 flex flex-col space-y-2">
-          {menuItems.map((item) => {
+        <nav className="flex-1 py-4 overflow-y-auto">
+          {sidebarItems.map((item) => {
             const Icon = item.icon;
-            const isActive = item.id === "dashboard" && currentScreen === "dashboard";
+            const isActive = currentScreen === item.id || (item.id === 'criar-treino' && (currentScreen === 'criar-treino' || currentScreen === 'treinos-aluno')) || (item.id === 'modelos' && currentScreen === 'editar-modelo') || (item.id === 'avaliacoes' && currentScreen === 'avaliacao-form');
             return (
               <button
                 key={item.id}
-                onClick={() => {
-                  if (item.id === "students") setCurrentScreen("students");
-                  else if (item.id === "exercises") setCurrentScreen("exercises");
-                  else if (item.id === "workouts") setCurrentScreen("workouts");
-                  else if (item.id === "assessments") setCurrentScreen("assessments");
-                  else setCurrentScreen("dashboard");
-                }}
-                className={`w-12 h-12 rounded-lg flex items-center justify-center transition relative group ${
+                onClick={() => handleNavClick(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-white/20 text-white"
-                    : "text-white/60 hover:bg-white/10 hover:text-white"
+                    ? 'bg-blue-50 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
-                title={item.label}
               >
-                <Icon className="w-5 h-5" />
-                {item.id === "dashboard" && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-green-400 rounded-r"></div>
-                )}
+                <div className={`w-8 h-8 flex items-center justify-center rounded-lg ${isActive ? 'bg-blue-400 text-white' : ''}`}>
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-400'}`} />
+                </div>
+                {sidebarOpen && <span>{item.label}</span>}
               </button>
             );
           })}
         </nav>
 
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="w-12 h-12 rounded-lg flex items-center justify-center text-white/60 hover:bg-white/10 hover:text-white transition"
-          title="Sair"
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
+        {/* User info + Logout */}
+        <div className="p-4 border-t border-gray-200">
+          {sidebarOpen && (
+            <div className="mb-2">
+              <p className="text-sm font-medium text-gray-900 truncate">{user?.name || 'Professor'}</p>
+              <p className="text-xs text-gray-500">Professor</p>
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
+          >
+            <LogOut className="w-4 h-4" />
+            {sidebarOpen && <span>Sair</span>}
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setMobileSidebarOpen(true)} className="p-1">
+              <Menu className="w-6 h-6 text-gray-600" />
+            </button>
+            <Dumbbell className="w-5 h-5 text-blue-600" />
+            <span className="font-bold text-gray-800">SysFit Pro</span>
+          </div>
+          <button onClick={handleLogout} className="p-1 text-red-500">
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
+        {/* Mobile tabs */}
+        <div className="flex overflow-x-auto px-2 pb-2 gap-1 scrollbar-hide">
+          {sidebarItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentScreen === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  isActive ? 'bg-blue-400 text-white' : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        {/* Header */}
-        <div className="bg-white border-b px-8 py-6">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <div className="flex items-center space-x-3">
-              <Dumbbell className="w-8 h-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-gray-900">SysFit Pro</h1>
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div className="md:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileSidebarOpen(false)} />
+          <aside className="relative w-64 h-full bg-white shadow-xl flex flex-col">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Dumbbell className="w-7 h-7 text-blue-500" />
+                <span className="font-bold text-lg">SysFit Pro</span>
+              </div>
+              <button onClick={() => setMobileSidebarOpen(false)} className="p-1">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
             </div>
-          </div>
+            <nav className="flex-1 py-4 overflow-y-auto">
+              {sidebarItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentScreen === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavClick(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-blue-50 text-gray-900'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 flex items-center justify-center rounded-lg ${isActive ? 'bg-blue-400 text-white' : ''}`}>
+                      <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-400'}`} />
+                    </div>
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+            <div className="p-4 border-t border-gray-200">
+              <p className="text-sm font-medium text-gray-900 truncate">{user?.name || 'Professor'}</p>
+              <p className="text-xs text-gray-500 mb-3">Professor</p>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition px-2 py-2"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sair</span>
+              </button>
+            </div>
+          </aside>
         </div>
+      )}
 
-        {/* Dashboard Content */}
-        {currentScreen === "dashboard" && (
-          <div className="max-w-7xl mx-auto px-8 py-8 space-y-8">
-            {/* Action Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card
-                className="hover:shadow-lg transition cursor-pointer group"
-                onClick={() => setCurrentScreen("students")}
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition">
-                    <Users className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Meus Alunos</h3>
-                  <p className="text-sm text-gray-500">Ver e gerenciar meus alunos</p>
-                </CardContent>
-              </Card>
+      {/* Main Content */}
+      <main className="flex-1 min-w-0 md:pt-0 pt-24 overflow-auto p-3 sm:p-6">
 
-              <Card
-                className="hover:shadow-lg transition cursor-pointer group"
-                onClick={() => setLocation("/professor/workout/new")}
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition">
-                    <Dumbbell className="w-8 h-8 text-green-600" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Criar Treino</h3>
-                  <p className="text-sm text-gray-500">Montar série de treino para aluno</p>
-                </CardContent>
-              </Card>
-
-              <Card
-                className="hover:shadow-lg transition cursor-pointer group"
-                onClick={() => setCurrentScreen("assessments")}
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition">
-                    <Clipboard className="w-8 h-8 text-yellow-600" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Avaliações</h3>
-                  <p className="text-sm text-gray-500">Registrar avaliações físicas</p>
-                </CardContent>
-              </Card>
-
-              <Card
-                className="hover:shadow-lg transition cursor-pointer group"
-                onClick={() => setCurrentScreen("exercises")}
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition">
-                    <BookOpen className="w-8 h-8 text-purple-600" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Biblioteca de Exercícios</h3>
-                  <p className="text-sm text-gray-500">Explorar exercícios disponíveis</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Status Rápido */}
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Visão Geral</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="border-l-4 border-l-blue-500 shadow-md">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-600 mb-2">Meus Alunos</p>
-                        <p className="text-3xl font-bold text-gray-900 mb-1">{students.length}</p>
-                        <p className="text-xs text-gray-500">Total de alunos cadastrados</p>
-                      </div>
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Users className="w-6 h-6 text-blue-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-green-500 shadow-md">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-600 mb-2">Treinos Criados</p>
-                        <p className="text-3xl font-bold text-gray-900 mb-1">{workouts.length}</p>
-                        <p className="text-xs text-gray-500">Séries de treino ativas</p>
-                      </div>
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <Dumbbell className="w-6 h-6 text-green-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-orange-500 shadow-md">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-600 mb-2">Treinos Ativos</p>
-                        <p className="text-3xl font-bold text-gray-900 mb-1">{workouts.filter((w: any) => w.active).length}</p>
-                        <p className="text-xs text-gray-500">Séries ativas no momento</p>
-                      </div>
-                      <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                        <Activity className="w-6 h-6 text-orange-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-purple-500 shadow-md">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-600 mb-2">Exercícios na Biblioteca</p>
-                        <p className="text-3xl font-bold text-gray-900 mb-1">{exercises.length}</p>
-                        <p className="text-xs text-gray-500">Total disponível</p>
-                      </div>
-                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <Activity className="w-6 h-6 text-purple-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+        {/* Tab: Sócio (Alunos) */}
+        {currentScreen === "alunos" && (
+          <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-2xl font-bold text-gray-900">Meus Alunos</h2>
+              <div className="relative w-full sm:w-auto">
+                <Search className="absolute left-2 sm:left-3 top-2 sm:top-3 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                <input
+                  type="text"
+                  value={studentFilters.searchTerm}
+                  onChange={(e) => setStudentFilters({ ...studentFilters, searchTerm: e.target.value })}
+                  placeholder="Buscar aluno..."
+                  style={{ fontSize: '16px' }}
+                  className="pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 w-full sm:w-auto outline-none"
+                />
               </div>
             </div>
 
-            {/* Últimos Alunos Cadastrados */}
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Últimos Alunos Cadastrados</h2>
-              <Card>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50 border-b">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plano</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data Cadastro</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {latestStudents.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                              Nenhum aluno cadastrado ainda
-                            </td>
-                          </tr>
-                        ) : (
-                          latestStudents.map((student: any) => (
-                            <tr key={student.id} className="hover:bg-gray-50">
-                              <td className="px-6 py-4">
-                                <div className="flex items-center">
-                                  <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mr-3">
-                                    <span className="text-sm font-semibold text-white">
-                                      {student.name.charAt(0).toUpperCase()}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <div className="font-medium text-gray-900">{student.name}</div>
-                                    <div className="text-sm text-gray-500">Ficha #{student.id}</div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4">
-                                <div className="text-sm text-gray-900">Plano Básico</div>
-                                <div className="text-sm text-gray-500">R$ 49,90/mês</div>
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-900">
-                                {new Date(student.createdAt).toLocaleDateString("pt-BR")}
-                              </td>
-                              <td className="px-6 py-4">
-                                <Badge className={
-                                  student.membershipStatus === "active"
-                                    ? "bg-green-500 hover:bg-green-600"
-                                    : "bg-gray-500"
-                                }>
-                                  {student.membershipStatus === "active" ? "ATIVO" : "INATIVO"}
-                                </Badge>
-                              </td>
-                              <td className="px-6 py-4">
-                                <div className="flex items-center space-x-3">
-                                  <button
-                                    onClick={() => setLocation(`/professor/students/${student.id}`)}
-                                    className="text-blue-600 hover:text-blue-900 text-sm font-medium"
-                                  >
-                                    Ver
-                                  </button>
-                                  <button
-                                    onClick={() => setLocation(`/professor/students/${student.id}`)}
-                                    className="text-blue-600 hover:text-blue-900 text-sm font-medium"
-                                  >
-                                    Editar
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* Students Screen */}
-        {currentScreen === "students" && (
-          <div className="max-w-7xl mx-auto px-8 py-8 space-y-4">
-            <h2 className="text-2xl font-bold text-gray-900">Alunos</h2>
-
-            <Card>
-              <CardContent className="pt-6 space-y-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    placeholder="Buscar por nome, email ou matrícula..."
-                    value={studentFilters.searchTerm}
-                    onChange={(e) => setStudentFilters({ ...studentFilters, searchTerm: e.target.value })}
-                    className="pl-10"
-                  />
+            {/* Info bar */}
+            {filteredAndSortedStudents.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-3 sm:mb-4 pb-3 sm:pb-4 border-b">
+                <div className="text-xs sm:text-sm text-gray-600">
+                  <span className="hidden sm:inline">Exibindo {filteredAndSortedStudents.length} de {students.length} sócios</span>
+                  <span className="sm:hidden">{filteredAndSortedStudents.length} alunos</span>
                 </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <Select
-                    value={studentFilters.status}
-                    onValueChange={(value) => setStudentFilters({ ...studentFilters, status: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="active">Ativos</SelectItem>
-                      <SelectItem value="inactive">Inativos</SelectItem>
-                      <SelectItem value="suspended">Suspensos</SelectItem>
-                      <SelectItem value="blocked">Bloqueados</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={studentSorting}
-                    onValueChange={(value: any) => setStudentSorting(value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="name">Nome</SelectItem>
-                      <SelectItem value="createdAt">Data cadastro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            )}
 
             {filteredAndSortedStudents.length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-gray-600">Nenhum aluno encontrado</p>
-                </CardContent>
-              </Card>
+              <p className="text-center text-gray-500 py-6 sm:py-8 text-sm sm:text-base">Nenhum aluno encontrado</p>
             ) : (
-              <Card>
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    {filteredAndSortedStudents.map((student: any) => {
-                      const studentWorkouts = workouts.filter((w: any) => w.studentId === student.id);
-                      return (
-                        <div
-                          key={student.id}
-                          className="p-4 hover:bg-gray-50 transition flex items-center gap-3"
-                        >
-                          {/* Student Avatar */}
-                          <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
-                            <span className="text-lg font-semibold text-white">
-                              {student.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-
-                          {/* Student Info */}
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-gray-900">{student.name}</h3>
-                            <p className="text-sm text-gray-500 truncate">{student.email}</p>
-                            {studentWorkouts.length > 0 && (
-                              <p className="text-xs text-blue-600 mt-1">
-                                {studentWorkouts.length} treino(s) criado(s)
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Status Badge */}
-                          <Badge
-                            className={
-                              student.membershipStatus === "active"
-                                ? "bg-green-500"
-                                : "bg-gray-500"
-                            }
-                          >
-                            {student.membershipStatus === "active" && "Ativo"}
-                            {student.membershipStatus === "inactive" && "Inativo"}
-                            {student.membershipStatus === "suspended" && "Suspenso"}
-                            {student.membershipStatus === "blocked" && "Bloqueado"}
-                          </Badge>
-
-                          {/* Action Buttons */}
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {studentWorkouts.length > 0 ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setLocation(`/professor/workout/${studentWorkouts[0].id}/edit`);
-                                }}
-                                title="Editar treino"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setLocation(`/professor/workout/new`);
-                                }}
-                                title="Criar treino"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setLocation(`/professor/students/${student.id}`);
-                              }}
-                              title="Ver perfil do aluno"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
+              <div className="space-y-2 sm:space-y-3">
+                {filteredAndSortedStudents.map((student: any) => (
+                  <div
+                    key={student.id}
+                    className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition"
+                    onClick={() => {
+                      setSelectedAluno(student);
+                      setCurrentScreen("treinos-aluno");
+                    }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-medium text-gray-900 text-sm sm:text-base truncate">{student.name}</h3>
+                      <p className="text-xs text-gray-500 truncate mt-0.5">Ficha #{student.id}</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 ml-2" />
                   </div>
-                </CardContent>
-              </Card>
+                ))}
+              </div>
             )}
           </div>
         )}
 
-        {/* Exercises Screen */}
-        {currentScreen === "exercises" && (
-          <div className="max-w-7xl mx-auto px-8 py-8 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Biblioteca de Exercícios</h2>
-              <Button onClick={() => setIsExerciseDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Exercício
-              </Button>
+        {/* Tab: Treinos Criados */}
+        {currentScreen === "todos-treinos" && (
+          <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Treinos Criados</h2>
+
+            {/* Busca e Filtro */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por sócio ou nome do treino..."
+                  value={workoutSearchTerm}
+                  onChange={(e) => setWorkoutSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  style={{ fontSize: '16px' }}
+                />
+              </div>
+              <select
+                value={workoutStatusFilter}
+                onChange={(e) => setWorkoutStatusFilter(e.target.value as any)}
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
+              >
+                <option value="all">Todos os status</option>
+                <option value="active">Ativos</option>
+                <option value="inactive">Inativos</option>
+              </select>
             </div>
 
-            {exercises.length > 0 && (
-              <Card>
-                <CardContent className="pt-6 space-y-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      placeholder="Buscar exercícios..."
-                      value={exerciseFilters.searchTerm}
-                      onChange={(e) => setExerciseFilters({ ...exerciseFilters, searchTerm: e.target.value })}
-                      className="pl-10"
-                    />
-                  </div>
-                  {filteredExercises.length > 0 && (
-                    <p className="text-sm text-gray-600">
-                      {filteredExercises.length} exercício(s) encontrado(s)
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {exercises.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Dumbbell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-4">Nenhum exercício cadastrado</p>
-                  <Button onClick={() => setIsExerciseDialogOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Criar Primeiro Exercício
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : filteredExercises.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600">Nenhum exercício encontrado com esses filtros</p>
-                </CardContent>
-              </Card>
+            {filteredWorkouts.length === 0 ? (
+              <div className="text-center py-8 sm:py-12">
+                <FileText className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-3 sm:mb-4" />
+                <p className="text-gray-600 text-sm sm:text-base">Nenhum treino criado ainda</p>
+              </div>
             ) : (
-              <>
-                <Card>
-                  <CardContent className="p-0">
-                    <div className="divide-y">
-                      {paginatedExercises.map((exercise: any) => (
-                        <div
-                          key={exercise.id}
-                          className="p-4 hover:bg-gray-50 transition flex items-center gap-3"
-                        >
-                          {/* Miniatura da foto */}
-                          <div className="flex-shrink-0 w-16 h-16 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                            {exercise.imageUrl ? (
-                              <img
-                                src={exercise.imageUrl}
-                                alt={exercise.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                <Dumbbell className="w-8 h-8" />
-                              </div>
-                            )}
+              <div className="space-y-3">
+                {filteredWorkouts.map((workout: any) => {
+                  const student = students.find((s: any) => s.id === workout.studentId);
+                  const isActive = workout.active;
+                  return (
+                    <div
+                      key={workout.id}
+                      className={`border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition cursor-pointer ${isActive ? 'border-green-300 bg-green-50/30' : 'border-gray-200'}`}
+                      onClick={() => {
+                        if (student) {
+                          setSelectedAluno(student);
+                          setCurrentScreen("treinos-aluno");
+                        }
+                      }}
+                    >
+                      <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-sm sm:text-base font-medium text-gray-900 truncate">{workout.name || 'Treino sem nome'}</h3>
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                              {isActive ? 'Ativo' : 'Inativo'}
+                            </span>
                           </div>
-
-                          {/* Informações */}
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">{exercise.name}</h3>
-                            {exercise.muscleGroup && (
-                              <span className="inline-block mt-1 text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                                {exercise.muscleGroup}
+                          {student && <p className="text-sm text-blue-600 font-medium mb-1">{student.name}</p>}
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              <span>
+                                {workout.startDate ? new Date(workout.startDate).toLocaleDateString('pt-BR') : '-'}
+                                {' - '}
+                                {workout.endDate ? new Date(workout.endDate).toLocaleDateString('pt-BR') : '-'}
                               </span>
-                            )}
-                          </div>
-
-                          {/* Botões de ação */}
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedExercise(exercise);
-                                setIsExerciseDetailOpen(true);
-                              }}
-                              title="Ver detalhes"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditExercise(exercise);
-                              }}
-                              title="Editar"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteExercise(exercise.id);
-                              }}
-                              title="Excluir"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Dumbbell className="w-3 h-3" />
+                              <span>{workout.exerciseCount || 0} exercícios</span>
+                            </div>
                           </div>
                         </div>
-                      ))}
+                        <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0 hidden sm:block" />
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
-                {/* Paginação */}
-                {totalExercisePages > 1 && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-600">
-                          Página {exercisePage} de {totalExercisePages}
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setExercisePage(Math.max(1, exercisePage - 1))}
-                            disabled={exercisePage === 1}
-                          >
-                            Anterior
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setExercisePage(Math.min(totalExercisePages, exercisePage + 1))}
-                            disabled={exercisePage === totalExercisePages}
-                          >
-                            Próxima
-                          </Button>
+        {/* Tab: Treinos do Aluno */}
+        {currentScreen === "treinos-aluno" && (
+          <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setSelectedAluno(null); setCurrentScreen("alunos"); }}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition"
+                  title="Voltar para lista de sócios"
+                >
+                  <ChevronLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <div>
+                  <h2 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
+                    {selectedAluno ? selectedAluno.name : 'Treinos do Aluno'}
+                  </h2>
+                  {selectedAluno && (
+                    <p className="text-xs text-gray-500">Código: {selectedAluno.registrationNumber || selectedAluno.id} | Sócio</p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setEditingWorkout(null);
+                  setWorkoutForm({ name: "", startDate: "", endDate: "" });
+                  setWorkoutExercises([]);
+                  setCurrentScreen("criar-treino");
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-400 hover:bg-blue-500 text-white rounded-lg transition text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                Novo Treino
+              </button>
+            </div>
+
+            {/* Student workouts list */}
+            {(() => {
+              const studentWorkouts = workouts.filter((w: any) => w.studentId === selectedAluno?.id);
+              return studentWorkouts.length === 0 ? (
+                <div className="text-center py-8 sm:py-12">
+                  <FileText className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-3 sm:mb-4" />
+                  <p className="text-gray-500 text-sm sm:text-base mb-4">Nenhum treino criado para este aluno</p>
+                  <button
+                    onClick={() => {
+                      setEditingWorkout(null);
+                      setWorkoutForm({ name: "", startDate: "", endDate: "" });
+                      setWorkoutExercises([]);
+                      setCurrentScreen("criar-treino");
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-400 hover:bg-blue-500 text-white rounded-lg text-sm"
+                  >
+                    <Plus className="w-4 h-4" /> Criar Primeiro Treino
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {studentWorkouts.map((workout: any) => {
+                    const isActive = workout.active;
+                    return (
+                      <div
+                        key={workout.id}
+                        className={`border rounded-lg p-3 sm:p-4 ${isActive ? 'border-green-300 bg-green-50/30' : 'border-gray-200'}`}
+                      >
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-sm sm:text-base font-medium text-gray-900 truncate">{workout.name || 'Treino sem nome'}</h3>
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                {isActive ? 'Ativo' : 'Inativo'}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                <span>
+                                  {workout.startDate ? new Date(workout.startDate).toLocaleDateString('pt-BR') : '-'}
+                                  {' até '}
+                                  {workout.endDate ? new Date(workout.endDate).toLocaleDateString('pt-BR') : '-'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Dumbbell className="w-3 h-3" />
+                                <span>{workout.exerciseCount || 0} exercicios</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={() => handleEditWorkout(workout)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition"
+                            >
+                              <Edit className="w-3.5 h-3.5" /> Editar
+                            </button>
+                            <button
+                              onClick={() => cloneWorkoutMutation.mutate({ workoutId: workout.id })}
+                              disabled={cloneWorkoutMutation.isPending}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-medium transition disabled:opacity-50"
+                            >
+                              <Copy className="w-3.5 h-3.5" /> Clonar
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm("Excluir este treino?")) deleteWorkoutMutation.mutate({ workoutId: workout.id });
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Deletar
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Tab: Exercícios */}
+        {currentScreen === "exercicios" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Exercicios</h2>
+              <button
+                onClick={() => setIsExerciseDialogOpen(true)}
+                className="w-10 h-10 flex items-center justify-center bg-blue-400 hover:bg-blue-500 text-white rounded-full transition"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Stats bar */}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border-2 border-blue-400 bg-blue-50 text-gray-800 font-medium">
+                <Dumbbell className="w-3.5 h-3.5" /> {exercises.length} exercicios
+              </span>
+              <span className="text-gray-400">|</span>
+              <span>{exercises.filter((e: any) => !e.createdBy || e.createdBy === 0).length} biblioteca</span>
+              <span>{exercises.filter((e: any) => e.createdBy && e.createdBy > 0).length} próprio</span>
+            </div>
+
+            {/* Stats chips */}
+            <div className="flex flex-wrap gap-2 sm:gap-3">
+              <button
+                onClick={() => setExerciseFilters({ ...exerciseFilters, muscleGroup: "all" })}
+                className={`inline-flex items-center gap-1.5 text-xs sm:text-sm px-3 py-1 rounded-full border-2 transition cursor-pointer ${
+                  exerciseFilters.muscleGroup === "all"
+                    ? 'border-blue-400 bg-blue-50 text-gray-800'
+                    : 'border-gray-200 bg-white text-gray-500 hover:border-blue-300'
+                }`}
+              >
+                <span className="font-bold">{exercises.length}</span> Total
+              </button>
+              {muscleGroups.map((group: any) => (
+                <button
+                  key={group}
+                  onClick={() => setExerciseFilters({ ...exerciseFilters, muscleGroup: exerciseFilters.muscleGroup === group ? "all" : group })}
+                  className={`inline-flex items-center gap-1.5 text-xs sm:text-sm px-3 py-1 rounded-full border-2 transition cursor-pointer ${
+                    exerciseFilters.muscleGroup === group
+                      ? 'border-blue-400 bg-blue-50 text-gray-800'
+                      : 'border-gray-200 bg-white text-gray-500 hover:border-blue-300'
+                  }`}
+                >
+                  {group}
+                </button>
+              ))}
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar exercícios..."
+                value={exerciseFilters.searchTerm}
+                onChange={(e) => setExerciseFilters({ ...exerciseFilters, searchTerm: e.target.value })}
+                className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white outline-none"
+                style={{ fontSize: '16px' }}
+              />
+            </div>
+
+            {exercises.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <Dumbbell className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p className="mb-4">Nenhum exercício cadastrado</p>
+                <button
+                  onClick={() => setIsExerciseDialogOpen(true)}
+                  className="inline-flex items-center gap-2 bg-blue-400 text-white px-4 py-2 rounded-lg hover:bg-blue-500 text-sm"
+                >
+                  <Plus className="w-4 h-4" /> Criar Primeiro Exercício
+                </button>
+              </div>
+            ) : filteredExercises.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <Search className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p>Nenhum exercício encontrado com esses filtros</p>
+              </div>
+            ) : (
+              <>
+                <div className="bg-white rounded-lg shadow divide-y divide-gray-100">
+                  {paginatedExercises.map((exercise: any) => (
+                    <div
+                      key={exercise.id}
+                      className="flex items-center gap-3 px-3 sm:px-4 py-3 hover:bg-gray-50 transition cursor-pointer"
+                      onClick={() => { setSelectedExercise(exercise); setIsExerciseDetailOpen(true); }}
+                    >
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                        {(exercise.videoUrl || exercise.imageUrl) ? (
+                          <img src={exercise.videoUrl || exercise.imageUrl} alt={exercise.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400"><Dumbbell className="w-6 h-6" /></div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">{exercise.name}</p>
+                        <p className="text-xs text-gray-400 truncate">
+                          {[exercise.equipment, exercise.muscleGroup].filter(Boolean).join(', ')}
+                        </p>
+                        {exercise.equipment && (
+                          <span className="inline-block mt-1 text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded border border-gray-200">{exercise.equipment}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button onClick={(e) => { e.stopPropagation(); handleEditExercise(exercise); }} className="p-1.5 text-gray-400 hover:text-blue-500 transition" title="Editar">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteExercise(exercise.id); }} className="p-1.5 text-gray-400 hover:text-red-500 transition" title="Excluir">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {totalExercisePages > 1 && (
+                  <div className="flex items-center justify-center gap-3 py-2">
+                    <button onClick={() => setExercisePage(Math.max(1, exercisePage - 1))} disabled={exercisePage === 1} className="flex items-center gap-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                      <ChevronLeft className="w-4 h-4" /><span className="hidden sm:inline">Anterior</span>
+                    </button>
+                    <span className="text-sm text-gray-600">Pág {exercisePage}/{totalExercisePages}</span>
+                    <button onClick={() => setExercisePage(Math.min(totalExercisePages, exercisePage + 1))} disabled={exercisePage === totalExercisePages} className="flex items-center gap-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                      <span className="hidden sm:inline">Próxima</span><ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 )}
               </>
             )}
           </div>
         )}
 
-        {/* Workouts Screen - Gerenciar treinos por aluno */}
-        {currentScreen === "workouts" && (
-          <div className="max-w-7xl mx-auto px-8 py-8 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Gerenciar Treinos</h2>
-              <Button onClick={() => setLocation("/professor/workout/new")}>
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Treino
-              </Button>
-            </div>
-
-            {(() => {
-              // Filtrar apenas alunos que têm treinos criados
-              const studentsWithWorkouts = students.filter((student: any) => {
-                const studentWorkouts = workouts.filter((w: any) => w.studentId === student.id);
-                return studentWorkouts.length > 0;
-              });
-
-              if (studentsWithWorkouts.length === 0) {
-                return (
-                  <Card>
-                    <CardContent className="py-12 text-center">
-                      <Dumbbell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-600 mb-4">Nenhum treino criado ainda</p>
-                      <p className="text-sm text-gray-500 mb-4">Crie treinos para seus alunos</p>
-                      <Button onClick={() => setLocation("/professor/workout/new")}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Criar Primeiro Treino
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              }
-
-              return (
-                <Card>
-                  <CardContent className="p-0">
-                    <div className="divide-y">
-                      {studentsWithWorkouts.map((student: any) => {
-                        const studentWorkouts = workouts.filter((w: any) => w.studentId === student.id);
-                        return (
-                          <div
-                            key={student.id}
-                            className="p-4 hover:bg-gray-50 transition flex items-center gap-3"
-                          >
-                            {/* Student Avatar */}
-                            <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
-                              <span className="text-lg font-semibold text-white">
-                                {student.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-
-                            {/* Student Info */}
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-gray-900">{student.name}</h3>
-                              <p className="text-sm text-gray-500 truncate">{student.email}</p>
-                              <p className="text-xs text-blue-600 mt-1">
-                                {studentWorkouts.length} treino(s) criado(s)
-                              </p>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setLocation(`/professor/workout/${studentWorkouts[0].id}/edit`);
-                                }}
-                                title="Visualizar treino"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setLocation(`/professor/workout/${studentWorkouts[0].id}/edit`);
-                                }}
-                                title="Editar treino"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (confirm(`Deseja realmente excluir o treino de ${student.name}?\n\nEsta ação não pode ser desfeita!`)) {
-                                    deleteWorkoutMutation.mutate({ workoutId: studentWorkouts[0].id });
-                                  }
-                                }}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                title="Excluir treino"
-                                disabled={deleteWorkoutMutation.isPending}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })()}
-          </div>
-        )}
-
-        {/* Assessments Screen */}
-        {currentScreen === "assessments" && (
-          <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Avaliações Físicas</h2>
-              <Button onClick={() => setIsAssessmentDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Avaliação
-              </Button>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid gap-6 md:grid-cols-4">
-              <Card className="border-l-4 border-l-blue-500">
-                <CardContent className="p-6">
-                  <p className="text-sm text-gray-600 mb-2">Total de Avaliações</p>
-                  <p className="text-3xl font-bold">{assessments.length}</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-green-500">
-                <CardContent className="p-6">
-                  <p className="text-sm text-gray-600 mb-2">Alunos Avaliados</p>
-                  <p className="text-3xl font-bold">
-                    {new Set(assessments.map((a: any) => a.studentId)).size}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-purple-500">
-                <CardContent className="p-6">
-                  <p className="text-sm text-gray-600 mb-2">IMC Médio</p>
-                  <p className="text-3xl font-bold">
-                    {assessments.length > 0
-                      ? (assessments.reduce((sum: number, a: any) => sum + (a.bmi || 0), 0) / assessments.length).toFixed(1)
-                      : "0.0"}
-                  </p>
-                  <p className="text-sm text-gray-500">kg/m²</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-orange-500">
-                <CardContent className="p-6">
-                  <p className="text-sm text-gray-600 mb-2">% Gordura Média</p>
-                  <p className="text-3xl font-bold">
-                    {assessments.length > 0
-                      ? (assessments.reduce((sum: number, a: any) => sum + (a.bodyFatPercentage || 0), 0) / assessments.length).toFixed(1)
-                      : "0.0"}%
-                  </p>
-                </CardContent>
-              </Card>
+        {/* Tab: Biblioteca De Treinos (Templates) */}
+        {currentScreen === "modelos" && (
+          <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-2xl font-bold text-gray-900">Biblioteca De Treinos</h2>
+              <button
+                onClick={() => {
+                  createTemplateMutation.mutate({ name: "Novo Treino" });
+                }}
+                disabled={createTemplateMutation.isPending}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-400 hover:bg-blue-500 text-white rounded-lg transition text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                Novo Modelo
+              </button>
             </div>
 
             {/* Search */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    placeholder="Buscar por nome do aluno..."
-                    value={assessmentSearchTerm}
-                    onChange={(e) => setAssessmentSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Buscar modelos..."
+                value={templateSearch}
+                onChange={(e) => setTemplateSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                style={{ fontSize: '16px' }}
+              />
+            </div>
 
-            {/* Assessments Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Todas as Avaliações</CardTitle>
-                <CardDescription>
-                  {filteredAssessments.length} avaliação(ões) encontrada(s)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Aluno</TableHead>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Peso</TableHead>
-                        <TableHead>Altura</TableHead>
-                        <TableHead>IMC</TableHead>
-                        <TableHead>% Gordura</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAssessments.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                            Nenhuma avaliação encontrada
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredAssessments.map((assessment: any) => {
-                          const imcStatus = getIMCStatus(assessment.bmi || 0);
-                          return (
-                            <TableRow key={assessment.id}>
-                              <TableCell className="font-medium">{assessment.studentName}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="w-3 h-3 text-gray-400" />
-                                  {new Date(assessment.assessmentDate).toLocaleDateString("pt-BR")}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1">
-                                  <Weight className="w-3 h-3 text-gray-400" />
-                                  {assessment.weightKg} kg
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1">
-                                  <Ruler className="w-3 h-3 text-gray-400" />
-                                  {assessment.heightCm} cm
-                                </div>
-                              </TableCell>
-                              <TableCell className="font-semibold">
-                                {assessment.bmi ? assessment.bmi.toFixed(1) : "-"}
-                              </TableCell>
-                              <TableCell>
-                                {assessment.bodyFatPercentage ? `${assessment.bodyFatPercentage}%` : "-"}
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={imcStatus.color}>{imcStatus.label}</Badge>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            {filteredTemplates.length === 0 ? (
+              <div className="text-center py-8 sm:py-12">
+                <Library className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-3 sm:mb-4" />
+                <p className="text-gray-600 text-sm sm:text-base">
+                  {templateSearch ? 'Nenhum modelo encontrado com esse filtro' : 'Nenhum modelo criado ainda'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredTemplates.map((template: any) => (
+                  <div
+                    key={template.id}
+                    className={`border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition cursor-pointer ${
+                      template.active ? 'border-green-300 bg-green-50/30' : 'border-gray-200'
+                    }`}
+                    onClick={() => handleOpenEditTemplate(template)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-sm sm:text-base font-medium text-gray-900 truncate">{template.name}</h3>
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${template.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                            {template.active ? 'Ativo' : 'Inativo'}
+                          </span>
+                        </div>
+                        {template.description && (
+                          <p className="text-sm text-gray-500 mb-1 line-clamp-2">{template.description}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          <span>{new Date(template.createdAt).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 ml-2 shrink-0">
+                        {/* Toggle */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleTemplateMutation.mutate({ id: template.id }); }}
+                          className={`relative w-10 h-5 rounded-full transition ${template.active ? 'bg-green-400' : 'bg-gray-300'}`}
+                        >
+                          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${template.active ? 'left-5' : 'left-0.5'}`} />
+                        </button>
+                        {/* Copy */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); cloneTemplateMutation.mutate({ id: template.id }); }}
+                          disabled={cloneTemplateMutation.isPending}
+                          className="p-1.5 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition"
+                          title="Copiar"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                        {/* Apply to students */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setApplyingTemplateId(template.id);
+                            setApplyStudentIds([]);
+                            setApplySearch("");
+                            setApplyStartDate(new Date().toISOString().split('T')[0]);
+                            setApplyEndDate("");
+                            setApplyModalOpen(true);
+                          }}
+                          className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition"
+                          title="Aplicar em alunos"
+                        >
+                          <Users className="w-4 h-4" />
+                        </button>
+                        {/* Delete */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(template.id); }}
+                          className="p-1.5 text-gray-400 hover:text-red-500 transition"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
-      </div>
+
+        {/* Tab: Programas (Criar/Editar Treino) */}
+        {currentScreen === "criar-treino" && (
+          <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+            {!selectedAluno ? (
+              <div className="text-center py-12">
+                <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600 mb-4">Selecione um aluno primeiro na aba "Sócio"</p>
+                <button onClick={() => setCurrentScreen("alunos")} className="px-4 py-2 bg-blue-400 hover:bg-blue-500 text-white rounded-lg text-sm">
+                  Ir para Sócio
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Header */}
+                <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-4">
+                  {editingWorkout ? `Editar Treino: ${editingWorkout.name || ''}` : `Criar Treino para ${selectedAluno.name}`}
+                </h2>
+
+                {/* Use Template button - only for new workouts */}
+                {!editingWorkout && templates.length > 0 && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button className="flex items-center gap-1.5 px-4 py-2 border-2 border-blue-400 text-blue-500 rounded-lg text-sm font-medium hover:bg-blue-50 transition mb-4">
+                        <Library className="w-4 h-4" /> Usar Modelo de Treino
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Selecionar Modelo</DialogTitle>
+                        <DialogDescription>Escolha um modelo para preencher o treino</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {templates.filter((t: any) => t.active).map((t: any) => (
+                          <button
+                            key={t.id}
+                            className="w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition"
+                            onClick={async () => {
+                              try {
+                                // Fetch template exercises via API
+                                applyTemplateMutation.mutate({
+                                  templateId: t.id,
+                                  studentIds: [selectedAluno.id],
+                                  startDate: workoutForm.startDate || new Date().toISOString().split('T')[0],
+                                  endDate: workoutForm.endDate || undefined,
+                                });
+                              } catch (err) {
+                                // handled
+                              }
+                            }}
+                          >
+                            <p className="font-medium text-gray-900">{t.name}</p>
+                            {t.description && <p className="text-xs text-gray-500">{t.description}</p>}
+                          </button>
+                        ))}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+
+                {/* Form */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Nome do Plano *</Label>
+                    <Input
+                      placeholder="Ex: Treino A - Hipertrofia"
+                      value={workoutForm.name}
+                      onChange={(e) => setWorkoutForm({ ...workoutForm, name: e.target.value })}
+                      style={{ fontSize: 16 }}
+                    />
+                  </div>
+
+                  {/* Aluno readonly */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Aluno</Label>
+                    <Input value={selectedAluno.name} disabled className="bg-gray-100" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Data Inicio *</Label>
+                      <Input type="date" value={workoutForm.startDate} onChange={(e) => setWorkoutForm({ ...workoutForm, startDate: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Data Fim *</Label>
+                      <Input type="date" value={workoutForm.endDate} onChange={(e) => setWorkoutForm({ ...workoutForm, endDate: e.target.value })} />
+                    </div>
+                  </div>
+
+                  {/* Exercises section */}
+                  <div className="border-t pt-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-semibold text-gray-900">
+                          Exercícios ({workoutExercises.length})
+                        </h3>
+                        {/* View mode toggle */}
+                        <div className="flex border rounded-lg overflow-hidden">
+                          <button
+                            onClick={() => setViewMode("list")}
+                            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition ${viewMode === "list" ? 'bg-blue-400 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            <ClipboardList className="w-3 h-3" /> Lista
+                          </button>
+                          <button
+                            onClick={() => setViewMode("byDay")}
+                            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition ${viewMode === "byDay" ? 'bg-blue-400 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            <Calendar className="w-3 h-3" /> Por Dia
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { setBibliotecaSearch(""); setBibliotecaMuscle("all"); setBibliotecaPage(1); setShowBibliotecaModal(true); }}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-blue-400 hover:bg-blue-500 text-white rounded-lg text-sm transition"
+                        >
+                          <Library className="w-4 h-4" /> Da Biblioteca
+                        </button>
+                        <button
+                          onClick={() => {
+                            setWorkoutExercises(prev => [...prev, {
+                              exerciseId: 0,
+                              name: "",
+                              imageUrl: null,
+                              videoUrl: null,
+                              muscleGroup: "",
+                              sets: 3,
+                              reps: "12",
+                              load: "",
+                              restSeconds: 60,
+                              dayOfWeek: "Segunda",
+                              technique: "normal",
+                              notes: "",
+                              orderIndex: prev.length,
+                            }]);
+                          }}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm transition"
+                        >
+                          <Plus className="w-4 h-4" /> Manual
+                        </button>
+                      </div>
+                    </div>
+
+                    {workoutExercises.length === 0 ? (
+                      <div className="text-center py-8 text-gray-400">
+                        <Dumbbell className="w-12 h-12 mx-auto mb-2" />
+                        <p className="text-sm">Adicione exercícios ao treino</p>
+                      </div>
+                    ) : viewMode === "list" ? (
+                      /* LIST VIEW */
+                      <div className="space-y-4">
+                        {workoutExercises.map((ex, idx) => (
+                          <div key={idx} className="border rounded-lg p-3 hover:bg-gray-50 transition">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <GripVertical className="w-4 h-4 text-gray-400 cursor-grab" />
+                                <span className="text-sm font-semibold text-gray-700">Exercício {idx + 1}</span>
+                              </div>
+                              <button onClick={() => handleRemoveWorkoutExercise(idx)} className="text-sm text-red-500 hover:text-red-700 font-medium">
+                                Remover
+                              </button>
+                            </div>
+
+                            <div className="flex items-start gap-3">
+                              {/* Thumbnail */}
+                              <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0 cursor-pointer" onClick={() => setVideoModalExercicio(ex)}>
+                                {(ex.videoUrl || ex.imageUrl) ? (
+                                  <img src={ex.videoUrl || ex.imageUrl} alt={ex.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center"><Dumbbell className="w-5 h-5 text-gray-300" /></div>
+                                )}
+                              </div>
+                              {/* Name */}
+                              <div className="flex-1 min-w-0">
+                                <label className="text-xs text-gray-500 block mb-0.5">Nome do Exercício</label>
+                                <input
+                                  type="text"
+                                  value={ex.name}
+                                  onChange={(e) => handleUpdateWorkoutExercise(idx, "name", e.target.value)}
+                                  className="w-full border rounded-lg px-3 py-1.5 text-sm"
+                                  placeholder="Nome do exercício"
+                                  readOnly={!!ex.exerciseId}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Fields grid */}
+                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-3">
+                              <div>
+                                <label className="text-xs text-gray-500 block mb-0.5">Dia</label>
+                                <select value={ex.dayOfWeek} onChange={(e) => handleUpdateWorkoutExercise(idx, "dayOfWeek", e.target.value)}
+                                  className="w-full border rounded-lg px-2 py-1.5 text-sm bg-white">
+                                  {daysOfWeek.map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 block mb-0.5">Séries</label>
+                                <input type="number" value={ex.sets} onChange={(e) => handleUpdateWorkoutExercise(idx, "sets", parseInt(e.target.value) || 0)}
+                                  className="w-full border rounded-lg px-2 py-1.5 text-sm text-center" />
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 block mb-0.5">Repetições</label>
+                                <input type="text" value={ex.reps} onChange={(e) => handleUpdateWorkoutExercise(idx, "reps", e.target.value)}
+                                  className="w-full border rounded-lg px-2 py-1.5 text-sm text-center" />
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 block mb-0.5">Peso (kg)</label>
+                                <input type="text" value={ex.load} onChange={(e) => handleUpdateWorkoutExercise(idx, "load", e.target.value)}
+                                  className="w-full border rounded-lg px-2 py-1.5 text-sm text-center" />
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 block mb-0.5">Descanso (seg)</label>
+                                <input type="number" value={ex.restSeconds} onChange={(e) => handleUpdateWorkoutExercise(idx, "restSeconds", parseInt(e.target.value) || 0)}
+                                  className="w-full border rounded-lg px-2 py-1.5 text-sm text-center" />
+                              </div>
+                            </div>
+
+                            {/* Method + Notes row */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                              <div>
+                                <label className="text-xs text-gray-500 block mb-0.5">Método</label>
+                                <select value={ex.technique || "normal"} onChange={(e) => handleUpdateWorkoutExercise(idx, "technique", e.target.value)}
+                                  className="w-full border rounded-lg px-2 py-1.5 text-sm bg-white">
+                                  <option value="normal">Normal</option>
+                                  <option value="dropset">Drop Set</option>
+                                  <option value="superset">Super Set</option>
+                                  <option value="giant_set">Giant Set</option>
+                                  <option value="rest_pause">Rest Pause</option>
+                                  <option value="pyramidal">Pirâmide</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 block mb-0.5">Observação para o Aluno</label>
+                                <input type="text" value={ex.notes || ""} onChange={(e) => handleUpdateWorkoutExercise(idx, "notes", e.target.value)}
+                                  className="w-full border rounded-lg px-2 py-1.5 text-sm"
+                                  placeholder="Ex: Manter cotovelos junto ao corpo..." />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      /* BY DAY VIEW */
+                      <div className="space-y-4">
+                        {daysOfWeek.map(day => {
+                          const dayExercises = exercisesByDay[day] || [];
+                          if (dayExercises.length === 0) return null;
+                          return (
+                            <div key={day}>
+                              <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                <Calendar className="w-4 h-4" />
+                                {day} <span className="text-xs text-gray-400 font-normal">({dayExercises.length} exercícios)</span>
+                              </h4>
+                              <div className="space-y-2 ml-6">
+                                {dayExercises.map((ex: any) => {
+                                  const idx = workoutExercises.indexOf(ex);
+                                  return (
+                                    <div key={idx} className="flex items-center gap-3 border rounded-lg p-2 bg-gray-50">
+                                      <div className="w-10 h-10 rounded overflow-hidden bg-gray-200 shrink-0">
+                                        {(ex.videoUrl || ex.imageUrl) ? <img src={ex.videoUrl || ex.imageUrl} alt="" className="w-full h-full object-cover" /> : <Dumbbell className="w-4 h-4 m-3 text-gray-400" />}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 truncate">{ex.name}</p>
+                                        <p className="text-xs text-gray-500">{ex.sets}x{ex.reps} {ex.load ? `• ${ex.load}kg` : ''} {ex.restSeconds ? `• ${ex.restSeconds}s` : ''} {ex.technique && ex.technique !== 'normal' ? `• ${ex.technique}` : ''}</p>
+                                      </div>
+                                      <button onClick={() => handleRemoveWorkoutExercise(idx)} className="p-1 text-gray-400 hover:text-red-500">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {workoutExercises.length > 0 && Object.values(exercisesByDay).every(arr => arr.length === 0) && (
+                          <p className="text-center text-gray-400 text-sm py-4">Nenhum exercício organizado por dia</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Save/Cancel/Save Model buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+                    <button onClick={() => { setEditingWorkout(null); setWorkoutExercises([]); setCurrentScreen("treinos-aluno"); }}
+                      className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition font-medium">
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleSaveAsTemplate}
+                      disabled={createTemplateMutation.isPending}
+                      className="px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2 justify-center"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      {createTemplateMutation.isPending ? "Salvando..." : "Salvar Modelo"}
+                    </button>
+                    <button
+                      onClick={handleSaveWorkout}
+                      disabled={createWorkoutMutation.isPending || updateWorkoutMutation.isPending || addExerciseToWorkoutMutation.isPending}
+                      className="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition disabled:opacity-50"
+                    >
+                      {(createWorkoutMutation.isPending || updateWorkoutMutation.isPending) ? "Salvando..." : editingWorkout ? "Atualizar" : "Salvar Treino"}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Tab: Editar Modelo (Template) - Layout com sidebar */}
+        {currentScreen === "editar-modelo" && editingTemplate && (
+          <div className="flex gap-0 h-[calc(100vh-6rem)] -m-3 sm:-m-6">
+            {/* Left: Form */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => { setEditingTemplate(null); setCurrentScreen("modelos"); }} className="p-1.5 hover:bg-gray-100 rounded-lg transition">
+                    <ChevronLeft className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">Editar treino</h2>
+                </div>
+                <button
+                  onClick={() => { if (confirm("Excluir este modelo?")) { deleteTemplateMutation.mutate({ id: editingTemplate.id }); setCurrentScreen("modelos"); } }}
+                  className="p-2 text-gray-400 hover:text-red-500 transition"
+                  title="Excluir modelo"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Template Form */}
+              <div className="space-y-5">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Nome do Treino</label>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    <input
+                      type="text"
+                      value={templateForm.name}
+                      onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
+                      className="w-full border-0 border-b border-transparent hover:border-gray-300 focus:border-blue-400 outline-none py-1 text-lg font-bold bg-transparent"
+                      style={{ fontSize: 16 }}
+                    />
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Início</label>
+                    <Input type="date" value={templateForm.startDate} onChange={(e) => setTemplateForm({ ...templateForm, startDate: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Fim</label>
+                    <Input type="date" value={templateForm.endDate} onChange={(e) => setTemplateForm({ ...templateForm, endDate: e.target.value })} />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Descrição</label>
+                  <Textarea
+                    value={templateForm.description}
+                    onChange={(e) => setTemplateForm({ ...templateForm, description: e.target.value })}
+                    placeholder="Deixe aqui observações sobre este treino"
+                    rows={2}
+                    className="text-sm"
+                  />
+                </div>
+
+                {/* Exercises section */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-gray-900">Exercícios</h3>
+                    <button className="text-sm text-blue-500 hover:text-blue-700 font-medium flex items-center gap-1">
+                      <Edit className="w-3.5 h-3.5" /> Editar
+                    </button>
+                  </div>
+
+                  {templateExercises.length === 0 ? (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center text-gray-400">
+                      <p>Adicionar exercício</p>
+                      <p className="text-xs mt-1">Use a sidebar à direita para adicionar</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {templateExercises.map((ex, idx) => (
+                        <div key={idx} className="border-l-4 border-red-400 bg-white rounded-r-lg p-4 shadow-sm">
+                          <div className="flex items-start gap-3 mb-3">
+                            <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                              {(ex.videoUrl || ex.imageUrl) ? (
+                                <img src={ex.videoUrl || ex.imageUrl} alt={ex.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400"><Dumbbell className="w-5 h-5" /></div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-gray-900">{ex.name}</p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-0.5">Metodologia</label>
+                              <select value={ex.technique || "normal"} onChange={(e) => {
+                                const updated = [...templateExercises];
+                                updated[idx] = { ...updated[idx], technique: e.target.value };
+                                setTemplateExercises(updated);
+                              }} className="w-full border rounded-lg px-2 py-1.5 text-sm bg-white">
+                                <option value="normal">Normal</option>
+                                <option value="dropset">Drop Set</option>
+                                <option value="superset">Super Set</option>
+                                <option value="giant_set">Giant Set</option>
+                                <option value="rest_pause">Rest Pause</option>
+                                <option value="pyramidal">Pirâmide</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-0.5">Repetições</label>
+                              <input type="text" value={ex.reps} onChange={(e) => {
+                                const updated = [...templateExercises];
+                                updated[idx] = { ...updated[idx], reps: e.target.value };
+                                setTemplateExercises(updated);
+                              }} className="w-full border rounded-lg px-2 py-1.5 text-sm" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-0.5">Carga</label>
+                              <input type="text" value={ex.load || ""} onChange={(e) => {
+                                const updated = [...templateExercises];
+                                updated[idx] = { ...updated[idx], load: e.target.value };
+                                setTemplateExercises(updated);
+                              }} className="w-full border rounded-lg px-2 py-1.5 text-sm" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-0.5">Intervalo</label>
+                              <input type="number" value={ex.restSeconds || ""} onChange={(e) => {
+                                const updated = [...templateExercises];
+                                updated[idx] = { ...updated[idx], restSeconds: parseInt(e.target.value) || 0 };
+                                setTemplateExercises(updated);
+                              }} className="w-full border rounded-lg px-2 py-1.5 text-sm" />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mt-3">
+                            <div className="flex-1">
+                              <label className="text-xs text-gray-500 block mb-0.5">Observações</label>
+                              <Textarea value={ex.notes || ""} onChange={(e) => {
+                                const updated = [...templateExercises];
+                                updated[idx] = { ...updated[idx], notes: e.target.value };
+                                setTemplateExercises(updated);
+                              }} rows={1} className="text-sm" placeholder="Observações..." />
+                            </div>
+                            <div className="flex items-center gap-1 ml-2 shrink-0">
+                              <button className="p-1.5 text-gray-400 hover:text-gray-600"><GripVertical className="w-4 h-4" /></button>
+                              <button onClick={() => setTemplateExercises(prev => prev.filter((_, i) => i !== idx))} className="p-1.5 text-gray-400 hover:text-red-500">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Save button */}
+                <div className="pt-4 border-t">
+                  <button
+                    onClick={handleSaveTemplate}
+                    disabled={updateTemplateMutation.isPending || addTemplateExerciseMutation.isPending}
+                    className="w-full px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition disabled:opacity-50"
+                  >
+                    {updateTemplateMutation.isPending ? "Salvando..." : "Salvar Modelo"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Exercise Sidebar */}
+            <div className="w-72 lg:w-80 border-l bg-white overflow-y-auto hidden md:flex flex-col">
+              <div className="p-3 border-b sticky top-0 bg-white z-10">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-gray-900">Exercícios</h3>
+                  <button
+                    onClick={() => { setBibliotecaSearch(""); setBibliotecaMuscle("all"); setBibliotecaPage(1); setShowBibliotecaModal(true); }}
+                    className="w-8 h-8 flex items-center justify-center bg-blue-400 hover:bg-blue-500 text-white rounded-full transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar"
+                    value={templateSidebarSearch}
+                    onChange={(e) => setTemplateSidebarSearch(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-400 outline-none"
+                    style={{ fontSize: 14 }}
+                  />
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {templateSidebarFiltered.slice(0, 50).map((exercise: any) => (
+                  <div
+                    key={exercise.id}
+                    className="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 border-b border-gray-100 transition"
+                  >
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                      {(exercise.videoUrl || exercise.imageUrl) ? (
+                        <img src={exercise.videoUrl || exercise.imageUrl} alt={exercise.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center"><Dumbbell className="w-4 h-4 text-gray-300" /></div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{exercise.name}</p>
+                      <p className="text-xs text-gray-400 truncate">{[exercise.muscleGroup, exercise.equipment].filter(Boolean).join(', ')}</p>
+                    </div>
+                    <button
+                      onClick={() => handleAddExerciseToTemplate(exercise)}
+                      className="p-1 text-gray-400 hover:text-blue-500 transition shrink-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* Biblioteca de Exercícios Modal */}
+      {showBibliotecaModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="p-3 sm:p-4 border-b flex items-center justify-between shrink-0">
+              <div>
+                <h2 className="text-lg sm:text-2xl font-bold text-gray-800">Biblioteca de Exercícios</h2>
+                <p className="text-sm text-gray-600">{bibliotecaFiltered.length} exercícios disponíveis</p>
+              </div>
+              <button onClick={() => setShowBibliotecaModal(false)} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition">
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            </div>
+
+            {/* Filters */}
+            <div className="p-3 sm:p-4 border-b shrink-0">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="md:col-span-2 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Buscar exercícios..."
+                    value={bibliotecaSearch}
+                    onChange={(e) => { setBibliotecaSearch(e.target.value); setBibliotecaPage(1); }}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    style={{ fontSize: 16 }}
+                  />
+                </div>
+                <select
+                  value={bibliotecaMuscle}
+                  onChange={(e) => { setBibliotecaMuscle(e.target.value); setBibliotecaPage(1); }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
+                >
+                  <option value="all">Todos os grupos musculares</option>
+                  {muscleGroups.map((g: any) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Exercise Grid */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {bibliotecaPaginated.map((exercise: any) => (
+                  <div
+                    key={exercise.id}
+                    className="bg-white border rounded-lg overflow-hidden hover:shadow-md transition cursor-pointer group"
+                    onClick={() => handleAddExerciseToWorkout(exercise)}
+                  >
+                    {/* Image/GIF */}
+                    <div className="h-40 sm:h-48 bg-gray-200 relative">
+                      {(exercise.videoUrl || exercise.imageUrl) ? (
+                        <img
+                          src={exercise.videoUrl || exercise.imageUrl}
+                          alt={exercise.name}
+                          className="w-full h-full object-contain bg-gray-100"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Dumbbell className="w-12 h-12 text-gray-300" />
+                        </div>
+                      )}
+                      {exercise.muscleGroup && (
+                        <div className="absolute top-2 left-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold">
+                          {exercise.muscleGroup}
+                        </div>
+                      )}
+                      {exercise.videoUrl?.endsWith('.gif') && (
+                        <div className="absolute top-2 right-2 bg-green-600 text-white px-2 py-0.5 rounded text-xs">GIF</div>
+                      )}
+                      {/* Hover overlay */}
+                      <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/20 transition flex items-center justify-center">
+                        <div className="opacity-0 group-hover:opacity-100 transition bg-blue-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-lg">
+                          <Plus className="w-4 h-4 inline mr-1" />Adicionar
+                        </div>
+                      </div>
+                    </div>
+                    {/* Info */}
+                    <div className="p-3">
+                      <h3 className="font-semibold text-gray-800 text-sm line-clamp-2 mb-1">{exercise.name}</h3>
+                      {exercise.equipment && (
+                        <p className="text-xs text-gray-500"><span className="font-medium">Equipamento:</span> {exercise.equipment}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {bibliotecaFiltered.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  <Search className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p>Nenhum exercício encontrado</p>
+                </div>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {bibliotecaTotalPages > 1 && (
+              <div className="p-3 border-t flex items-center justify-center gap-4 shrink-0">
+                <button onClick={() => setBibliotecaPage(Math.max(1, bibliotecaPage - 1))} disabled={bibliotecaPage === 1}
+                  className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 text-sm">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-sm text-gray-600">Página {bibliotecaPage} de {bibliotecaTotalPages}</span>
+                <button onClick={() => setBibliotecaPage(Math.min(bibliotecaTotalPages, bibliotecaPage + 1))} disabled={bibliotecaPage >= bibliotecaTotalPages}
+                  className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 text-sm">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Video/GIF Demo Modal */}
+      {videoModalExercicio && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setVideoModalExercicio(null)}>
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="font-bold text-lg">{videoModalExercicio.name}</h3>
+              <button onClick={() => setVideoModalExercicio(null)} className="p-1 text-gray-500 hover:text-gray-700"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-4">
+              {(videoModalExercicio.videoUrl || videoModalExercicio.imageUrl) ? (
+                <img src={videoModalExercicio.videoUrl || videoModalExercicio.imageUrl} alt={videoModalExercicio.name} className="w-full rounded-lg object-contain max-h-96 bg-gray-100" />
+              ) : (
+                <div className="w-full h-48 bg-gray-100 rounded-lg flex items-center justify-center"><Dumbbell className="w-16 h-16 text-gray-300" /></div>
+              )}
+              <div className="mt-4 grid grid-cols-4 gap-3 text-center">
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <p className="text-xs text-gray-500">Séries</p>
+                  <p className="font-bold">{videoModalExercicio.sets}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <p className="text-xs text-gray-500">Repetições</p>
+                  <p className="font-bold">{videoModalExercicio.reps}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <p className="text-xs text-gray-500">Peso</p>
+                  <p className="font-bold">{videoModalExercicio.load || '-'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2">
+                  <p className="text-xs text-gray-500">Descanso</p>
+                  <p className="font-bold">{videoModalExercicio.restSeconds || '-'}s</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+        {/* Screen: Avaliações Físicas - List */}
+        {currentScreen === "avaliacoes" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold">Avaliação Física</h2>
+            </div>
+
+            {/* Student selector for assessment */}
+            {!selectedAluno ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-sm text-gray-500 mb-3">Selecione um aluno para visualizar ou criar avaliações:</p>
+                  <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Buscar aluno..."
+                      value={assessmentStudentSearch}
+                      onChange={(e) => setAssessmentStudentSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto">
+                    {students
+                      .filter((s: any) => !assessmentStudentSearch || s.name?.toLowerCase().includes(assessmentStudentSearch.toLowerCase()))
+                      .map((student: any) => (
+                        <Button
+                          key={student.id}
+                          variant="outline"
+                          className="justify-start h-auto py-2"
+                          onClick={() => {
+                            setSelectedAluno(student);
+                          }}
+                        >
+                          <User className="w-4 h-4 mr-2 text-blue-500" />
+                          <div className="text-left">
+                            <p className="text-sm font-medium">{student.name}</p>
+                            <p className="text-xs text-gray-400">{student.email}</p>
+                          </div>
+                        </Button>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedAluno(null)}>
+                      <ArrowLeft className="w-4 h-4 mr-1" /> Trocar Aluno
+                    </Button>
+                    <span className="font-semibold">{selectedAluno.name}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentScreen("comparativo")}
+                    >
+                      <BarChart3 className="w-4 h-4 mr-1" /> Comparativo & Gráficos
+                    </Button>
+                    <Button
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => {
+                        setEditingAssessment(null);
+                        setCurrentScreen("avaliacao-form");
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Nova Avaliação
+                    </Button>
+                  </div>
+                </div>
+
+                {/* List of existing assessments */}
+                <AssessmentsList
+                  studentId={selectedAluno.id}
+                  onEdit={(assessment: any) => {
+                    setEditingAssessment(assessment);
+                    setCurrentScreen("avaliacao-form");
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Screen: Assessment Form */}
+        {currentScreen === "avaliacao-form" && selectedAluno && (
+          <PhysicalAssessmentForm
+            studentId={selectedAluno.id}
+            studentName={selectedAluno.name}
+            studentSex={selectedAluno.gender === "female" ? "F" : "M"}
+            studentBirthDate={selectedAluno.birthDate}
+            existingAssessment={editingAssessment}
+            onBack={() => setCurrentScreen("avaliacoes")}
+            onSaved={() => {
+              setCurrentScreen("avaliacoes");
+              toast.success("Avaliação salva!");
+            }}
+          />
+        )}
+
+        {/* Screen: Comparativo & Gráficos */}
+        {currentScreen === "comparativo" && selectedAluno && (
+          <AssessmentComparative
+            studentId={selectedAluno.id}
+            studentName={selectedAluno.name}
+            onBack={() => setCurrentScreen("avaliacoes")}
+          />
+        )}
+
+      {/* Apply Template Modal */}
+      <Dialog open={applyModalOpen} onOpenChange={setApplyModalOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Aplicar Modelo em Alunos</DialogTitle>
+            <DialogDescription>Selecione os alunos e defina o período do treino</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Date fields */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Data Início</Label>
+                <Input
+                  type="date"
+                  value={applyStartDate}
+                  onChange={(e) => setApplyStartDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Data Fim (opcional)</Label>
+                <Input
+                  type="date"
+                  value={applyEndDate}
+                  onChange={(e) => setApplyEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Student search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Buscar alunos..."
+                value={applySearch}
+                onChange={(e) => setApplySearch(e.target.value)}
+                className="pl-10"
+                style={{ fontSize: 16 }}
+              />
+            </div>
+
+            {/* Select all */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">{applyStudentIds.length} selecionado(s)</span>
+              <button
+                type="button"
+                className="text-blue-500 hover:text-blue-700 font-medium"
+                onClick={() => {
+                  if (applyStudentIds.length === applyFilteredStudents.length) {
+                    setApplyStudentIds([]);
+                  } else {
+                    setApplyStudentIds(applyFilteredStudents.map((s: any) => s.id));
+                  }
+                }}
+              >
+                {applyStudentIds.length === applyFilteredStudents.length ? "Desmarcar todos" : "Selecionar todos"}
+              </button>
+            </div>
+
+            {/* Student list with checkboxes */}
+            <div className="max-h-60 overflow-y-auto border rounded-lg divide-y">
+              {applyFilteredStudents.map((student: any) => (
+                <label
+                  key={student.id}
+                  className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={applyStudentIds.includes(student.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setApplyStudentIds([...applyStudentIds, student.id]);
+                      } else {
+                        setApplyStudentIds(applyStudentIds.filter(id => id !== student.id));
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                  />
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold shrink-0">
+                    {student.name?.charAt(0)?.toUpperCase()}
+                  </div>
+                  <span className="text-sm text-gray-900 truncate">{student.name}</span>
+                </label>
+              ))}
+              {applyFilteredStudents.length === 0 && (
+                <div className="px-3 py-4 text-center text-gray-500 text-sm">Nenhum aluno encontrado</div>
+              )}
+            </div>
+
+            <Button
+              className="w-full bg-blue-400 hover:bg-blue-500"
+              onClick={handleApplyTemplate}
+              disabled={applyTemplateMutation.isPending || applyStudentIds.length === 0}
+            >
+              {applyTemplateMutation.isPending
+                ? "Aplicando..."
+                : `Aplicar para ${applyStudentIds.length} aluno(s)`
+              }
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Exercise Detail Dialog */}
       <Dialog open={isExerciseDetailOpen} onOpenChange={setIsExerciseDetailOpen}>
@@ -1418,10 +2787,10 @@ export default function ProfessorDashboard() {
 
               <div className="space-y-4">
                 {/* Foto do exercício */}
-                {selectedExercise.imageUrl && (
+                {(selectedExercise.videoUrl || selectedExercise.imageUrl) && (
                   <div className="w-full rounded-lg overflow-hidden bg-gray-100">
                     <img
-                      src={selectedExercise.imageUrl}
+                      src={selectedExercise.videoUrl || selectedExercise.imageUrl}
                       alt={selectedExercise.name}
                       className="w-full h-auto object-contain max-h-96"
                       onError={(e) => {
@@ -1596,255 +2965,388 @@ export default function ProfessorDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Exercise Dialog */}
-      <Dialog open={isExerciseDialogOpen} onOpenChange={setIsExerciseDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Criar Novo Exercício</DialogTitle>
-            <DialogDescription>
-              Adicione um novo exercício à biblioteca
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="ex-name">Nome do Exercício *</Label>
-                <Input
-                  id="ex-name"
-                  placeholder="Ex: Supino Reto"
-                  value={exerciseForm.name}
-                  onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value })}
+      {/* Exercise Sheet (Right Drawer) */}
+      <Sheet open={isExerciseDialogOpen} onOpenChange={(open) => {
+        setIsExerciseDialogOpen(open);
+        if (!open) {
+          setExerciseForm({ name: "", description: "", muscleGroup: "", equipment: "", instructions: "" });
+          setExerciseImageFile(null);
+          setExerciseVideoFile(null);
+          setExerciseMedia1Link("");
+          setExerciseMedia2Link("");
+          setExerciseMedia1Preview(null);
+          setExerciseMedia2Preview(null);
+        }
+      }}>
+        <SheetContent side="right" className="!w-[400px] !sm:max-w-[400px] overflow-y-auto p-0">
+          <SheetHeader className="p-4 pb-0">
+            <SheetTitle className="text-lg">Criar Novo Exercício</SheetTitle>
+            <SheetDescription className="sr-only">Adicione um novo exercício à biblioteca</SheetDescription>
+          </SheetHeader>
+
+          <div className="p-4 space-y-5 flex-1 overflow-y-auto">
+            {/* Mídia 1 */}
+            <div className="space-y-2">
+              <Label className="font-semibold text-sm">Mídia 1</Label>
+              <div
+                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition relative"
+                onClick={() => document.getElementById('ex-media1-file')?.click()}
+              >
+                {exerciseMedia1Preview ? (
+                  <div className="relative">
+                    <img src={exerciseMedia1Preview} alt="Preview" className="w-full h-32 object-contain rounded" />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setExerciseImageFile(null); setExerciseMedia1Preview(null); }}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500">Adicionar Mídia</p>
+                  </>
+                )}
+                <input
+                  id="ex-media1-file"
+                  type="file"
+                  accept="image/*,.gif,.mp4,.mov,.pdf,.xls,.doc,.webp,.jpeg,.jpg,.png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setExerciseImageFile(file);
+                      const reader = new FileReader();
+                      reader.onloadend = () => setExerciseMedia1Preview(reader.result as string);
+                      reader.readAsDataURL(file);
+                    }
+                  }}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="ex-muscle">Grupo Muscular</Label>
+              <p className="text-xs text-blue-500">.jpg, .png, .gif, .mp4, .mov, .pdf, .xls, .doc, .webp, .jpeg</p>
+              <div className="text-center text-xs text-gray-400">Ou</div>
+              <div className="relative">
+                <Link className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <Input
-                  id="ex-muscle"
-                  placeholder="Ex: Peito"
-                  value={exerciseForm.muscleGroup}
-                  onChange={(e) => setExerciseForm({ ...exerciseForm, muscleGroup: e.target.value })}
+                  placeholder="Link externo"
+                  value={exerciseMedia1Link}
+                  onChange={(e) => setExerciseMedia1Link(e.target.value)}
+                  className="pl-9 text-sm"
                 />
               </div>
+              <p className="text-xs text-blue-500">youtube, vimeo, etc</p>
             </div>
 
+            {/* Mídia 2 */}
             <div className="space-y-2">
-              <Label htmlFor="ex-equipment">Equipamento</Label>
+              <Label className="font-semibold text-sm">Mídia 2</Label>
+              <div
+                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition relative"
+                onClick={() => document.getElementById('ex-media2-file')?.click()}
+              >
+                {exerciseMedia2Preview ? (
+                  <div className="relative">
+                    <img src={exerciseMedia2Preview} alt="Preview" className="w-full h-32 object-contain rounded" />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setExerciseVideoFile(null); setExerciseMedia2Preview(null); }}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500">Adicionar Mídia</p>
+                  </>
+                )}
+                <input
+                  id="ex-media2-file"
+                  type="file"
+                  accept="image/*,.gif,.mp4,.mov,.pdf,.xls,.doc,.webp,.jpeg,.jpg,.png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setExerciseVideoFile(file);
+                      const reader = new FileReader();
+                      reader.onloadend = () => setExerciseMedia2Preview(reader.result as string);
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+              </div>
+              <p className="text-xs text-blue-500">.jpg, .png, .gif, .mp4, .mov, .pdf, .xls, .doc, .webp, .jpeg</p>
+              <div className="text-center text-xs text-gray-400">Ou</div>
+              <div className="relative">
+                <Link className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Input
+                  placeholder="Link externo"
+                  value={exerciseMedia2Link}
+                  onChange={(e) => setExerciseMedia2Link(e.target.value)}
+                  className="pl-9 text-sm"
+                />
+              </div>
+              <p className="text-xs text-blue-500">youtube, vimeo, etc</p>
+            </div>
+
+            {/* Título */}
+            <div className="space-y-2">
+              <Label className="font-semibold text-sm">Título</Label>
               <Input
-                id="ex-equipment"
-                placeholder="Ex: Barra, Halteres"
+                placeholder="Ex: Supino reto"
+                value={exerciseForm.name}
+                onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value })}
+              />
+            </div>
+
+            {/* Equipamento */}
+            <div className="space-y-2">
+              <Label className="font-semibold text-sm">Equipamento</Label>
+              <Input
+                placeholder="Selecione um equipamento"
                 value={exerciseForm.equipment}
                 onChange={(e) => setExerciseForm({ ...exerciseForm, equipment: e.target.value })}
               />
             </div>
 
+            {/* Grupo Muscular */}
             <div className="space-y-2">
-              <Label htmlFor="ex-description">Descrição</Label>
+              <Label className="font-semibold text-sm">Grupo Muscular</Label>
+              <Input
+                placeholder="Ex: Peito"
+                value={exerciseForm.muscleGroup}
+                onChange={(e) => setExerciseForm({ ...exerciseForm, muscleGroup: e.target.value })}
+              />
+            </div>
+
+            {/* Descrição */}
+            <div className="space-y-2">
+              <Label className="font-semibold text-sm">Descrição</Label>
               <Textarea
-                id="ex-description"
                 placeholder="Breve descrição do exercício"
                 value={exerciseForm.description}
                 onChange={(e) => setExerciseForm({ ...exerciseForm, description: e.target.value })}
+                rows={3}
               />
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="ex-instructions">Instruções de Execução</Label>
-              <Textarea
-                id="ex-instructions"
-                placeholder="Como executar o exercício corretamente"
-                value={exerciseForm.instructions}
-                onChange={(e) => setExerciseForm({ ...exerciseForm, instructions: e.target.value })}
-                rows={4}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="ex-image">Foto do Exercício</Label>
-              <Input
-                id="ex-image"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setExerciseImageFile(e.target.files?.[0] || null)}
-              />
-            </div>
-
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-700 flex items-center gap-2">
-                <Video className="w-4 h-4" />
-                Para adicionar vídeos, primeiro crie o exercício e depois edite-o.
-              </p>
-            </div>
-
+          <SheetFooter className="p-4 border-t flex flex-row gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsExerciseDialogOpen(false)}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
             <Button
               onClick={handleCreateExercise}
               disabled={createExerciseMutation.isPending}
-              className="w-full"
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
-              {createExerciseMutation.isPending ? "Criando..." : "Criar Exercício"}
+              {createExerciseMutation.isPending ? "Salvando..." : "Salvar"}
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
-      {/* Edit Exercise Dialog */}
-      <Dialog open={isEditExerciseDialogOpen} onOpenChange={(open) => {
+      {/* Edit Exercise Sheet (Right Drawer) */}
+      <Sheet open={isEditExerciseDialogOpen} onOpenChange={(open) => {
         setIsEditExerciseDialogOpen(open);
         if (!open) {
           setEditingExercise(null);
           setExerciseImageFile(null);
         }
       }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Exercício</DialogTitle>
-            <DialogDescription>
-              Atualize as informações do exercício
-            </DialogDescription>
-          </DialogHeader>
+        <SheetContent side="right" className="!w-[400px] !sm:max-w-[400px] overflow-y-auto p-0">
+          <SheetHeader className="p-4 pb-0 flex flex-row items-center justify-between">
+            <SheetTitle className="text-lg">Editar Exercício</SheetTitle>
+            <SheetDescription className="sr-only">Atualize as informações do exercício</SheetDescription>
+            {editingExercise && (
+              <button
+                onClick={() => {
+                  if (confirm("Tem certeza que deseja excluir este exercício?")) {
+                    handleDeleteExercise(editingExercise.id);
+                    setIsEditExerciseDialogOpen(false);
+                  }
+                }}
+                className="p-2 text-gray-400 hover:text-red-500 transition"
+                title="Excluir exercício"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            )}
+          </SheetHeader>
+
           {editingExercise && (
-            <div className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
+            <>
+              <div className="p-4 space-y-5 flex-1 overflow-y-auto">
+                {/* Mídia 1 - Current image/video */}
                 <div className="space-y-2">
-                  <Label htmlFor="edit-ex-name">Nome do Exercício *</Label>
-                  <Input
-                    id="edit-ex-name"
-                    placeholder="Ex: Supino Reto"
-                    value={editingExercise.name}
-                    onChange={(e) => setEditingExercise({ ...editingExercise, name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-ex-muscle">Grupo Muscular</Label>
-                  <Input
-                    id="edit-ex-muscle"
-                    placeholder="Ex: Peito"
-                    value={editingExercise.muscleGroup}
-                    onChange={(e) => setEditingExercise({ ...editingExercise, muscleGroup: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-ex-equipment">Equipamento</Label>
-                <Input
-                  id="edit-ex-equipment"
-                  placeholder="Ex: Barra, Halteres"
-                  value={editingExercise.equipment}
-                  onChange={(e) => setEditingExercise({ ...editingExercise, equipment: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-ex-description">Descrição</Label>
-                <Textarea
-                  id="edit-ex-description"
-                  placeholder="Breve descrição do exercício"
-                  value={editingExercise.description}
-                  onChange={(e) => setEditingExercise({ ...editingExercise, description: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-ex-instructions">Instruções de Execução</Label>
-                <Textarea
-                  id="edit-ex-instructions"
-                  placeholder="Como executar o exercício corretamente"
-                  value={editingExercise.instructions}
-                  onChange={(e) => setEditingExercise({ ...editingExercise, instructions: e.target.value })}
-                  rows={4}
-                />
-              </div>
-
-              {editingExercise.imageUrl && (
-                <div className="space-y-2">
-                  <Label>Foto Atual</Label>
-                  <div className="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden border">
-                    <img
-                      src={editingExercise.imageUrl}
-                      alt={editingExercise.name}
-                      className="w-full h-full object-cover"
+                  <Label className="font-semibold text-sm">Mídia 1</Label>
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition relative"
+                    onClick={() => document.getElementById('edit-ex-media1-file')?.click()}
+                  >
+                    {(editingExercise.videoUrl || editingExercise.imageUrl) ? (
+                      <div className="relative">
+                        <img src={editingExercise.videoUrl || editingExercise.imageUrl} alt="Preview" className="w-full h-32 object-contain rounded" />
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                        <p className="text-sm text-gray-500">Adicionar Mídia</p>
+                      </>
+                    )}
+                    <input
+                      id="edit-ex-media1-file"
+                      type="file"
+                      accept="image/*,.gif,.mp4,.mov,.pdf,.xls,.doc,.webp,.jpeg,.jpg,.png"
+                      className="hidden"
+                      onChange={(e) => setExerciseImageFile(e.target.files?.[0] || null)}
                     />
                   </div>
+                  <p className="text-xs text-blue-500">.jpg, .png, .gif, .mp4, .mov, .pdf, .xls, .doc, .webp, .jpeg</p>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-ex-image">
-                  {editingExercise.imageUrl ? "Substituir Foto" : "Adicionar Foto"}
-                </Label>
-                <Input
-                  id="edit-ex-image"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setExerciseImageFile(e.target.files?.[0] || null)}
-                />
-              </div>
+                {/* Mídia 2 - Videos */}
+                <div className="space-y-2">
+                  <Label className="font-semibold text-sm">Mídia 2</Label>
 
-              {/* Seção de Vídeos no Edit */}
-              <div className="border-t pt-4">
-                <h4 className="font-semibold text-base mb-3 flex items-center gap-2">
-                  <Video className="w-4 h-4 text-blue-600" />
-                  Vídeos de Demonstração
-                </h4>
-
-                {exerciseVideos.length > 0 && (
-                  <div className="space-y-2 mb-3">
-                    {exerciseVideos.map((vid: any) => {
-                      const isYoutube = vid.videoUrl?.includes("youtube.com") || vid.videoUrl?.includes("youtu.be");
-                      const isVimeo = vid.videoUrl?.includes("vimeo.com");
-                      const isEmbed = isYoutube || isVimeo;
-                      let embedUrl = vid.videoUrl;
-                      if (isYoutube) {
-                        const match = vid.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
-                        if (match) embedUrl = `https://www.youtube.com/embed/${match[1]}`;
-                      } else if (isVimeo) {
-                        const match = vid.videoUrl.match(/vimeo\.com\/(\d+)/);
-                        if (match) embedUrl = `https://player.vimeo.com/video/${match[1]}`;
-                      }
-                      return (
-                        <div key={vid.id} className="border rounded-lg p-2 bg-gray-50">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium truncate flex-1">{vid.title || "Vídeo"}</span>
-                            <Button variant="ghost" size="sm" onClick={() => deleteVideoMutation.mutate({ videoId: vid.id })} className="text-red-500 hover:text-red-700 h-7 w-7 p-0">
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                          {isEmbed ? (
-                            <div className="aspect-video rounded overflow-hidden bg-black">
-                              <iframe src={embedUrl} className="w-full h-full" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
+                  {exerciseVideos.length > 0 && (
+                    <div className="space-y-2 mb-2">
+                      {exerciseVideos.map((vid: any) => {
+                        const isYoutube = vid.videoUrl?.includes("youtube.com") || vid.videoUrl?.includes("youtu.be");
+                        const isVimeo = vid.videoUrl?.includes("vimeo.com");
+                        const isEmbed = isYoutube || isVimeo;
+                        let embedUrl = vid.videoUrl;
+                        if (isYoutube) {
+                          const match = vid.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+                          if (match) embedUrl = `https://www.youtube.com/embed/${match[1]}`;
+                        } else if (isVimeo) {
+                          const match = vid.videoUrl.match(/vimeo\.com\/(\d+)/);
+                          if (match) embedUrl = `https://player.vimeo.com/video/${match[1]}`;
+                        }
+                        return (
+                          <div key={vid.id} className="border rounded-lg p-2 bg-gray-50">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-medium truncate flex-1">{vid.title || "Vídeo"}</span>
+                              <Button variant="ghost" size="sm" onClick={() => deleteVideoMutation.mutate({ videoId: vid.id })} className="text-red-500 hover:text-red-700 h-7 w-7 p-0">
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
                             </div>
-                          ) : (
-                            <video src={vid.videoUrl} controls className="w-full rounded max-h-48" preload="metadata" />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                            {isEmbed ? (
+                              <div className="aspect-video rounded overflow-hidden bg-black">
+                                <iframe src={embedUrl} className="w-full h-full" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
+                              </div>
+                            ) : (
+                              <video src={vid.videoUrl} controls className="w-full rounded max-h-48" preload="metadata" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
-                <div className="space-y-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
-                  <p className="text-xs font-semibold text-blue-800">Adicionar Vídeo</p>
-                  <div className="flex gap-2">
-                    <Input type="file" accept="video/*" capture="environment" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} className="flex-1 text-xs" disabled={isUploadingVideo} />
-                    <Button onClick={handleUploadVideo} disabled={!videoFile || isUploadingVideo} size="sm" className="bg-blue-600 hover:bg-blue-700">
-                      {isUploadingVideo ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-                    </Button>
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition"
+                    onClick={() => document.getElementById('edit-ex-media2-file')?.click()}
+                  >
+                    <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500">Adicionar Mídia</p>
+                    <input
+                      id="edit-ex-media2-file"
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                    />
                   </div>
+                  <p className="text-xs text-blue-500">.jpg, .png, .gif, .mp4, .mov, .pdf, .xls, .doc, .webp, .jpeg</p>
+
+                  {videoFile && (
+                    <div className="flex gap-2">
+                      <span className="text-xs text-gray-600 flex-1 truncate">{videoFile.name}</span>
+                      <Button onClick={handleUploadVideo} disabled={isUploadingVideo} size="sm" className="bg-blue-600 hover:bg-blue-700">
+                        {isUploadingVideo ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                      </Button>
+                    </div>
+                  )}
                   {isUploadingVideo && (
                     <div className="w-full bg-blue-200 rounded-full h-1.5">
                       <div className="bg-blue-600 h-1.5 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
                     </div>
                   )}
-                  <div className="flex gap-2 border-t border-blue-200 pt-2">
-                    <Input type="url" placeholder="https://youtube.com/watch?v=..." value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} className="flex-1 text-xs" />
-                    <Button onClick={handleAddVideoUrl} disabled={!videoUrl || addVideoUrlMutation.isPending} size="sm" variant="outline" className="border-blue-300">
-                      <Link className="w-3 h-3" />
+
+                  <div className="text-center text-xs text-gray-400">Ou</div>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Link className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <Input type="url" placeholder="Link externo" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} className="pl-9 text-sm" />
+                    </div>
+                    <Button onClick={handleAddVideoUrl} disabled={!videoUrl || addVideoUrlMutation.isPending} size="sm" variant="outline">
+                      <Plus className="w-3 h-3" />
                     </Button>
                   </div>
+                  <p className="text-xs text-blue-500">youtube, vimeo, etc</p>
+                </div>
+
+                {/* Título */}
+                <div className="space-y-2">
+                  <Label className="font-semibold text-sm">Título</Label>
+                  <Input
+                    placeholder="Ex: Supino reto"
+                    value={editingExercise.name}
+                    onChange={(e) => setEditingExercise({ ...editingExercise, name: e.target.value })}
+                  />
+                </div>
+
+                {/* Equipamento */}
+                <div className="space-y-2">
+                  <Label className="font-semibold text-sm">Equipamento</Label>
+                  <Input
+                    placeholder="Selecione um equipamento"
+                    value={editingExercise.equipment}
+                    onChange={(e) => setEditingExercise({ ...editingExercise, equipment: e.target.value })}
+                  />
+                </div>
+
+                {/* Grupo Muscular */}
+                <div className="space-y-2">
+                  <Label className="font-semibold text-sm">Grupo Muscular</Label>
+                  <Input
+                    placeholder="Ex: Peito"
+                    value={editingExercise.muscleGroup}
+                    onChange={(e) => setEditingExercise({ ...editingExercise, muscleGroup: e.target.value })}
+                  />
+                </div>
+
+                {/* Descrição */}
+                <div className="space-y-2">
+                  <Label className="font-semibold text-sm">Descrição</Label>
+                  <Textarea
+                    placeholder="Breve descrição do exercício"
+                    value={editingExercise.description}
+                    onChange={(e) => setEditingExercise({ ...editingExercise, description: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+
+                {/* Instruções */}
+                <div className="space-y-2">
+                  <Label className="font-semibold text-sm">Instruções de Execução</Label>
+                  <Textarea
+                    placeholder="Como executar o exercício corretamente"
+                    value={editingExercise.instructions}
+                    onChange={(e) => setEditingExercise({ ...editingExercise, instructions: e.target.value })}
+                    rows={3}
+                  />
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <SheetFooter className="p-4 border-t flex flex-row gap-3">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1859,15 +3361,15 @@ export default function ProfessorDashboard() {
                 <Button
                   onClick={handleUpdateExercise}
                   disabled={updateExerciseMutation.isPending}
-                  className="flex-1"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
                 >
-                  {updateExerciseMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                  {updateExerciseMutation.isPending ? "Salvando..." : "Salvar"}
                 </Button>
-              </div>
-            </div>
+              </SheetFooter>
+            </>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* Assessment Dialog */}
       <Dialog open={isAssessmentDialogOpen} onOpenChange={setIsAssessmentDialogOpen}>

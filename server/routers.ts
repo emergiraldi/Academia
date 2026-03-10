@@ -2734,6 +2734,50 @@ export const appRouter = router({
         return { success: true, workoutId: input.workoutId };
       }),
 
+    clone: professorProcedure
+      .input(z.object({
+        workoutId: z.number(),
+        studentId: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+        }
+        const original = await db.getWorkoutWithExercises(input.workoutId, ctx.user.gymId);
+        if (!original) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Treino não encontrado" });
+        }
+        const targetStudentId = input.studentId || original.studentId;
+        const newWorkout = await db.createWorkout({
+          gymId: ctx.user.gymId,
+          studentId: targetStudentId,
+          professorId: ctx.user.id,
+          name: `${original.name} (cópia)`,
+          description: original.description || null,
+          startDate: new Date(),
+          endDate: null,
+          active: true,
+        });
+        const exercises = original.exercises || [];
+        for (let i = 0; i < exercises.length; i++) {
+          const ex = exercises[i] as any;
+          await db.addWorkoutExercise({
+            workoutId: newWorkout.insertId,
+            exerciseId: ex.exerciseId,
+            dayOfWeek: ex.dayOfWeek || "Segunda",
+            sets: ex.sets || 3,
+            reps: ex.reps || "12",
+            load: ex.load || null,
+            restSeconds: ex.restSeconds || null,
+            technique: ex.technique || "normal",
+            supersetWith: null,
+            notes: ex.notes || null,
+            orderIndex: i,
+          });
+        }
+        return { success: true, workoutId: newWorkout.insertId };
+      }),
+
     delete: professorProcedure
       .input(z.object({
         workoutId: z.number(),
@@ -5561,174 +5605,6 @@ export const appRouter = router({
 
         // Professor e Admin veem todas da academia
         return await db.getAllAssessmentsByGym(ctx.user.gymId);
-        // Se studentId for fornecido, retornar avaliações desse aluno
-        if (input.studentId) {
-          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
-        }
-
-        // Aluno pode ver apenas suas próprias avaliações
-        if (ctx.user.role === 'student') {
-          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
-          if (!student) return [];
-          return await db.getStudentAssessments(student.id, ctx.user.gymId);
-        }
-
-        // Professor e Admin veem todas da academia
-        return await db.getAllAssessmentsByGym(ctx.user.gymId);
-        // Se studentId for fornecido, retornar avaliações desse aluno
-        if (input.studentId) {
-          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
-        }
-
-        // Aluno pode ver apenas suas próprias avaliações
-        if (ctx.user.role === 'student') {
-          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
-          if (!student) return [];
-          return await db.getStudentAssessments(student.id, ctx.user.gymId);
-        }
-
-        // Professor e Admin veem todas da academia
-        return await db.getAllAssessmentsByGym(ctx.user.gymId);
-        // Se studentId for fornecido, retornar avaliações desse aluno
-        if (input.studentId) {
-          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
-        }
-
-        // Aluno pode ver apenas suas próprias avaliações
-        if (ctx.user.role === 'student') {
-          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
-          if (!student) return [];
-          return await db.getStudentAssessments(student.id, ctx.user.gymId);
-        }
-
-        // Professor e Admin veem todas da academia
-        return await db.getAllAssessmentsByGym(ctx.user.gymId);
-        // Se studentId for fornecido, retornar avaliações desse aluno
-        if (input.studentId) {
-          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
-        }
-
-        // Aluno pode ver apenas suas próprias avaliações
-        if (ctx.user.role === 'student') {
-          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
-          if (!student) return [];
-          return await db.getStudentAssessments(student.id, ctx.user.gymId);
-        }
-
-        // Professor e Admin veem todas da academia
-        return await db.getAllAssessmentsByGym(ctx.user.gymId);
-        // Se studentId for fornecido, retornar avaliações desse aluno
-        if (input.studentId) {
-          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
-        }
-
-        // Aluno pode ver apenas suas próprias avaliações
-        if (ctx.user.role === 'student') {
-          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
-          if (!student) return [];
-          return await db.getStudentAssessments(student.id, ctx.user.gymId);
-        }
-
-        // Professor e Admin veem todas da academia
-        return await db.getAllAssessmentsByGym(ctx.user.gymId);
-        // Se studentId for fornecido, retornar avaliações desse aluno
-        if (input.studentId) {
-          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
-        }
-
-        // Aluno pode ver apenas suas próprias avaliações
-        if (ctx.user.role === 'student') {
-          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
-          if (!student) return [];
-          return await db.getStudentAssessments(student.id, ctx.user.gymId);
-        }
-
-        // Professor e Admin veem todas da academia
-        return await db.getAllAssessmentsByGym(ctx.user.gymId);
-        // Se studentId for fornecido, retornar avaliações desse aluno
-        if (input.studentId) {
-          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
-        }
-
-        // Aluno pode ver apenas suas próprias avaliações
-        if (ctx.user.role === 'student') {
-          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
-          if (!student) return [];
-          return await db.getStudentAssessments(student.id, ctx.user.gymId);
-        }
-
-        // Professor e Admin veem todas da academia
-        return await db.getAllAssessmentsByGym(ctx.user.gymId);
-        // Se studentId for fornecido, retornar avaliações desse aluno
-        if (input.studentId) {
-          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
-        }
-
-        // Aluno pode ver apenas suas próprias avaliações
-        if (ctx.user.role === 'student') {
-          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
-          if (!student) return [];
-          return await db.getStudentAssessments(student.id, ctx.user.gymId);
-        }
-
-        // Professor e Admin veem todas da academia
-        return await db.getAllAssessmentsByGym(ctx.user.gymId);
-        // Se studentId for fornecido, retornar avaliações desse aluno
-        if (input.studentId) {
-          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
-        }
-
-        // Aluno pode ver apenas suas próprias avaliações
-        if (ctx.user.role === 'student') {
-          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
-          if (!student) return [];
-          return await db.getStudentAssessments(student.id, ctx.user.gymId);
-        }
-
-        // Professor e Admin veem todas da academia
-        return await db.getAllAssessmentsByGym(ctx.user.gymId);
-        // Se studentId for fornecido, retornar avaliações desse aluno
-        if (input.studentId) {
-          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
-        }
-
-        // Aluno pode ver apenas suas próprias avaliações
-        if (ctx.user.role === 'student') {
-          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
-          if (!student) return [];
-          return await db.getStudentAssessments(student.id, ctx.user.gymId);
-        }
-
-        // Professor e Admin veem todas da academia
-        return await db.getAllAssessmentsByGym(ctx.user.gymId);
-        // Se studentId for fornecido, retornar avaliações desse aluno
-        if (input.studentId) {
-          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
-        }
-
-        // Aluno pode ver apenas suas próprias avaliações
-        if (ctx.user.role === 'student') {
-          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
-          if (!student) return [];
-          return await db.getStudentAssessments(student.id, ctx.user.gymId);
-        }
-
-        // Professor e Admin veem todas da academia
-        return await db.getAllAssessmentsByGym(ctx.user.gymId);
-        // Se studentId for fornecido, retornar avaliações desse aluno
-        if (input.studentId) {
-          return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
-        }
-
-        // Aluno pode ver apenas suas próprias avaliações
-        if (ctx.user.role === 'student') {
-          const student = await db.getStudentByUserId(ctx.user.id, ctx.user.gymId);
-          if (!student) return [];
-          return await db.getStudentAssessments(student.id, ctx.user.gymId);
-        }
-
-        // Professor e Admin veem todas da academia
-        return await db.getAllAssessmentsByGym(ctx.user.gymId);
       }),
 
     // Buscar avaliação por ID
@@ -5879,6 +5755,220 @@ export const appRouter = router({
         }
 
         return await db.deletePhysicalAssessment(input.id, ctx.user.gymId);
+      }),
+
+    // Full assessment creation (planilha metria completa)
+    createFull: professorProcedure
+      .input(z.object({
+        studentId: z.number(),
+        assessmentDate: z.string(),
+        assessmentNumber: z.number().optional(),
+        protocol: z.string().optional(),
+        // Body
+        weight: z.number().optional(),
+        height: z.number().optional(),
+        // Circumferences
+        shoulder: z.number().optional(),
+        chest: z.number().optional(),
+        waist: z.number().optional(),
+        abdomen: z.number().optional(),
+        hips: z.number().optional(),
+        rightArm: z.number().optional(),
+        leftArm: z.number().optional(),
+        rightForearm: z.number().optional(),
+        leftForearm: z.number().optional(),
+        rightThigh: z.number().optional(),
+        leftThigh: z.number().optional(),
+        rightCalf: z.number().optional(),
+        leftCalf: z.number().optional(),
+        bust: z.number().optional(),
+        // Skinfolds
+        subscapularSkinfold: z.number().optional(),
+        tricepsSkinfold: z.number().optional(),
+        bicepsSkinfold: z.number().optional(),
+        pectoralSkinfold: z.number().optional(),
+        midaxillarySkinfold: z.number().optional(),
+        suprailiacSkinfold: z.number().optional(),
+        abdominalSkinfold: z.number().optional(),
+        thighSkinfold: z.number().optional(),
+        calfSkinfold: z.number().optional(),
+        // Bone diameters
+        humerusDiameter: z.number().optional(),
+        wristDiameter: z.number().optional(),
+        femurDiameter: z.number().optional(),
+        // Blood pressure
+        systolicBP: z.number().optional(),
+        diastolicBP: z.number().optional(),
+        restingHR: z.number().optional(),
+        // Tests
+        abdominalReps: z.number().optional(),
+        pushupReps: z.number().optional(),
+        cooperDistance: z.number().optional(),
+        cooperSpeed: z.number().optional(),
+        vo2max: z.number().optional(),
+        flexibility: z.number().optional(),
+        // JSON fields
+        flexiteste: z.string().optional(),
+        posturalAssessment: z.string().optional(),
+        parq: z.string().optional(),
+        // Calculated
+        bmi: z.number().optional(),
+        rcq: z.number().optional(),
+        bodyFat: z.number().optional(),
+        fatMass: z.number().optional(),
+        leanMass: z.number().optional(),
+        muscleMass: z.number().optional(),
+        residualMass: z.number().optional(),
+        boneMass: z.number().optional(),
+        bmr: z.number().optional(),
+        somatotype: z.string().optional(),
+        endomorphy: z.number().optional(),
+        mesomorphy: z.number().optional(),
+        ectomorphy: z.number().optional(),
+        // Other
+        notes: z.string().optional(),
+        considerations: z.string().optional(),
+        goals: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nenhuma academia associada" });
+
+        const toStr = (v: number | undefined) => v !== undefined && v !== null ? v.toString() : null;
+
+        return await db.createPhysicalAssessment({
+          studentId: input.studentId,
+          professorId: ctx.user.id,
+          gymId: ctx.user.gymId,
+          assessmentDate: new Date(input.assessmentDate),
+          assessmentNumber: input.assessmentNumber || 1,
+          protocol: input.protocol || "jackson_pollock_7",
+          weight: toStr(input.weight), height: toStr(input.height),
+          shoulder: toStr(input.shoulder), chest: toStr(input.chest),
+          waist: toStr(input.waist), abdomen: toStr(input.abdomen),
+          hips: toStr(input.hips), rightArm: toStr(input.rightArm),
+          leftArm: toStr(input.leftArm), rightForearm: toStr(input.rightForearm),
+          leftForearm: toStr(input.leftForearm), rightThigh: toStr(input.rightThigh),
+          leftThigh: toStr(input.leftThigh), rightCalf: toStr(input.rightCalf),
+          leftCalf: toStr(input.leftCalf), bust: toStr(input.bust),
+          subscapularSkinfold: toStr(input.subscapularSkinfold),
+          tricepsSkinfold: toStr(input.tricepsSkinfold),
+          bicepsSkinfold: toStr(input.bicepsSkinfold),
+          pectoralSkinfold: toStr(input.pectoralSkinfold),
+          midaxillarySkinfold: toStr(input.midaxillarySkinfold),
+          suprailiacSkinfold: toStr(input.suprailiacSkinfold),
+          abdominalSkinfold: toStr(input.abdominalSkinfold),
+          thighSkinfold: toStr(input.thighSkinfold),
+          calfSkinfold: toStr(input.calfSkinfold),
+          humerusDiameter: toStr(input.humerusDiameter),
+          wristDiameter: toStr(input.wristDiameter),
+          femurDiameter: toStr(input.femurDiameter),
+          systolicBP: input.systolicBP, diastolicBP: input.diastolicBP,
+          restingHR: input.restingHR, abdominalReps: input.abdominalReps,
+          pushupReps: input.pushupReps,
+          cooperDistance: toStr(input.cooperDistance),
+          cooperSpeed: toStr(input.cooperSpeed),
+          vo2max: toStr(input.vo2max), flexibility: toStr(input.flexibility),
+          flexiteste: input.flexiteste || null,
+          posturalAssessment: input.posturalAssessment || null,
+          parq: input.parq || null,
+          bmi: toStr(input.bmi), rcq: toStr(input.rcq),
+          bodyFat: toStr(input.bodyFat), fatMass: toStr(input.fatMass),
+          leanMass: toStr(input.leanMass), muscleMass: toStr(input.muscleMass),
+          residualMass: toStr(input.residualMass), boneMass: toStr(input.boneMass),
+          bmr: toStr(input.bmr), somatotype: input.somatotype || null,
+          endomorphy: toStr(input.endomorphy), mesomorphy: toStr(input.mesomorphy),
+          ectomorphy: toStr(input.ectomorphy),
+          notes: input.notes || null, considerations: input.considerations || null,
+          goals: input.goals || null,
+        } as any);
+      }),
+
+    // Get assessments for a specific student
+    getByStudent: professorProcedure
+      .input(z.object({ studentId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+        return await db.getStudentAssessments(input.studentId, ctx.user.gymId);
+      }),
+
+    // Update full assessment
+    updateFull: professorProcedure
+      .input(z.object({
+        id: z.number(),
+        assessmentDate: z.string().optional(),
+        protocol: z.string().optional(),
+        weight: z.number().optional(),
+        height: z.number().optional(),
+        shoulder: z.number().optional(),
+        chest: z.number().optional(),
+        waist: z.number().optional(),
+        abdomen: z.number().optional(),
+        hips: z.number().optional(),
+        rightArm: z.number().optional(),
+        leftArm: z.number().optional(),
+        rightForearm: z.number().optional(),
+        leftForearm: z.number().optional(),
+        rightThigh: z.number().optional(),
+        leftThigh: z.number().optional(),
+        rightCalf: z.number().optional(),
+        leftCalf: z.number().optional(),
+        bust: z.number().optional(),
+        subscapularSkinfold: z.number().optional(),
+        tricepsSkinfold: z.number().optional(),
+        bicepsSkinfold: z.number().optional(),
+        pectoralSkinfold: z.number().optional(),
+        midaxillarySkinfold: z.number().optional(),
+        suprailiacSkinfold: z.number().optional(),
+        abdominalSkinfold: z.number().optional(),
+        thighSkinfold: z.number().optional(),
+        calfSkinfold: z.number().optional(),
+        humerusDiameter: z.number().optional(),
+        wristDiameter: z.number().optional(),
+        femurDiameter: z.number().optional(),
+        systolicBP: z.number().optional(),
+        diastolicBP: z.number().optional(),
+        restingHR: z.number().optional(),
+        abdominalReps: z.number().optional(),
+        pushupReps: z.number().optional(),
+        cooperDistance: z.number().optional(),
+        cooperSpeed: z.number().optional(),
+        vo2max: z.number().optional(),
+        flexibility: z.number().optional(),
+        flexiteste: z.string().optional(),
+        posturalAssessment: z.string().optional(),
+        parq: z.string().optional(),
+        bmi: z.number().optional(),
+        rcq: z.number().optional(),
+        bodyFat: z.number().optional(),
+        fatMass: z.number().optional(),
+        leanMass: z.number().optional(),
+        muscleMass: z.number().optional(),
+        residualMass: z.number().optional(),
+        boneMass: z.number().optional(),
+        bmr: z.number().optional(),
+        somatotype: z.string().optional(),
+        endomorphy: z.number().optional(),
+        mesomorphy: z.number().optional(),
+        ectomorphy: z.number().optional(),
+        notes: z.string().optional(),
+        considerations: z.string().optional(),
+        goals: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+
+        const toStr = (v: number | undefined) => v !== undefined && v !== null ? v.toString() : undefined;
+        const { id, ...rest } = input;
+        const updates: any = {};
+        Object.entries(rest).forEach(([k, v]) => {
+          if (v !== undefined) {
+            if (typeof v === 'number') updates[k] = v.toString();
+            else if (typeof v === 'string' && k === 'assessmentDate') updates[k] = new Date(v);
+            else updates[k] = v;
+          }
+        });
+
+        return await db.updatePhysicalAssessment(id, ctx.user.gymId, updates);
       }),
   }),
 
@@ -6405,6 +6495,157 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Check-in não encontrado" });
         }
         return checkIn;
+      }),
+  }),
+
+  // Workout Templates
+  templates: router({
+    list: professorProcedure
+      .query(async ({ ctx }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+        return await db.getWorkoutTemplates(ctx.user.gymId);
+      }),
+
+    getById: professorProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+        const template = await db.getWorkoutTemplateById(input.id, ctx.user.gymId);
+        if (!template) throw new TRPCError({ code: "NOT_FOUND" });
+        const exercises = await db.getTemplateExercises(input.id);
+        return { ...template, exercises };
+      }),
+
+    create: professorProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+        const result = await db.createWorkoutTemplate({
+          gymId: ctx.user.gymId,
+          professorId: ctx.user.id,
+          name: input.name,
+          description: input.description || null,
+        } as any);
+        return { success: true, templateId: result.insertId };
+      }),
+
+    update: professorProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).optional(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+        const { id, ...data } = input;
+        await db.updateWorkoutTemplate(id, ctx.user.gymId, data as any);
+        return { success: true };
+      }),
+
+    clone: professorProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+        const original = await db.getWorkoutTemplateById(input.id, ctx.user.gymId);
+        if (!original) throw new TRPCError({ code: "NOT_FOUND" });
+        const exercises = await db.getTemplateExercises(input.id);
+        const newTemplate = await db.createWorkoutTemplate({
+          gymId: ctx.user.gymId,
+          professorId: ctx.user.id,
+          name: `${original.name} (cópia)`,
+          description: original.description || null,
+        } as any);
+        for (let i = 0; i < exercises.length; i++) {
+          const ex = exercises[i] as any;
+          await db.addTemplateExercise({
+            templateId: newTemplate.insertId,
+            exerciseId: ex.exerciseId,
+            dayOfWeek: ex.dayOfWeek || "Segunda",
+            sets_count: ex.sets_count || ex.sets || 3,
+            reps: ex.reps || "12",
+            load_value: ex.load_value || ex.load || null,
+            restSeconds: ex.restSeconds || null,
+            technique: ex.technique || "normal",
+            notes: ex.notes || null,
+            orderIndex: i,
+          } as any);
+        }
+        return { success: true, templateId: newTemplate.insertId };
+      }),
+
+    delete: professorProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+        await db.deleteWorkoutTemplate(input.id, ctx.user.gymId);
+        return { success: true };
+      }),
+
+    toggle: professorProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+        return await db.toggleWorkoutTemplate(input.id, ctx.user.gymId);
+      }),
+
+    addExercise: professorProcedure
+      .input(z.object({
+        templateId: z.number(),
+        exerciseId: z.number(),
+        dayOfWeek: z.string(),
+        sets: z.number(),
+        reps: z.string(),
+        load: z.string().optional(),
+        restSeconds: z.number().optional(),
+        technique: z.string().optional(),
+        notes: z.string().optional(),
+        orderIndex: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+        const result = await db.addTemplateExercise(input as any);
+        return { success: true, id: result.insertId };
+      }),
+
+    deleteExercise: professorProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteTemplateExercise(input.id);
+        return { success: true };
+      }),
+
+    clearExercises: professorProcedure
+      .input(z.object({ templateId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.clearTemplateExercises(input.templateId);
+        return { success: true };
+      }),
+
+    fromWorkout: professorProcedure
+      .input(z.object({
+        workoutId: z.number(),
+        templateName: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+        const result = await db.createTemplateFromWorkout(input.workoutId, ctx.user.gymId, ctx.user.id, input.templateName);
+        return { success: true, templateId: result.insertId };
+      }),
+
+    applyToStudents: professorProcedure
+      .input(z.object({
+        templateId: z.number(),
+        studentIds: z.array(z.number()).min(1),
+        startDate: z.string(),
+        endDate: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user.gymId) throw new TRPCError({ code: "BAD_REQUEST" });
+        const results = await db.applyTemplateToStudents(input.templateId, ctx.user.gymId, ctx.user.id, input.studentIds, input.startDate, input.endDate);
+        return { success: true, results };
       }),
   }),
 

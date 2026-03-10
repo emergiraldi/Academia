@@ -16,6 +16,7 @@ import {
   Loader2,
   ScanFace,
   FileText,
+  Activity,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -24,6 +25,7 @@ import { StudentDigitalCard } from "@/components/StudentDigitalCard";
 import StudentPayments from "./StudentPayments";
 import StudentFaceEnrollment from "./StudentFaceEnrollment";
 import StudentMedicalExams from "./StudentMedicalExams";
+import StudentAssessments from "@/components/StudentAssessments";
 
 export default function StudentDashboardNew() {
   const { user, logout } = useAuth();
@@ -162,6 +164,12 @@ export default function StudentDashboardNew() {
       color: "from-pink-500 to-rose-500",
     },
     {
+      id: "assessments",
+      icon: Activity,
+      label: "Avaliações",
+      color: "from-orange-500 to-amber-500",
+    },
+    {
       id: "medicalExams",
       icon: FileText,
       label: "Exames",
@@ -199,6 +207,9 @@ export default function StudentDashboardNew() {
             onSuccess={refetchStudent}
           />
         );
+
+      case "assessments":
+        return <StudentAssessments onBack={() => setCurrentScreen("dashboard")} />;
 
       case "medicalExams":
         return (

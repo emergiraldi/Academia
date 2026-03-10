@@ -31,6 +31,8 @@ interface MonitorState {
 
 const monitors = new Map<number, MonitorState>();
 const POLL_INTERVAL = 1000; // 1 segundo
+const DEBOUNCE_SECONDS = 30; // Ignorar mesmo usuário por 30 segundos
+const recentReleases = new Map<string, number>(); // "gymId:userId" -> timestamp
 
 // ============================================
 // LÓGICA PRINCIPAL
@@ -143,6 +145,15 @@ async function processAccessLog(gymId: number, log: AccessLog): Promise<void> {
 
     console.log(`[AccessMonitor] ✅ Acesso CONCEDIDO para userId ${userId} no gymId ${gymId}`);
 
+    // Debounce: ignorar se mesmo usuário liberou recentemente
+    const debounceKey = `${gymId}:${userId}`;
+    const lastRelease = recentReleases.get(debounceKey);
+    const now = Math.floor(Date.now() / 1000);
+    if (lastRelease && (now - lastRelease) < DEBOUNCE_SECONDS) {
+      console.log(`[AccessMonitor] ⏭️  Debounce: userId ${userId} já liberado há ${now - lastRelease}s atrás, ignorando`);
+      return;
+    }
+
     // Buscar dados do aluno/staff no banco
     const db = await import('./db');
     const person = await findPersonByControlIdUserId(gymId, userId);
@@ -170,6 +181,14 @@ async function processAccessLog(gymId: number, log: AccessLog): Promise<void> {
 
     // Liberar entrada na catraca Toletus
     await releaseToletusEntry(gymId, person.name);
+
+    // Marcar debounce após liberar
+    recentReleases.set(debounceKey, Math.floor(Date.now() / 1000));
+
+    // Limpar debounces antigos (mais de 5 minutos)
+    for (const [key, time] of recentReleases) {
+      if (Math.floor(Date.now() / 1000) - time > 300) recentReleases.delete(key);
+    }
 
   } catch (error: any) {
     console.error(`[AccessMonitor] ❌ Erro ao processar log de acesso:`, error.message);

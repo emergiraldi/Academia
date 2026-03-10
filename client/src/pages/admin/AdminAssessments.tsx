@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -13,14 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -32,224 +22,54 @@ import {
 import {
   Activity,
   Plus,
-  TrendingUp,
-  TrendingDown,
   Calendar,
   Ruler,
   Weight,
-  Target,
   ArrowLeft,
+  BarChart3,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useGym } from "@/_core/hooks/useGym";
+import PhysicalAssessmentForm from "@/components/PhysicalAssessmentForm";
+import AssessmentComparative from "@/components/AssessmentComparative";
+
+type Screen = "list" | "form" | "comparativo";
 
 export default function AdminAssessments() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-  const [selectedAssessment, setSelectedAssessment] = useState<any>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [currentScreen, setCurrentScreen] = useState<Screen>("list");
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedStudentName, setSelectedStudentName] = useState("");
+  const [selectedStudentSex, setSelectedStudentSex] = useState("M");
+  const [selectedStudentBirthDate, setSelectedStudentBirthDate] = useState("");
+  const [editingAssessment, setEditingAssessment] = useState<any>(null);
+  const [newAssessmentStudentId, setNewAssessmentStudentId] = useState("");
   const { gymSlug } = useGym();
-
-  // Form state for creating
-  const [formData, setFormData] = useState({
-    studentId: "",
-    assessmentDate: new Date().toISOString().split('T')[0],
-    weightKg: "",
-    heightCm: "",
-    bodyFatPercentage: "",
-    muscleMassKg: "",
-    chestCm: "",
-    waistCm: "",
-    hipCm: "",
-    rightArmCm: "",
-    leftArmCm: "",
-    rightThighCm: "",
-    leftThighCm: "",
-    rightCalfCm: "",
-    leftCalfCm: "",
-    notes: "",
-    goals: "",
-  });
-
-  // Form state for editing
-  const [editFormData, setEditFormData] = useState({
-    assessmentDate: "",
-    weightKg: "",
-    heightCm: "",
-    bodyFatPercentage: "",
-    muscleMassKg: "",
-    chestCm: "",
-    waistCm: "",
-    hipCm: "",
-    rightArmCm: "",
-    leftArmCm: "",
-    rightThighCm: "",
-    leftThighCm: "",
-    rightCalfCm: "",
-    leftCalfCm: "",
-    notes: "",
-    goals: "",
-  });
 
   // Queries
   const { data: assessments = [], refetch: refetchAssessments } = trpc.assessments.list.useQuery({ studentId: undefined });
   const { data: students = [] } = trpc.students.listAll.useQuery({ gymSlug: gymSlug || '' }, { enabled: !!gymSlug });
 
-  // Mutations
-  const createAssessment = trpc.assessments.create.useMutation({
-    onSuccess: () => {
-      toast.success("Avaliação cadastrada com sucesso!");
-      setAddModalOpen(false);
-      resetForm();
-      refetchAssessments();
-    },
-    onError: (error) => {
-      toast.error(error.message || "Erro ao cadastrar avaliação");
-    },
-  });
-
-  const updateAssessment = trpc.assessments.update.useMutation({
-    onSuccess: () => {
-      toast.success("Avaliação atualizada com sucesso!");
-      setDetailsModalOpen(false);
-      setIsEditing(false);
-      refetchAssessments();
-    },
-    onError: (error) => {
-      toast.error(error.message || "Erro ao atualizar avaliação");
-    },
-  });
-
-  const resetForm = () => {
-    setFormData({
-      studentId: "",
-      assessmentDate: new Date().toISOString().split('T')[0],
-      weightKg: "",
-      heightCm: "",
-      bodyFatPercentage: "",
-      muscleMassKg: "",
-      chestCm: "",
-      waistCm: "",
-      hipCm: "",
-      rightArmCm: "",
-      leftArmCm: "",
-      rightThighCm: "",
-      leftThighCm: "",
-      rightCalfCm: "",
-      leftCalfCm: "",
-      notes: "",
-      goals: "",
-    });
-  };
-
-  // Calcular IMC automaticamente
-  const calculateBMI = (weight: number, height: number): number => {
-    const heightInMeters = height / 100;
-    return weight / (heightInMeters * heightInMeters);
-  };
-
-  const handleSubmit = () => {
-    if (!formData.studentId || !formData.weightKg || !formData.heightCm) {
-      toast.error("Preencha os campos obrigatórios: Aluno, Peso e Altura");
-      return;
-    }
-
-    const weight = parseFloat(formData.weightKg);
-    const height = parseFloat(formData.heightCm);
-    const bmi = calculateBMI(weight, height);
-
-    createAssessment.mutate({
-      studentId: parseInt(formData.studentId),
-      assessmentDate: formData.assessmentDate,
-      weightKg: weight,
-      heightCm: height,
-      bmi,
-      bodyFatPercentage: formData.bodyFatPercentage ? parseFloat(formData.bodyFatPercentage) : undefined,
-      muscleMassKg: formData.muscleMassKg ? parseFloat(formData.muscleMassKg) : undefined,
-      chestCm: formData.chestCm ? parseFloat(formData.chestCm) : undefined,
-      waistCm: formData.waistCm ? parseFloat(formData.waistCm) : undefined,
-      hipCm: formData.hipCm ? parseFloat(formData.hipCm) : undefined,
-      rightArmCm: formData.rightArmCm ? parseFloat(formData.rightArmCm) : undefined,
-      leftArmCm: formData.leftArmCm ? parseFloat(formData.leftArmCm) : undefined,
-      rightThighCm: formData.rightThighCm ? parseFloat(formData.rightThighCm) : undefined,
-      leftThighCm: formData.leftThighCm ? parseFloat(formData.leftThighCm) : undefined,
-      rightCalfCm: formData.rightCalfCm ? parseFloat(formData.rightCalfCm) : undefined,
-      leftCalfCm: formData.leftCalfCm ? parseFloat(formData.leftCalfCm) : undefined,
-      notes: formData.notes || undefined,
-      goals: formData.goals || undefined,
-    });
-  };
-
-  const populateEditForm = (assessment: any) => {
-    setEditFormData({
-      assessmentDate: assessment.assessmentDate ? new Date(assessment.assessmentDate).toISOString().split('T')[0] : "",
-      weightKg: assessment.weight || "",
-      heightCm: assessment.height || "",
-      bodyFatPercentage: assessment.bodyFat || "",
-      muscleMassKg: assessment.muscleMass || "",
-      chestCm: assessment.chest || "",
-      waistCm: assessment.waist || "",
-      hipCm: assessment.hips || "",
-      rightArmCm: assessment.rightArm || "",
-      leftArmCm: assessment.leftArm || "",
-      rightThighCm: assessment.rightThigh || "",
-      leftThighCm: assessment.leftThigh || "",
-      rightCalfCm: assessment.rightCalf || "",
-      leftCalfCm: assessment.leftCalf || "",
-      notes: assessment.notes || "",
-      goals: assessment.goals || "",
-    });
-  };
-
-  const handleUpdate = () => {
-    if (!selectedAssessment || !editFormData.weightKg || !editFormData.heightCm) {
-      toast.error("Preencha os campos obrigatórios: Peso e Altura");
-      return;
-    }
-
-    const weight = parseFloat(editFormData.weightKg);
-    const height = parseFloat(editFormData.heightCm);
-    const bmi = calculateBMI(weight, height);
-
-    updateAssessment.mutate({
-      id: selectedAssessment.id,
-      assessmentDate: editFormData.assessmentDate,
-      weightKg: weight,
-      heightCm: height,
-      bmi,
-      bodyFatPercentage: editFormData.bodyFatPercentage ? parseFloat(editFormData.bodyFatPercentage) : undefined,
-      muscleMassKg: editFormData.muscleMassKg ? parseFloat(editFormData.muscleMassKg) : undefined,
-      chestCm: editFormData.chestCm ? parseFloat(editFormData.chestCm) : undefined,
-      waistCm: editFormData.waistCm ? parseFloat(editFormData.waistCm) : undefined,
-      hipCm: editFormData.hipCm ? parseFloat(editFormData.hipCm) : undefined,
-      rightArmCm: editFormData.rightArmCm ? parseFloat(editFormData.rightArmCm) : undefined,
-      leftArmCm: editFormData.leftArmCm ? parseFloat(editFormData.leftArmCm) : undefined,
-      rightThighCm: editFormData.rightThighCm ? parseFloat(editFormData.rightThighCm) : undefined,
-      leftThighCm: editFormData.leftThighCm ? parseFloat(editFormData.leftThighCm) : undefined,
-      rightCalfCm: editFormData.rightCalfCm ? parseFloat(editFormData.rightCalfCm) : undefined,
-      leftCalfCm: editFormData.leftCalfCm ? parseFloat(editFormData.leftCalfCm) : undefined,
-      notes: editFormData.notes || undefined,
-      goals: editFormData.goals || undefined,
-    });
-  };
-
   const filteredAssessments = assessments.filter((assessment: any) =>
     searchTerm === "" ||
-    assessment.studentName.toLowerCase().includes(searchTerm.toLowerCase())
+    assessment.studentName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalAssessments = assessments.length;
   const avgIMC = assessments.length > 0
-    ? assessments.reduce((sum: number, a: any) => sum + (a.bmi || 0), 0) / assessments.length
+    ? assessments.reduce((sum: number, a: any) => {
+        const bmi = a.bmi || (a.weight && a.height ? Number(a.weight) / Math.pow(Number(a.height) / 100, 2) : 0);
+        return sum + bmi;
+      }, 0) / assessments.length
     : 0;
   const avgBodyFat = assessments.length > 0
-    ? assessments.reduce((sum: number, a: any) => sum + (a.bodyFatPercentage || 0), 0) / assessments.length
+    ? assessments.filter((a: any) => a.bodyFatPct || a.bodyFat).reduce((sum: number, a: any) => sum + Number(a.bodyFatPct || a.bodyFat || 0), 0) / (assessments.filter((a: any) => a.bodyFatPct || a.bodyFat).length || 1)
     : 0;
+  const uniqueStudents = new Set(assessments.map((a: any) => a.studentId)).size;
 
   const getIMCStatus = (imc: number) => {
     if (imc < 18.5) return { label: "Abaixo", color: "bg-blue-100 text-blue-800" };
@@ -258,13 +78,84 @@ export default function AdminAssessments() {
     return { label: "Obesidade", color: "bg-red-100 text-red-800" };
   };
 
-  const uniqueStudents = new Set(assessments.map((a: any) => a.studentId)).size;
+  const openNewAssessment = () => {
+    if (!newAssessmentStudentId) {
+      toast.error("Selecione um aluno primeiro");
+      return;
+    }
+    const student = (students as any[]).find((s: any) => s.id === parseInt(newAssessmentStudentId));
+    if (!student) return;
+    setSelectedStudentId(student.id);
+    setSelectedStudentName(student.name);
+    setSelectedStudentSex(student.sex || "M");
+    setSelectedStudentBirthDate(student.birthDate || "");
+    setEditingAssessment(null);
+    setCurrentScreen("form");
+  };
 
+  const openEditAssessment = (assessment: any) => {
+    const student = (students as any[]).find((s: any) => s.id === assessment.studentId);
+    setSelectedStudentId(assessment.studentId);
+    setSelectedStudentName(assessment.studentName || student?.name || "");
+    setSelectedStudentSex(student?.sex || "M");
+    setSelectedStudentBirthDate(student?.birthDate || "");
+    setEditingAssessment(assessment);
+    setCurrentScreen("form");
+  };
+
+  const openComparativo = (assessment: any) => {
+    const student = (students as any[]).find((s: any) => s.id === assessment.studentId);
+    setSelectedStudentId(assessment.studentId);
+    setSelectedStudentName(assessment.studentName || student?.name || "");
+    setCurrentScreen("comparativo");
+  };
+
+  // FORM SCREEN
+  if (currentScreen === "form" && selectedStudentId) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <PhysicalAssessmentForm
+            studentId={selectedStudentId}
+            studentName={selectedStudentName}
+            studentSex={selectedStudentSex}
+            studentBirthDate={selectedStudentBirthDate}
+            existingAssessment={editingAssessment}
+            onBack={() => {
+              setCurrentScreen("list");
+              refetchAssessments();
+            }}
+            onSaved={() => {
+              setCurrentScreen("list");
+              refetchAssessments();
+            }}
+          />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // COMPARATIVO SCREEN
+  if (currentScreen === "comparativo" && selectedStudentId) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <AssessmentComparative
+            studentId={selectedStudentId}
+            studentName={selectedStudentName}
+            onBack={() => setCurrentScreen("list")}
+          />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // LIST SCREEN
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -277,237 +168,28 @@ export default function AdminAssessments() {
             <div>
               <h1 className="text-3xl font-bold">Avaliações Físicas</h1>
               <p className="text-muted-foreground">
-                Acompanhamento de medidas e evolução dos alunos
+                Acompanhamento completo de medidas e evolução dos alunos
               </p>
             </div>
           </div>
-          <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Avaliação
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                <DialogTitle>Registrar Nova Avaliação</DialogTitle>
-                <DialogDescription>
-                  Cadastre medidas corporais e composição física
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Aluno *</Label>
-                    <Select
-                      value={formData.studentId}
-                      onValueChange={(value) => setFormData({ ...formData, studentId: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o aluno" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {students.map((student: any) => (
-                          <SelectItem key={student.id} value={student.id.toString()}>
-                            {student.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Data *</Label>
-                    <Input
-                      type="date"
-                      value={formData.assessmentDate}
-                      onChange={(e) => setFormData({ ...formData, assessmentDate: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label>Peso (kg) *</Label>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      placeholder="75.5"
-                      value={formData.weightKg}
-                      onChange={(e) => setFormData({ ...formData, weightKg: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label>Altura (cm) *</Label>
-                    <Input
-                      type="number"
-                      placeholder="175"
-                      value={formData.heightCm}
-                      onChange={(e) => setFormData({ ...formData, heightCm: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label>Gordura (%)</Label>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      placeholder="20.5"
-                      value={formData.bodyFatPercentage}
-                      onChange={(e) => setFormData({ ...formData, bodyFatPercentage: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Massa Muscular (kg)</Label>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      placeholder="60"
-                      value={formData.muscleMassKg}
-                      onChange={(e) => setFormData({ ...formData, muscleMassKg: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="border-t pt-4">
-                  <h3 className="text-sm font-semibold mb-3">Perimetria (Medidas em cm)</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label>Peitoral</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="95"
-                        value={formData.chestCm}
-                        onChange={(e) => setFormData({ ...formData, chestCm: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>Cintura</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="85"
-                        value={formData.waistCm}
-                        onChange={(e) => setFormData({ ...formData, waistCm: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>Quadril</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="95"
-                        value={formData.hipCm}
-                        onChange={(e) => setFormData({ ...formData, hipCm: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div>
-                      <Label>Braço Direito</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="32"
-                        value={formData.rightArmCm}
-                        onChange={(e) => setFormData({ ...formData, rightArmCm: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>Braço Esquerdo</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="32"
-                        value={formData.leftArmCm}
-                        onChange={(e) => setFormData({ ...formData, leftArmCm: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div>
-                      <Label>Coxa Direita</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="55"
-                        value={formData.rightThighCm}
-                        onChange={(e) => setFormData({ ...formData, rightThighCm: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>Coxa Esquerda</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="55"
-                        value={formData.leftThighCm}
-                        onChange={(e) => setFormData({ ...formData, leftThighCm: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div>
-                      <Label>Panturrilha Direita</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="38"
-                        value={formData.rightCalfCm}
-                        onChange={(e) => setFormData({ ...formData, rightCalfCm: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>Panturrilha Esquerda</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="38"
-                        value={formData.leftCalfCm}
-                        onChange={(e) => setFormData({ ...formData, leftCalfCm: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t pt-4">
-                  <div className="max-w-7xl mx-auto px-8 py-8 space-y-4">
-                    <div>
-                      <Label>Objetivos/Metas</Label>
-                      <Textarea
-                        placeholder="Ex: Perder 5kg, ganhar massa muscular..."
-                        value={formData.goals}
-                        onChange={(e) => setFormData({ ...formData, goals: e.target.value })}
-                        rows={2}
-                      />
-                    </div>
-                    <div>
-                      <Label>Observações</Label>
-                      <Textarea
-                        placeholder="Anotações gerais sobre a avaliação..."
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <Button
-                  className="w-full"
-                  onClick={handleSubmit}
-                  disabled={createAssessment.isLoading}
-                >
-                  {createAssessment.isLoading ? "Cadastrando..." : "Cadastrar Avaliação"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <div className="flex items-center gap-2">
+            <Select value={newAssessmentStudentId} onValueChange={setNewAssessmentStudentId}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="Selecione o aluno" />
+              </SelectTrigger>
+              <SelectContent>
+                {(students as any[]).map((student: any) => (
+                  <SelectItem key={student.id} value={student.id.toString()}>
+                    {student.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={openNewAssessment}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Avaliação
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -553,9 +235,7 @@ export default function AdminAssessments() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">
-                {uniqueStudents}
-              </div>
+              <div className="text-3xl font-bold">{uniqueStudents}</div>
             </CardContent>
           </Card>
         </div>
@@ -563,7 +243,10 @@ export default function AdminAssessments() {
         {/* Search */}
         <Card className="shadow-md">
           <CardHeader>
-            <CardTitle>Buscar</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="w-4 h-4" />
+              Buscar
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Input
@@ -605,64 +288,59 @@ export default function AdminAssessments() {
                   </TableRow>
                 ) : (
                   filteredAssessments.map((assessment: any) => {
-                    const bmi = assessment.weight && assessment.height
-                      ? Number(assessment.weight) / Math.pow(Number(assessment.height) / 100, 2)
-                      : 0;
+                    const bmi = assessment.bmi
+                      ? Number(assessment.bmi)
+                      : assessment.weight && assessment.height
+                        ? Number(assessment.weight) / Math.pow(Number(assessment.height) / 100, 2)
+                        : 0;
                     const imcStatus = getIMCStatus(bmi);
+                    const bodyFat = assessment.bodyFatPct || assessment.bodyFat;
                     return (
                       <TableRow key={assessment.id}>
                         <TableCell className="font-medium">{assessment.studentName}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Calendar className="w-3 h-3 text-muted-foreground" />
-                            {new Date(assessment.assessmentDate).toLocaleDateString("pt-BR")}
+                            {assessment.assessmentDate ? new Date(assessment.assessmentDate).toLocaleDateString("pt-BR") : "—"}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Weight className="w-3 h-3 text-muted-foreground" />
-                            {assessment.weight ? `${assessment.weight} kg` : "-"}
+                            {assessment.weight ? `${Number(assessment.weight).toFixed(1)} kg` : "—"}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Ruler className="w-3 h-3 text-muted-foreground" />
-                            {assessment.height ? `${assessment.height} cm` : "-"}
+                            {assessment.height ? `${Number(assessment.height).toFixed(1)} cm` : "—"}
                           </div>
                         </TableCell>
                         <TableCell className="font-semibold">
-                          {bmi ? bmi.toFixed(1) : "-"}
+                          {bmi ? bmi.toFixed(1) : "—"}
                         </TableCell>
                         <TableCell>
-                          {assessment.bodyFat ? `${assessment.bodyFat}%` : "-"}
+                          {bodyFat ? `${Number(bodyFat).toFixed(1)}%` : "—"}
                         </TableCell>
                         <TableCell>
-                          <Badge className={imcStatus.color}>{imcStatus.label}</Badge>
+                          {bmi > 0 && <Badge className={imcStatus.color}>{imcStatus.label}</Badge>}
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedAssessment(assessment);
-                                setIsEditing(false);
-                                setDetailsModalOpen(true);
-                              }}
-                            >
-                              Ver Detalhes
-                            </Button>
+                          <div className="flex gap-1">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                setSelectedAssessment(assessment);
-                                populateEditForm(assessment);
-                                setIsEditing(true);
-                                setDetailsModalOpen(true);
-                              }}
+                              onClick={() => openEditAssessment(assessment)}
                             >
                               Editar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openComparativo(assessment)}
+                              title="Comparativo & Gráficos"
+                            >
+                              <BarChart3 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -674,312 +352,6 @@ export default function AdminAssessments() {
             </Table>
           </CardContent>
         </Card>
-
-        {/* Modal de Detalhes/Edição */}
-        <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {isEditing ? "Editar Avaliação Física" : "Detalhes da Avaliação Física"}
-              </DialogTitle>
-              <DialogDescription>
-                {selectedAssessment?.studentName} - {selectedAssessment?.assessmentDate && new Date(selectedAssessment.assessmentDate).toLocaleDateString("pt-BR")}
-              </DialogDescription>
-            </DialogHeader>
-
-            {selectedAssessment && (
-              <div className="grid gap-6 py-4">
-                {/* Dados Básicos */}
-                <div>
-                  <h3 className="font-semibold mb-3">Dados Básicos</h3>
-                  {isEditing ? (
-                    <div className="grid gap-4">
-                      <div>
-                        <Label>Data da Avaliação *</Label>
-                        <Input
-                          type="date"
-                          value={editFormData.assessmentDate}
-                          onChange={(e) => setEditFormData({ ...editFormData, assessmentDate: e.target.value })}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <Label>Peso (kg) *</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={editFormData.weightKg}
-                            onChange={(e) => setEditFormData({ ...editFormData, weightKg: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label>Altura (cm) *</Label>
-                          <Input
-                            type="number"
-                            value={editFormData.heightCm}
-                            onChange={(e) => setEditFormData({ ...editFormData, heightCm: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label>% Gordura</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={editFormData.bodyFatPercentage}
-                            onChange={(e) => setEditFormData({ ...editFormData, bodyFatPercentage: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label>Massa Muscular (kg)</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={editFormData.muscleMassKg}
-                            onChange={(e) => setEditFormData({ ...editFormData, muscleMassKg: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <Label className="text-muted-foreground">Peso</Label>
-                        <div className="text-lg font-semibold">{selectedAssessment.weight || "-"} kg</div>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Altura</Label>
-                        <div className="text-lg font-semibold">{selectedAssessment.height || "-"} cm</div>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">IMC</Label>
-                        <div className="text-lg font-semibold">
-                          {selectedAssessment.weight && selectedAssessment.height
-                            ? (Number(selectedAssessment.weight) / Math.pow(Number(selectedAssessment.height) / 100, 2)).toFixed(1)
-                            : "-"}
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">% Gordura</Label>
-                        <div className="text-lg font-semibold">{selectedAssessment.bodyFat ? `${selectedAssessment.bodyFat}%` : "-"}</div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Perimetria */}
-                {(isEditing || selectedAssessment.chest || selectedAssessment.waist || selectedAssessment.hips) && (
-                  <div>
-                    <h3 className="font-semibold mb-3">Perimetria (cm)</h3>
-                    {isEditing ? (
-                      <div className="grid gap-4">
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <Label>Peitoral</Label>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={editFormData.chestCm}
-                              onChange={(e) => setEditFormData({ ...editFormData, chestCm: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label>Cintura</Label>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={editFormData.waistCm}
-                              onChange={(e) => setEditFormData({ ...editFormData, waistCm: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label>Quadril</Label>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={editFormData.hipCm}
-                              onChange={(e) => setEditFormData({ ...editFormData, hipCm: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label>Braço Direito</Label>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={editFormData.rightArmCm}
-                              onChange={(e) => setEditFormData({ ...editFormData, rightArmCm: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label>Braço Esquerdo</Label>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={editFormData.leftArmCm}
-                              onChange={(e) => setEditFormData({ ...editFormData, leftArmCm: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label>Coxa Direita</Label>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={editFormData.rightThighCm}
-                              onChange={(e) => setEditFormData({ ...editFormData, rightThighCm: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label>Coxa Esquerda</Label>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={editFormData.leftThighCm}
-                              onChange={(e) => setEditFormData({ ...editFormData, leftThighCm: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label>Panturrilha Direita</Label>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={editFormData.rightCalfCm}
-                              onChange={(e) => setEditFormData({ ...editFormData, rightCalfCm: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label>Panturrilha Esquerda</Label>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={editFormData.leftCalfCm}
-                              onChange={(e) => setEditFormData({ ...editFormData, leftCalfCm: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {selectedAssessment.chest && (
-                          <div>
-                            <Label className="text-muted-foreground">Peitoral</Label>
-                            <div>{selectedAssessment.chest} cm</div>
-                          </div>
-                        )}
-                        {selectedAssessment.waist && (
-                          <div>
-                            <Label className="text-muted-foreground">Cintura</Label>
-                            <div>{selectedAssessment.waist} cm</div>
-                          </div>
-                        )}
-                        {selectedAssessment.hips && (
-                          <div>
-                            <Label className="text-muted-foreground">Quadril</Label>
-                            <div>{selectedAssessment.hips} cm</div>
-                          </div>
-                        )}
-                        {selectedAssessment.rightArm && (
-                          <div>
-                            <Label className="text-muted-foreground">Braço Direito</Label>
-                            <div>{selectedAssessment.rightArm} cm</div>
-                          </div>
-                        )}
-                        {selectedAssessment.leftArm && (
-                          <div>
-                            <Label className="text-muted-foreground">Braço Esquerdo</Label>
-                            <div>{selectedAssessment.leftArm} cm</div>
-                          </div>
-                        )}
-                        {selectedAssessment.rightThigh && (
-                          <div>
-                            <Label className="text-muted-foreground">Coxa Direita</Label>
-                            <div>{selectedAssessment.rightThigh} cm</div>
-                          </div>
-                        )}
-                        {selectedAssessment.leftThigh && (
-                          <div>
-                            <Label className="text-muted-foreground">Coxa Esquerda</Label>
-                            <div>{selectedAssessment.leftThigh} cm</div>
-                          </div>
-                        )}
-                        {selectedAssessment.rightCalf && (
-                          <div>
-                            <Label className="text-muted-foreground">Panturrilha Direita</Label>
-                            <div>{selectedAssessment.rightCalf} cm</div>
-                          </div>
-                        )}
-                        {selectedAssessment.leftCalf && (
-                          <div>
-                            <Label className="text-muted-foreground">Panturrilha Esquerda</Label>
-                            <div>{selectedAssessment.leftCalf} cm</div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Observações e Objetivos */}
-                {(isEditing || selectedAssessment.notes || selectedAssessment.goals) && (
-                  <div className="space-y-4">
-                    {isEditing ? (
-                      <>
-                        <div>
-                          <Label>Objetivos/Metas</Label>
-                          <Textarea
-                            placeholder="Ex: Perder 5kg, ganhar massa muscular..."
-                            value={editFormData.goals}
-                            onChange={(e) => setEditFormData({ ...editFormData, goals: e.target.value })}
-                            rows={2}
-                          />
-                        </div>
-                        <div>
-                          <Label>Observações</Label>
-                          <Textarea
-                            placeholder="Anotações gerais sobre a avaliação..."
-                            value={editFormData.notes}
-                            onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-                            rows={3}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        {selectedAssessment.notes && (
-                          <div>
-                            <Label className="text-muted-foreground font-semibold">Observações</Label>
-                            <div className="mt-1 text-sm bg-muted p-3 rounded">{selectedAssessment.notes}</div>
-                          </div>
-                        )}
-                        {selectedAssessment.goals && (
-                          <div>
-                            <Label className="text-muted-foreground font-semibold">Objetivos/Metas</Label>
-                            <div className="mt-1 text-sm bg-muted p-3 rounded">{selectedAssessment.goals}</div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {isEditing && (
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button variant="outline" onClick={() => setDetailsModalOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button onClick={handleUpdate} disabled={updateAssessment.isLoading}>
-                      {updateAssessment.isLoading ? "Salvando..." : "Salvar Alterações"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
       </div>
     </DashboardLayout>
   );

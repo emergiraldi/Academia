@@ -34,6 +34,8 @@ async function startServer() {
   app.use(toletusTestRouter);
   // Serve uploaded files statically
   app.use("/uploads", express.static("uploads"));
+  // Serve GIFs and static assets
+  app.use("/static", express.static("public/static"));
   // tRPC API
   app.use(
     "/api/trpc",
