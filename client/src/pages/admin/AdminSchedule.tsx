@@ -158,6 +158,14 @@ export default function AdminSchedule() {
     }
   );
 
+  // Query sem filtro de data - para o modal "Ver Lista" mostrar todos os participantes
+  const { data: allParticipants, refetch: refetchAllParticipants } = trpc.bookings.listBySchedule.useQuery(
+    { scheduleId: selectedSchedule?.id || 0 },
+    {
+      enabled: !!selectedSchedule && selectedSchedule.id > 0 && participantsModalOpen,
+    }
+  );
+
   // Mutations
   const createSchedule = trpc.schedules.create.useMutation({
     onSuccess: () => {
@@ -329,8 +337,7 @@ export default function AdminSchedule() {
     setParticipantsModalOpen(true);
     // Forçar refetch ao abrir o modal
     setTimeout(() => {
-      refetchBookings();
-      refetchEnrollments();
+      refetchAllParticipants();
       refetchVisitorBookings();
     }, 100);
   };
@@ -924,66 +931,36 @@ export default function AdminSchedule() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
-              <div className="w-full sm:w-48">
-                <Label>Data</Label>
-                <Input
-                  type="date"
-                  value={bookingForm.bookingDate}
-                  onChange={(e) => setBookingForm({ ...bookingForm, bookingDate: e.target.value })}
-                />
-              </div>
-
-              {/* Alunos Matriculados (fixos na turma) */}
-              {enrollments && enrollments.length > 0 && (
+              {/* Participantes (enrollments + bookings combinados) */}
+              {allParticipants && allParticipants.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <Users className="h-4 w-4 text-blue-600" />
-                    Matriculados na Turma ({enrollments.length})
+                    Participantes ({allParticipants.length})
                   </h3>
                   <div className="space-y-2">
-                    {enrollments.map((enrollment: any) => (
-                      <div key={`enroll-${enrollment.id}`} className="border rounded-lg p-3 flex items-center justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-sm truncate">{enrollment.studentName}</p>
-                          {enrollment.studentEmail && (
-                            <p className="text-xs text-muted-foreground truncate">{enrollment.studentEmail}</p>
-                          )}
-                          {enrollment.studentPhone && (
-                            <p className="text-xs text-muted-foreground">{enrollment.studentPhone}</p>
-                          )}
-                        </div>
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 shrink-0">Fixo</Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Alunos Agendados (por data) */}
-              {bookings && bookings.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                    <CalendarIcon className="h-4 w-4 text-green-600" />
-                    Agendados para {new Date(bookingForm.bookingDate + 'T12:00:00').toLocaleDateString('pt-BR')} ({bookings.length})
-                  </h3>
-                  <div className="space-y-2">
-                    {bookings.map((booking: any) => (
-                      <div key={booking.id} className="border rounded-lg p-3 space-y-2">
+                    {allParticipants.map((p: any) => (
+                      <div key={`${p.source}-${p.id}`} className="border rounded-lg p-3 space-y-2">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium text-sm truncate">{booking.studentName}</p>
-                            <p className="text-xs text-muted-foreground truncate">{booking.studentEmail}</p>
-                            {booking.studentPhone && (
-                              <p className="text-xs text-muted-foreground">{booking.studentPhone}</p>
+                            <p className="font-medium text-sm truncate">{p.studentName}</p>
+                            {p.studentEmail && (
+                              <p className="text-xs text-muted-foreground truncate">{p.studentEmail}</p>
+                            )}
+                            {p.studentPhone && (
+                              <p className="text-xs text-muted-foreground">{p.studentPhone}</p>
                             )}
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
+                            <Badge variant="outline" className={p.source === 'enrollment' ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"}>
+                              {p.source === 'enrollment' ? 'Fixo' : 'Agendado'}
+                            </Badge>
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                               title="Mover para outro horário"
-                              onClick={() => handleMoveBooking(booking)}
+                              onClick={() => handleMoveBooking(p)}
                             >
                               <ArrowRightLeft className="h-4 w-4" />
                             </Button>
@@ -992,7 +969,7 @@ export default function AdminSchedule() {
                               size="icon"
                               className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
                               title="Remover"
-                              onClick={() => handleRemoveBooking(booking.id, booking.source || 'booking')}
+                              onClick={() => handleRemoveBooking(p.id, p.source || 'booking')}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -1000,8 +977,8 @@ export default function AdminSchedule() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Select
-                            value={booking.status}
-                            onValueChange={(value) => handleStatusChange(booking.id, value)}
+                            value={p.status}
+                            onValueChange={(value) => handleStatusChange(p.id, value)}
                           >
                             <SelectTrigger className="h-8 text-xs flex-1">
                               <SelectValue />
@@ -1060,7 +1037,7 @@ export default function AdminSchedule() {
                 </div>
               )}
 
-              {(!bookings || bookings.length === 0) && (!visitorBookings || visitorBookings.length === 0) && (!enrollments || enrollments.length === 0) && (
+              {(!allParticipants || allParticipants.length === 0) && (!visitorBookings || visitorBookings.length === 0) && (
                 <div className="text-center py-8 text-muted-foreground">
                   Nenhum participante matriculado ou agendado.
                 </div>
