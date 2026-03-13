@@ -151,6 +151,13 @@ export default function AdminSchedule() {
     }
   );
 
+  const { data: enrollments, refetch: refetchEnrollments } = trpc.enrollments.listBySchedule.useQuery(
+    { scheduleId: selectedSchedule?.id || 0 },
+    {
+      enabled: !!selectedSchedule && selectedSchedule.id > 0,
+    }
+  );
+
   // Mutations
   const createSchedule = trpc.schedules.create.useMutation({
     onSuccess: () => {
@@ -323,6 +330,7 @@ export default function AdminSchedule() {
     // Forçar refetch ao abrir o modal
     setTimeout(() => {
       refetchBookings();
+      refetchEnrollments();
       refetchVisitorBookings();
     }, 100);
   };
@@ -925,12 +933,38 @@ export default function AdminSchedule() {
                 />
               </div>
 
-              {/* Alunos Cadastrados */}
+              {/* Alunos Matriculados (fixos na turma) */}
+              {enrollments && enrollments.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <Users className="h-4 w-4 text-blue-600" />
+                    Matriculados na Turma ({enrollments.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {enrollments.map((enrollment: any) => (
+                      <div key={`enroll-${enrollment.id}`} className="border rounded-lg p-3 flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">{enrollment.studentName}</p>
+                          {enrollment.studentEmail && (
+                            <p className="text-xs text-muted-foreground truncate">{enrollment.studentEmail}</p>
+                          )}
+                          {enrollment.studentPhone && (
+                            <p className="text-xs text-muted-foreground">{enrollment.studentPhone}</p>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 shrink-0">Fixo</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Alunos Agendados (por data) */}
               {bookings && bookings.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Alunos Cadastrados ({bookings.length})
+                    <CalendarIcon className="h-4 w-4 text-green-600" />
+                    Agendados para {new Date(bookingForm.bookingDate + 'T12:00:00').toLocaleDateString('pt-BR')} ({bookings.length})
                   </h3>
                   <div className="space-y-2">
                     {bookings.map((booking: any) => (
@@ -1026,9 +1060,9 @@ export default function AdminSchedule() {
                 </div>
               )}
 
-              {(!bookings || bookings.length === 0) && (!visitorBookings || visitorBookings.length === 0) && (
+              {(!bookings || bookings.length === 0) && (!visitorBookings || visitorBookings.length === 0) && (!enrollments || enrollments.length === 0) && (
                 <div className="text-center py-8 text-muted-foreground">
-                  Nenhum participante agendado para esta data.
+                  Nenhum participante matriculado ou agendado.
                 </div>
               )}
             </div>
